@@ -1,3 +1,4 @@
+// src/components/tasks/shared/TaskForm.tsx
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -6,12 +7,14 @@ interface TaskFormProps {
   onSubmit: (title: string) => void;
   onClose: () => void;
   initialTitle?: string;
+  isEditing?: boolean;
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({
   onSubmit,
   onClose,
   initialTitle = '',
+  isEditing = false
 }) => {
   const { t } = useTranslation();
   const [title, setTitle] = useState(initialTitle);
@@ -20,7 +23,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
     e.preventDefault();
     if (title.trim()) {
       onSubmit(title.trim());
-      onClose();
     }
   };
 
@@ -29,7 +31,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       <div className="bg-white rounded-lg w-full max-w-md p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900">
-            {t('tasks.addNew')}
+            {isEditing ? t('tasks.edit') : t('tasks.addNew')}
           </h2>
           <button
             onClick={onClose}
@@ -41,10 +43,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label
-              htmlFor="title"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
               {t('tasks.title')}
             </label>
             <input
@@ -71,7 +70,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               disabled={!title.trim()}
               className="px-4 py-2 text-sm text-white bg-amber-600 rounded-md hover:bg-amber-700 disabled:opacity-50"
             >
-              {t('common.create')}
+              {isEditing ? t('common.save') : t('common.create')}
             </button>
           </div>
         </form>

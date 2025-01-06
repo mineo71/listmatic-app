@@ -1,27 +1,32 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { Task, Point } from '@/types/task';
 import Hexagon from './Hexagon';
 import HoneycombControls from './HoneycombControls';
 import Connection from './Connection';
-import TaskForm from '../shared/TaskForm';
+
+interface HexPosition extends Point {
+  id: string;
+  connectedTo?: string[];
+}
 
 interface HoneycombViewProps {
   tasks: Task[];
   onTaskAdd: (task: Omit<Task, 'id' | 'createdAt'>) => void;
   onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
   onTaskDelete: (taskId: string) => void;
-}
-
-interface HexPosition extends Point {
-  id: string;
-  connectedTo?: string[];  // IDs of connected hexagons
+  isAddingTask: boolean;
+  onAddingTaskComplete: () => void;
+  pendingTask: { title: string } | null;
 }
 
 const HoneycombView: React.FC<HoneycombViewProps> = ({
   tasks,
   onTaskAdd,
   onTaskUpdate,
-  onTaskDelete
+  onTaskDelete,
+  isAddingTask,
+  onAddingTaskComplete,
+  pendingTask
 }) => {
   // View state
   const [zoom, setZoom] = useState(1);
@@ -30,17 +35,9 @@ const HoneycombView: React.FC<HoneycombViewProps> = ({
   const [dragStartPoint, setDragStartPoint] = useState<Point | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
-  // Hexagon placement state
-  const [hexPositions, setHexPositions] = useState<HexPosition[]>([
-    // Start with center hexagon
-    { id: tasks[0]?.id || 'center', x: 0, y: 0, connectedTo: [] }
-  ]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [isAddingMode, setIsAddingMode] = useState(false);
+  // Task placement state
+  const [hexPositions, setHexPositions] = useState<HexPosition[]>([]);
   const [previewPosition, setPreviewPosition] = useState<Point | null>(null);
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [pendingPosition, setPendingPosition] = useState<Point | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -48,6 +45,15 @@ const HoneycombView: React.FC<HoneycombViewProps> = ({
   const HEX_SIZE = 50;
   const HEX_WIDTH = HEX_SIZE * 2;
   const HEX_HEIGHT = Math.sqrt(3) * HEX_SIZE;
+
+  // Initialize first hexagon position in the center
+  useEffect(() => {
+    if (tasks.length > 0 && hexPositions.length === 0) {
+      setHexPositions([
+        { id: tasks[0].id, x: 0, y: 0, connectedTo: [] }
+      ]);
+    }
+  }, [tasks, hexPositions.length]);
 
   // Calculate valid snap points for a new hexagon
   const getSnapPoints = useCallback((hexPosition: Point): Point[] => {
@@ -87,7 +93,7 @@ const HoneycombView: React.FC<HoneycombViewProps> = ({
       y: (e.clientY - rect.top - window.innerHeight/2) / zoom - center.y
     };
 
-    if (isAddingMode) {
+    if (isAddingTask && pendingTask) {
       const snapPoint = findNearestSnapPoint(mousePos);
       setPreviewPosition(snapPoint);
     } else if (isDragging && dragStartPoint) {
@@ -99,54 +105,28 @@ const HoneycombView: React.FC<HoneycombViewProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isAddingMode) {
+    if (!isAddingTask) {
       setIsDragging(true);
       setDragStartPoint({ x: e.clientX, y: e.clientY });
     }
   };
 
   const handleMouseUp = () => {
-    if (isAddingMode && previewPosition) {
-      setPendingPosition(previewPosition);
-      setShowTaskForm(true);
-    }
-    setIsDragging(false);
-    setDragStartPoint(null);
-  };
-
-  const handleTaskDelete = (taskId: string) => {
-    // Remove the hexagon and its connections
-    setHexPositions(prev => {
-      const filtered = prev.filter(hex => hex.id !== taskId);
-      // Update connections that referenced the deleted hexagon
-      return filtered.map(hex => ({
-        ...hex,
-        connectedTo: hex.connectedTo?.filter(id => id !== taskId) || []
-      }));
-    });
-    onTaskDelete(taskId);
-  };
-
-  const handleTaskAdd = (title: string) => {
-    if (pendingPosition) {
-      const newTask = {
-        title,
-        completed: false
-      };
-      onTaskAdd(newTask);
-      
+    if (isAddingTask && previewPosition && pendingTask) {
       // Find the nearest existing hexagon to connect to
       const nearestHex = hexPositions.reduce((nearest, hex) => {
-        const distance = Math.hypot(pendingPosition.x - hex.x, pendingPosition.y - hex.y);
-        return distance < Math.hypot(pendingPosition.x - nearest.x, pendingPosition.y - nearest.y)
-          ? hex
-          : nearest;
+        const distance = Math.hypot(previewPosition.x - hex.x, previewPosition.y - hex.y);
+        const nearestDistance = Math.hypot(previewPosition.x - nearest.x, previewPosition.y - nearest.y);
+        return distance < nearestDistance ? hex : nearest;
       }, hexPositions[0]);
 
-      // Add new position after task is created
+      onTaskAdd({
+        title: pendingTask.title,
+        completed: false
+      });
+
+      // Add new position with connection to nearest hexagon
       const newTaskId = (tasks[tasks.length - 1]?.id || 'new-task');
-      
-      // Update positions with new connections
       setHexPositions(prev => [
         ...prev.map(hex => 
           hex.id === nearestHex.id
@@ -154,16 +134,29 @@ const HoneycombView: React.FC<HoneycombViewProps> = ({
             : hex
         ),
         { 
-          ...pendingPosition, 
+          ...previewPosition, 
           id: newTaskId, 
           connectedTo: [nearestHex.id] 
         }
       ]);
       
-      setPendingPosition(null);
-      setShowTaskForm(false);
-      setIsAddingMode(false);
+      setPreviewPosition(null);
+      onAddingTaskComplete();
     }
+    setIsDragging(false);
+    setDragStartPoint(null);
+  };
+
+  const handleTaskDelete = (taskId: string) => {
+    setHexPositions(prev => {
+      const filtered = prev.filter(hex => hex.id !== taskId);
+      return filtered.map(hex => ({
+        ...hex,
+        connectedTo: hex.connectedTo?.filter(id => id !== taskId) || []
+      }));
+    });
+    onTaskDelete(taskId);
+    setSelectedTaskId(null);
   };
 
   return (
@@ -173,7 +166,10 @@ const HoneycombView: React.FC<HoneycombViewProps> = ({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={() => setIsDragging(false)}
+      onMouseLeave={() => {
+        setIsDragging(false);
+        setDragStartPoint(null);
+      }}
       onWheel={(e) => {
         e.preventDefault();
         const delta = e.deltaY * -0.001;
@@ -218,17 +214,17 @@ const HoneycombView: React.FC<HoneycombViewProps> = ({
                 onSelect={() => setSelectedTaskId(task.id)}
                 onComplete={() => onTaskUpdate(task.id, { completed: !task.completed })}
                 onDelete={() => handleTaskDelete(task.id)}
-                onEdit={() => setEditingTaskId(task.id)}
+                onEdit={(newTitle) => onTaskUpdate(task.id, { title: newTitle })}
               />
             );
           })}
 
           {/* Preview hexagon */}
-          {isAddingMode && previewPosition && (
+          {isAddingTask && previewPosition && pendingTask && (
             <Hexagon
               task={{
                 id: 'preview',
-                title: 'New Task',
+                title: pendingTask.title,
                 completed: false,
                 createdAt: new Date()
               }}
@@ -244,24 +240,11 @@ const HoneycombView: React.FC<HoneycombViewProps> = ({
         zoom={zoom}
         onZoomIn={() => setZoom(z => Math.min(z + 0.1, 2))}
         onZoomOut={() => setZoom(z => Math.max(z - 0.1, 0.5))}
-        onAddTask={() => setIsAddingMode(true)}
         onResetView={() => {
           setZoom(1);
           setCenter({ x: 0, y: 0 });
         }}
-        isAddingTask={isAddingMode}
       />
-
-      {showTaskForm && (
-        <TaskForm
-          onSubmit={handleTaskAdd}
-          onClose={() => {
-            setShowTaskForm(false);
-            setIsAddingMode(false);
-            setPendingPosition(null);
-          }}
-        />
-      )}
     </div>
   );
 };

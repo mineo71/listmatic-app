@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Search, Grid, List } from 'lucide-react';
-import { useViewMode } from '@/context/ViewModeContext';
+import { Search } from 'lucide-react';
 import type { Hive } from '@/types';
 
 interface HeaderProps {
@@ -10,7 +9,6 @@ interface HeaderProps {
 
 export const Header = ({ allHives, isSidebarOpen }: HeaderProps) => {
   const { t } = useTranslation();
-  const { viewMode, setViewMode } = useViewMode();
 
   const calculateTotalCompletion = () => {
     let totalTasks = 0;
@@ -34,33 +32,6 @@ export const Header = ({ allHives, isSidebarOpen }: HeaderProps) => {
         isSidebarOpen ? 'pl-72' : 'pl-24'
       }`}>
         <div className="max-w-md w-full flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-md transition-colors ${
-                viewMode === 'list' 
-                  ? 'bg-amber-100 text-amber-600' 
-                  : 'hover:bg-gray-100 text-gray-600'
-              }`}
-              aria-label={t('viewMode.list')}
-              title={t('viewMode.list')}
-            >
-              <List size={20} />
-            </button>
-            <button
-              onClick={() => setViewMode('honeycomb')}
-              className={`p-2 rounded-md transition-colors ${
-                viewMode === 'honeycomb' 
-                  ? 'bg-amber-100 text-amber-600' 
-                  : 'hover:bg-gray-100 text-gray-600'
-              }`}
-              aria-label={t('viewMode.honeycomb')}
-              title={t('viewMode.honeycomb')}
-            >
-              <Grid size={20} />
-            </button>
-          </div>
-
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />

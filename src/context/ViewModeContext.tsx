@@ -10,7 +10,7 @@ interface ViewModeContextType {
 const ViewModeContext = createContext<ViewModeContextType | null>(null);
 
 export function ViewModeProvider({ children }: { children: ReactNode }) {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('honeycomb'); // Changed default to honeycomb
 
   return (
     <ViewModeContext.Provider value={{ viewMode, setViewMode }}>

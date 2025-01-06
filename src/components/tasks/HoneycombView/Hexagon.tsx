@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { Check, Trash2, Edit2 } from 'lucide-react';
-
-interface Task {
-  id: string;
-  title: string;
-  completed: boolean;
-  createdAt: Date;
-}
+import type { Task } from '@/types/task';
 
 interface HexagonProps {
   task: Task;
@@ -18,7 +12,7 @@ interface HexagonProps {
   onSelect?: () => void;
   onComplete?: () => void;
   onDelete?: () => void;
-  onEdit?: () => void;
+  onEdit?: (newTitle: string) => void;  // Updated this line to include newTitle parameter
 }
 
 const Hexagon: React.FC<HexagonProps> = ({
@@ -27,6 +21,7 @@ const Hexagon: React.FC<HexagonProps> = ({
   position,
   isPreview = false,
   isSelected = false,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   connected = false,
   onSelect,
   onComplete,
@@ -41,15 +36,6 @@ const Hexagon: React.FC<HexagonProps> = ({
     return `${size * Math.cos(angle)},${size * Math.sin(angle)}`;
   }).join(' ');
 
-  // Calculate points for connection indicators
-  const connectionPoints = Array.from({ length: 6 }, (_, i) => {
-    const angle = (i * Math.PI) / 3;
-    return {
-      x: size * 1.2 * Math.cos(angle),
-      y: size * 1.2 * Math.sin(angle)
-    };
-  });
-
   return (
     <g
       transform={`translate(${position.x}, ${position.y})`}
@@ -62,17 +48,6 @@ const Hexagon: React.FC<HexagonProps> = ({
         hover:scale-105
       `}
     >
-      {/* Connection points */}
-      {connected && connectionPoints.map((point, i) => (
-        <circle
-          key={i}
-          cx={point.x}
-          cy={point.y}
-          r={3}
-          className="fill-amber-300"
-        />
-      ))}
-
       {/* Hexagon shape */}
       <polygon
         points={points}
@@ -128,7 +103,11 @@ const Hexagon: React.FC<HexagonProps> = ({
             className="fill-white stroke-gray-200"
             onClick={(e) => {
               e.stopPropagation();
-              onEdit?.();
+              if (onEdit) {
+                // Here you might want to trigger a modal or some other UI
+                const newTitle = prompt('Enter new title:', task.title);
+                if (newTitle) onEdit(newTitle);
+              }
             }}
           />
           <g transform={`translate(-8, ${-size/2 - 8})`}>

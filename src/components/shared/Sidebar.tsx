@@ -122,7 +122,7 @@ export const Sidebar = ({
                   })).map((hive) => (
                       <div key={hive.id} className="select-none">
                         <div
-                            className={`flex items-center px-2 py-2 rounded-md cursor-pointer hover:bg-gray-100 ${
+                            className={`flex items-center px-2 py-2 rounded-md cursor-pointer hover:bg-gray-100 group ${
                                 selectedHiveId === hive.id ? 'bg-amber-50' : ''
                             }`}
                             onClick={() => onSelectItem(hive.id, 'hive')}
@@ -159,25 +159,11 @@ export const Sidebar = ({
                                     y: e.clientY
                                   });
                                 }}
-                                className="p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded-md"
+                                className="p-1 invisible group-hover:visible hover:bg-gray-200 rounded-md"
                             >
                               <MoreHorizontal size={16} />
                             </button>
                           </div>
-                          <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setContextMenu({
-                                  id: hive.id,
-                                  type: 'hive',
-                                  x: e.clientX,
-                                  y: e.clientY
-                                });
-                              }}
-                              className="p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded-md"
-                          >
-                            <MoreHorizontal size={16} />
-                          </button>
                         </div>
 
                         {expandedHives.has(hive.id) && (

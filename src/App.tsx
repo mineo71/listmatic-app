@@ -9,10 +9,10 @@ import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { Settings } from '@/components/settings/Settings';
 import { Profile } from '@/components/settings/Profile';
-import { HoneycombViewWrapper } from '@/components/hive/HoneycombViewWrapper';
 import { config } from '@/config';
 import './i18n/config';
 import './index.css';
+import { ViewModeProvider } from './context/ViewModeContext';
 
 const queryClient = new QueryClient();
 
@@ -22,43 +22,44 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router>
-          <Routes>
-            {/* Auth routes */}
-            {config.enableAuth && (
-              <>
-                <Route path="/login" element={<LoginForm />} />
-                <Route path="/register" element={<RegisterForm />} />
-              </>
-            )}
+        <ViewModeProvider>
+          <Router>
+            <Routes>
+              {/* Auth routes */}
+              {config.enableAuth && (
+                <>
+                  <Route path="/login" element={<LoginForm />} />
+                  <Route path="/register" element={<RegisterForm />} />
+                </>
+              )}
 
-            {/* Protected routes */}
-            <Route
-              path="/"
-              element={
-                config.enableAuth ? (
-                  <ProtectedRoute>
+              {/* Protected routes */}
+              <Route
+                path="/"
+                element={
+                  config.enableAuth ? (
+                    <ProtectedRoute>
+                      <Layout />
+                    </ProtectedRoute>
+                  ) : (
                     <Layout />
-                  </ProtectedRoute>
-                ) : (
-                  <Layout />
-                )
-              }
-            >
-              <Route index element={
-                <div className="p-6 text-gray-500 text-center">
-                  {t('messages.selectHoneycomb')}
-                </div>
-              } />
-              <Route path="honeycomb/:id" element={<HoneycombViewWrapper />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="profile" element={<Profile />} />
-            </Route>
+                  )
+                }
+              >
+                <Route index element={
+                  <div className="p-6 text-gray-500 text-center">
+                    {t('messages.selectHoneycomb')}
+                  </div>
+                } />
+                <Route path="settings" element={<Settings />} />
+                <Route path="profile" element={<Profile />} />
+              </Route>
 
-            {/* Catch all route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
+              {/* Catch all route */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Router>
+        </ViewModeProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

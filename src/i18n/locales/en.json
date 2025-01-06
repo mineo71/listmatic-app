@@ -106,5 +106,11 @@
   "prompts": {
     "enterNewName": "Enter new name",
     "confirmDelete": "Are you sure? This action cannot be undone."
+  },
+  "viewMode": {
+    "list": "List View",
+    "honeycomb": "Honeycomb View",
+    "switchToList": "Switch to List View",
+    "switchToHoneycomb": "Switch to Honeycomb View"
   }
 }

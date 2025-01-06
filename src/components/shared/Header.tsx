@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Search } from 'lucide-react';
+import { Search, Grid, List } from 'lucide-react';
+import { useViewMode } from '@/context/ViewModeContext';
 import type { Hive } from '@/types';
 
 interface HeaderProps {
@@ -9,6 +10,7 @@ interface HeaderProps {
 
 export const Header = ({ allHives, isSidebarOpen }: HeaderProps) => {
   const { t } = useTranslation();
+  const { viewMode, setViewMode } = useViewMode();
 
   const calculateTotalCompletion = () => {
     let totalTasks = 0;
@@ -31,7 +33,35 @@ export const Header = ({ allHives, isSidebarOpen }: HeaderProps) => {
       <div className={`transition-all duration-300 flex items-center h-16 px-8 ${
         isSidebarOpen ? 'pl-72' : 'pl-8'
       }`}>
-        {/* Search Bar with adjusted positioning */}
+        {/* View Mode Switcher */}
+        <div className="flex items-center gap-2 mr-6">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === 'list' 
+                ? 'bg-amber-100 text-amber-600' 
+                : 'hover:bg-gray-100 text-gray-600'
+            }`}
+            aria-label={t('viewMode.list')}
+            title={t('viewMode.list')}
+          >
+            <List size={20} />
+          </button>
+          <button
+            onClick={() => setViewMode('honeycomb')}
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === 'honeycomb' 
+                ? 'bg-amber-100 text-amber-600' 
+                : 'hover:bg-gray-100 text-gray-600'
+            }`}
+            aria-label={t('viewMode.honeycomb')}
+            title={t('viewMode.honeycomb')}
+          >
+            <Grid size={20} />
+          </button>
+        </div>
+
+        {/* Search Bar */}
         <div className="flex-1 max-w-2xl mx-auto">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

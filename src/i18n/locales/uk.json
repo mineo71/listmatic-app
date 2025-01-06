@@ -107,5 +107,12 @@
   "prompts": {
     "enterNewName": "Введіть нову назву",
     "confirmDelete": "Ви впевнені? Цю дію неможливо скасувати."
+  },
+  "viewMode": {
+    "list": "Список",
+    "honeycomb": "Стільники",
+    "switchToList": "Перейти до списку",
+    "switchToHoneycomb": "Перейти до стільників"
   }
+
 }

@@ -19,19 +19,19 @@ interface SidebarProps {
 }
 
 export const Sidebar = ({
-                          isOpen,
-                          onToggleSidebar,
-                          hives,
-                          selectedHiveId,
-                          selectedHoneycombId,
-                          onSelectItem,
-                          onCreateHive,
-                          onCreateHoneycomb,
-                          onDeleteHive,
-                          onDeleteHoneycomb,
-                          onRenameItem,
-                          onLogout,
-                        }: SidebarProps) => {
+  isOpen,
+  onToggleSidebar,
+  hives,
+  selectedHiveId,
+  selectedHoneycombId,
+  onSelectItem,
+  onCreateHive,
+  onCreateHoneycomb,
+  onDeleteHive,
+  onDeleteHoneycomb,
+  onRenameItem,
+  onLogout,
+  }: SidebarProps) => {
   const { t } = useTranslation();
   const [expandedHives, setExpandedHives] = useState<Set<string>>(new Set());
   const [favoriteHives, setFavoriteHives] = useState<Set<string>>(new Set());
@@ -302,4 +302,3 @@ export const Sidebar = ({
       </>
   );
 };
-

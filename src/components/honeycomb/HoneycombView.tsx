@@ -1,22 +1,22 @@
-// src/components/honeycomb/HoneycombView.tsx
-import type { Honeycomb } from '@/types';
+import { useState } from 'react';
 import { HoneycombCanvas } from './HoneycombCanvas';
 
-interface HoneycombViewProps {
-  honeycomb: Honeycomb;
-}
+export const HoneycombView = () => {
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-export const HoneycombView = ({ honeycomb }: HoneycombViewProps) => {
   return (
     <div className="flex flex-col h-full">
-      <div className="p-6 border-b border-gray-200 bg-white">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
-        </div>
-      </div>
-
       <div className="flex-1 relative">
-        <HoneycombCanvas />
+        <HoneycombCanvas
+          zoom={zoom}
+          setZoom={setZoom}
+          offset={offset}
+          setOffset={setOffset}
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+        />
       </div>
     </div>
   );

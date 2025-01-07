@@ -1,10 +1,10 @@
-// src/components/honeycomb/HoneycombCanvas.tsx
-import React, { useState, useRef, useCallback } from 'react';
-import { Plus, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { HoneycombHexagon } from './HoneycombHexagon';
 import { HoneycombTaskModal } from './HoneycombTaskModal';
 import { HoneycombEditModal } from './HoneycombEditModal';
+import TaskSidebar from './TaskSidebar';
 
 interface HoneycombItem {
   id: string;
@@ -12,6 +12,7 @@ interface HoneycombItem {
   y: number;
   title: string;
   color?: string;
+  isCompleted?: boolean;
 }
 
 interface DragState {
@@ -22,26 +23,44 @@ interface DragState {
   initialY: number;
 }
 
-export const HoneycombCanvas = () => {
+interface HoneycombCanvasProps {
+  zoom: number;
+  setZoom: (zoom: number | ((prev: number) => number)) => void;
+  offset: { x: number; y: number };
+  setOffset: (offset: { x: number; y: number }) => void;
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: (open: boolean) => void;
+}
+
+export const HoneycombCanvas = ({
+  zoom,
+  setZoom,
+  offset,
+  setOffset,
+  isSidebarOpen,
+  setIsSidebarOpen
+}: HoneycombCanvasProps) => {
   const { t } = useTranslation();
-  const [zoom, setZoom] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Core state
   const [items, setItems] = useState<HoneycombItem[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragState, setDragState] = useState<DragState | null>(null);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [ghostPosition, setGhostPosition] = useState<{ x: number; y: number } | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [ghostPosition, setGhostPosition] = useState<{ x: number; y: number } | null>(null);
+  const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
+  
+  // Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<HoneycombItem | null>(null);
-  const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [linkingFromId, setLinkingFromId] = useState<string | null>(null);
   
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Drag state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
+  // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 0 && !isCreating && !dragState) {
       setIsDragging(true);
@@ -79,16 +98,14 @@ export const HoneycombCanvas = () => {
 
     if (isCreating && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      // Check if cursor is within bounds
       if (e.clientX >= rect.left && 
           e.clientX <= rect.right && 
           e.clientY >= rect.top && 
           e.clientY <= rect.bottom) {
-        // Get mouse position relative to container
-        let x = e.clientX - rect.left;
-        let y = e.clientY - rect.top;
+        let x = (e.clientX - rect.left) / zoom - offset.x;
+        let y = (e.clientY - rect.top) / zoom - offset.y;
         
-        // Snap to grid (50px grid)
+        // Snap to grid
         x = Math.round(x / 50) * 50;
         y = Math.round(y / 50) * 50;
         
@@ -97,23 +114,20 @@ export const HoneycombCanvas = () => {
         setGhostPosition(null);
       }
     }
-  }, [isDragging, dragStart, isCreating, zoom, offset, dragState]);
+  }, [isDragging, dragStart, isCreating, zoom, offset, dragState, setOffset]);
 
   const handleMouseUp = (e: React.MouseEvent) => {
     if (isCreating && !dragState && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      // Only open modal if click is within bounds
       if (e.clientX >= rect.left && 
           e.clientX <= rect.right && 
           e.clientY >= rect.top && 
           e.clientY <= rect.bottom) {
-        setPendingPosition({
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        });
+        const x = (e.clientX - rect.left) / zoom - offset.x;
+        const y = (e.clientY - rect.top) / zoom - offset.y;
+        setPendingPosition({ x, y });
         setIsCreateModalOpen(true);
       } else {
-        // Cancel creation if clicked outside
         setIsCreating(false);
         setGhostPosition(null);
       }
@@ -133,11 +147,12 @@ export const HoneycombCanvas = () => {
     });
   };
 
+  // Hexagon handlers
   const handleHexagonDragStart = (id: string, e: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
-      const x = (e.clientX - rect.left) / zoom - offset.x;
-      const y = (e.clientY - rect.top) / zoom - offset.y;
+      const x = (e.clientX - rect.left) / zoom;
+      const y = (e.clientY - rect.top) / zoom;
       const item = items.find(item => item.id === id);
       if (item) {
         setDragState({
@@ -156,6 +171,21 @@ export const HoneycombCanvas = () => {
     setIsEditModalOpen(true);
   };
 
+  const handleHexagonClick = (id: string) => {
+    if (selectedItemId === id) {
+      setItems(prevItems =>
+        prevItems.map(item =>
+          item.id === id
+            ? { ...item, isCompleted: !item.isCompleted }
+            : item
+        )
+      );
+    } else {
+      setSelectedItemId(id);
+    }
+  };
+
+  // Modal handlers
   const handleTaskSubmit = (data: { title: string }) => {
     if (pendingPosition) {
       const newItem: HoneycombItem = {
@@ -163,6 +193,7 @@ export const HoneycombCanvas = () => {
         x: pendingPosition.x,
         y: pendingPosition.y,
         title: data.title,
+        isCompleted: false
       };
       setItems(prev => [...prev, newItem]);
       setPendingPosition(null);
@@ -172,7 +203,7 @@ export const HoneycombCanvas = () => {
     }
   };
 
-  const handleEditSubmit = (data: { title: string; color: string }) => {
+  const handleEditSubmit = (data: { title: string; color?: string }) => {
     if (editingItem) {
       setItems(prevItems => 
         prevItems.map(item => 
@@ -194,47 +225,56 @@ export const HoneycombCanvas = () => {
     }
   };
 
-  // Add keyboard event listener for Esc key
-  React.useEffect(() => {
+  const scrollToHexagon = (id: string) => {
+    const item = items.find(item => item.id === id);
+    if (item && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      
+      setOffset({
+        x: centerX - (item.x * zoom),
+        y: centerY - (item.y * zoom)
+      });
+      setSelectedItemId(id);
+    }
+  };
+
+  // Keyboard handler
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isCreating) {
-        setIsCreating(false);
-        setGhostPosition(null);
-        setPendingPosition(null);
+      if (e.key === 'Escape') {
+        if (isCreating) {
+          setIsCreating(false);
+          setGhostPosition(null);
+          setPendingPosition(null);
+        }
+        if (selectedItemId) {
+          setSelectedItemId(null);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCreating]);
+  }, [isCreating, selectedItemId]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-gray-50 border-2 border-gray-200">
-      {/* Controls */}
-      <div className="absolute top-4 right-4 flex gap-2 z-10">
+    <div className="relative w-full h-full overflow-hidden bg-gray-50">
+      {/* Add Button */}
+      <div className="absolute top-4 left-4 z-10">
         <button
-          onClick={() => {
-            setZoom(1);
-            setOffset({ x: 0, y: 0 });
-          }}
-          className="p-2 bg-white rounded-full shadow hover:bg-gray-50"
+          onClick={() => setIsCreating(!isCreating)}
+          className={`flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all ${
+            isCreating ? 'bg-amber-500 text-white' : 'bg-white hover:bg-gray-50'
+          }`}
         >
-          <RotateCcw size={20} />
-        </button>
-        <button
-          onClick={() => setZoom(z => Math.min(z + 0.1, 2))}
-          className="p-2 bg-white rounded-full shadow hover:bg-gray-50"
-        >
-          <ZoomIn size={20} />
-        </button>
-        <button
-          onClick={() => setZoom(z => Math.max(z - 0.1, 0.5))}
-          className="p-2 bg-white rounded-full shadow hover:bg-gray-50"
-        >
-          <ZoomOut size={20} />
+          <Plus size={22} />
+          <span className="font-xl">{t('actions.addHexagon')}</span>
         </button>
       </div>
 
+      {/* Main Canvas */}
       <div 
         ref={containerRef}
         className={`w-full h-full ${isCreating ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
@@ -254,25 +294,17 @@ export const HoneycombCanvas = () => {
             transform: `scale(${zoom}) translate(${offset.x}px, ${offset.y}px)`,
             backgroundImage: `
               linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-              linear-gradient(to bottom, #e5e7eb 1px, transparent 1px),
-              linear-gradient(to right, #f3f4f6 1px, transparent 1px),
-              linear-gradient(to bottom, #f3f4f6 1px, transparent 1px)
+              linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
             `,
-            backgroundSize: '50px 50px, 50px 50px, 10px 10px, 10px 10px',
-            backgroundPosition: '0 0, 0 0, 0 0, 0 0'
+            backgroundSize: '50px 50px',
           }}
         >
           {items.map(item => (
             <HoneycombHexagon
               key={item.id}
-              id={item.id}
-              x={item.x}
-              y={item.y}
-              title={item.title}
-              color={item.color}
+              {...item}
               isSelected={selectedItemId === item.id}
-              isLinking={linkingFromId === item.id}
-              onClick={() => setSelectedItemId(item.id)}
+              onClick={() => handleHexagonClick(item.id)}
               onDoubleClick={() => handleHexagonDoubleClick(item)}
               onDragStart={handleHexagonDragStart}
             />
@@ -290,18 +322,21 @@ export const HoneycombCanvas = () => {
         </div>
       </div>
 
-      {/* Add Button */}
-      <div className="absolute bottom-8 right-8 flex flex-col gap-4 items-end z-10">
-        <button
-          onClick={() => setIsCreating(!isCreating)}
-          className={`flex items-center px-6 py-3 gap-2 rounded-full shadow-lg hover:shadow-xl transition-all ${
-            isCreating ? 'bg-amber-500 text-white' : 'bg-white hover:bg-gray-50'
-          }`}
-        >
-          <Plus size={24} />
-          <span className="text-lg font-medium">{t('actions.addHexagon')}</span>
-        </button>
-      </div>
+      {/* Task Sidebar */}
+      <TaskSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        items={items}
+        selectedItemId={selectedItemId}
+        onItemClick={scrollToHexagon}
+        onEditClick={(id) => {
+          const item = items.find(item => item.id === id);
+          if (item) {
+            setEditingItem(item);
+            setIsEditModalOpen(true);
+          }
+        }}
+      />
 
       {/* Modals */}
       <HoneycombTaskModal
@@ -326,7 +361,7 @@ export const HoneycombCanvas = () => {
         initialData={editingItem ? {
           title: editingItem.title,
           color: editingItem.color
-        } : { title: '', color: undefined }}
+        } : undefined}
       />
     </div>
   );

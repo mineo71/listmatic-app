@@ -1,5 +1,4 @@
-// src/components/honeycomb/HoneycombEditModal.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Trash2 } from 'lucide-react';
 
@@ -8,7 +7,7 @@ interface EditModalProps {
   onClose: () => void;
   onSubmit: (data: { title: string; color: string }) => void;
   onDelete: () => void;
-  initialData: {
+  initialData?: {
     title: string;
     color?: string;
   };
@@ -28,11 +27,19 @@ export const HoneycombEditModal = ({
   onClose,
   onSubmit,
   onDelete,
-  initialData,
+  initialData = { title: '', color: COLORS[0] }, // Provide default value
 }: EditModalProps) => {
   const { t } = useTranslation();
   const [title, setTitle] = useState(initialData.title);
-  const [selectedColor, setSelectedColor] = useState(initialData.color || COLORS[0]);
+  const [selectedColor, setSelectedColor] = useState(initialData.color ?? COLORS[0]);
+
+  // Update state when initialData changes
+  useEffect(() => {
+    if (isOpen) {
+      setTitle(initialData.title);
+      setSelectedColor(initialData.color ?? COLORS[0]);
+    }
+  }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { RotateCcw, ZoomIn, ZoomOut, List } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -15,11 +15,18 @@ export const HoneycombViewWrapper = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { hives } = useOutletContext<ContextType>();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // View state
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [progress, setProgress] = useState(0);
+
+  // Progress update handler
+  const handleProgressUpdate = (newProgress: number) => {
+    setProgress(newProgress);
+  };
 
   // Recursively find honeycomb in hives and their subhives
   const findHoneycomb = (hives: Hive[]): Honeycomb | undefined => {
@@ -46,7 +53,13 @@ export const HoneycombViewWrapper = () => {
   // Handlers for view controls
   const handleReset = () => {
     setZoom(1);
-    setOffset({ x: 0, y: 0 });
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setOffset({
+        x: rect.width / 2,
+        y: rect.height / 2
+      });
+    }
   };
 
   const handleZoomIn = () => {
@@ -66,7 +79,23 @@ export const HoneycombViewWrapper = () => {
       {/* Header with controls */}
       <div className="flex-shrink-0 p-6 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
+          <div className="flex items-center gap-8">
+            <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
+            
+            {/* Progress bar */}
+            <div className="w-64">
+              <div className="flex justify-between mb-1">
+                <span className="text-sm font-medium text-gray-700">Progress</span>
+                <span className="text-sm text-gray-500">{Math.round(progress)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-amber-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          </div>
           
           <div className="flex gap-2">
             <button
@@ -102,7 +131,7 @@ export const HoneycombViewWrapper = () => {
       </div>
 
       {/* Canvas area */}
-      <div className="flex-grow h-0">
+      <div ref={containerRef} className="flex-grow h-0">
         <HoneycombCanvas
           key={honeycomb.id}
           zoom={zoom}
@@ -111,6 +140,7 @@ export const HoneycombViewWrapper = () => {
           setOffset={setOffset}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
+          onProgressUpdate={handleProgressUpdate}
         />
       </div>
     </div>

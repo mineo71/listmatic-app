@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Check, Settings } from 'lucide-react';
 
 interface HexagonProps {
   id: string;
@@ -8,30 +9,28 @@ interface HexagonProps {
   color?: string;
   isGhost?: boolean;
   isSelected?: boolean;
-  isLinking?: boolean;
+  isMain?: boolean;
   isCompleted?: boolean;
+  isCreating?: boolean;
+  connections: string[];
+  connectedHexagons?: {
+    id: string;
+    x: number;
+    y: number;
+  }[];
   onClick?: () => void;
-  onDragStart?: (id: string, e: React.MouseEvent) => void;
-  onDragEnd?: () => void;
-  onDoubleClick?: () => void;
+  onMarkComplete?: () => void;
+  onEdit?: () => void;
 }
 
-// Helper function to darken a hex color
 const darkenColor = (hex: string, percent: number) => {
-  // Remove the # if present
   hex = hex.replace('#', '');
-  
-  // Convert to RGB
   let r = parseInt(hex.substring(0, 2), 16);
   let g = parseInt(hex.substring(2, 4), 16);
   let b = parseInt(hex.substring(4, 6), 16);
-
-  // Darken
   r = Math.floor(r * (100 - percent) / 100);
   g = Math.floor(g * (100 - percent) / 100);
   b = Math.floor(b * (100 - percent) / 100);
-
-  // Convert back to hex
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 };
 
@@ -43,22 +42,20 @@ export const HoneycombHexagon = ({
   color = '#FDE68A',
   isGhost = false,
   isSelected = false,
-  isLinking = false,
+  isMain = false,
   isCompleted = false,
+  isCreating = false,
+  connectedHexagons = [],
   onClick,
-  onDragStart,
-  onDragEnd,
-  onDoubleClick,
+  onMarkComplete,
+  onEdit,
 }: HexagonProps) => {
-  const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Calculate hexagon dimensions
-  const size = 60; // Base size
+  const size = 60;
   const width = size * 2;
   const height = Math.sqrt(3) * size;
 
-  // Calculate points for the hexagon shape
   const points = useMemo(() => {
     const vertices = [
       [size * Math.cos(0), size * Math.sin(0)],
@@ -76,173 +73,177 @@ export const HoneycombHexagon = ({
     }));
   }, [size, height]);
 
-  // Connection points coordinates (for the small circles)
-  const connectionPoints = useMemo(() => [
-    { x: width/2, y: 4, position: 'top' },
-    { x: width-15, y: height/4, position: 'topRight' },
-    { x: width-15, y: height*3/4, position: 'bottomRight' },
-    { x: width/2, y: height-4, position: 'bottom' },
-    { x: 15, y: height*3/4, position: 'bottomLeft' },
-    { x: 15, y: height/4, position: 'topLeft' },
-  ], [width, height]);
+  const connectionPaths = useMemo(() => {
+    return connectedHexagons.map(connected => {
+      const dx = connected.x - x;
+      const dy = connected.y - y;
+      const angle = Math.atan2(dy, dx);
+      
+      const padding = size * 0.9;
+      const startX = x + Math.cos(angle) * padding;
+      const startY = y + Math.sin(angle) * padding;
+      const endX = connected.x - Math.cos(angle) * padding;
+      const endY = connected.y - Math.sin(angle) * padding;
+      
+      const midX = (startX + endX) / 2;
+      const midY = (startY + endY) / 2;
+      const curvature = 20;
+      const controlX = midX - Math.sin(angle) * curvature;
+      const controlY = midY + Math.cos(angle) * curvature;
 
-  // Event handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (e.button === 0) { // Left click only
-      setIsDragging(true);
-      onDragStart?.(id, e);
-    }
-  };
+      return `M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`;
+    });
+  }, [x, y, connectedHexagons, size]);
 
-  const handleMouseUp = () => {
-    if (isDragging) {
-      setIsDragging(false);
-      onDragEnd?.();
-    }
-  };
-
-  // Generate SVG path for side faces (2.5D effect)
   const sideFaces = useMemo(() => {
-    const depth = isHovered ? 12 : 8; // Depth of 3D effect
+    const depth = isHovered && !isCreating ? 12 : 8;
     return {
       right: `M ${points[1]} L ${points[2]} L ${points[2].x},${points[2].y + depth} L ${points[1].x},${points[1].y + depth} Z`,
-      bottomRight: `M ${points[2]} L ${points[3]} L ${points[3].x},${points[3].y + depth} L ${points[2].x},${points[2].y + depth} Z`,
-      bottomLeft: `M ${points[3]} L ${points[4]} L ${points[4].x},${points[4].y + depth} L ${points[3].x},${points[3].y + depth} Z`,
-      rightShadow: `M ${points[0]} L ${points[1]} L ${points[1].x},${points[1].y + depth} L ${points[0].x},${points[0].y + depth} Z`
+      bottom: `M ${points[2]} L ${points[3]} L ${points[3].x},${points[3].y + depth} L ${points[2].x},${points[2].y + depth} Z`,
+      left: `M ${points[3]} L ${points[4]} L ${points[4].x},${points[4].y + depth} L ${points[3].x},${points[3].y + depth} Z`,
     };
-  }, [points, isHovered]);
+  }, [points, isHovered, isCreating]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isGhost && onClick) {
+      onClick();
+    } else if (!isMain && !isCreating && onClick) {
+      onClick();
+    }
+  };
 
   return (
-    <div
-      className={`absolute transform transition-all duration-200 ease-out
-        ${isHovered ? '-translate-y-3' : ''} 
-        ${isDragging ? 'cursor-grabbing z-50' : 'cursor-pointer'}
-        ${isCompleted ? 'opacity-80' : ''}`}
-      style={{ 
-        left: x, 
-        top: y,
-        transform: `translate(-50%, -50%) ${isHovered ? 'scale(1.05)' : 'scale(1)'}`,
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
-      onClick={onClick}
-      onDoubleClick={(e) => {
-        e.stopPropagation();
-        onDoubleClick?.();
-      }}
-    >
-      <svg
-        width={width}
-        height={height + (isHovered ? 12 : 8)} // Add space for 3D effect
-        className={`${isGhost ? 'opacity-50' : ''}`}
+    <>
+      {!isGhost && connectionPaths.map((path, index) => (
+        <svg
+          key={`connection-${index}`}
+          className="absolute top-0 left-0 w-full h-full pointer-events-none"
+          style={{ zIndex: 0 }}
+        >
+          <path
+            d={path}
+            stroke={darkenColor(color, 20)}
+            strokeWidth="3"
+            fill="none"
+            strokeDasharray="5,5"
+            className="transition-all duration-300"
+          />
+        </svg>
+      ))}
+      
+      <div
+        className={`absolute transform transition-all duration-200 ease-out
+          ${isHovered && !isCreating ? '-translate-y-3' : ''} 
+          ${isCompleted ? 'opacity-80' : ''}
+          ${isMain ? 'cursor-default' : isCreating ? 'cursor-default' : 'cursor-pointer'}
+          ${isCreating ? 'pointer-events-none' : ''}`}
         style={{ 
-          filter: `drop-shadow(0 ${isHovered ? '12px 24px' : '8px 16px'} rgba(0,0,0,${isHovered ? '0.2' : '0.15'}))`,
-          transition: 'all 0.2s ease-out'
+          left: x, 
+          top: y,
+          transform: `translate(-50%, -50%) ${isHovered && !isCreating ? 'scale(1.05)' : 'scale(1)'}`,
+          zIndex: isHovered ? 10 : 1
         }}
+        onMouseEnter={() => !isCreating && setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={handleClick}
       >
-        <defs>
-          {/* Main face gradient */}
-          <linearGradient id={`gradient-${id}`} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={isCompleted ? darkenColor(color, 20) : color} stopOpacity="1" />
-            <stop offset="100%" stopColor={isCompleted ? darkenColor(color, 30) : color} stopOpacity="0.9" />
-          </linearGradient>
-          
-          {/* Side face gradient */}
-          <linearGradient id={`side-gradient-${id}`} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={darkenColor(color, 20)} stopOpacity="0.9" />
-            <stop offset="100%" stopColor={darkenColor(color, 40)} stopOpacity="0.4" />
-          </linearGradient>
-        </defs>
+        <svg
+          width={width}
+          height={height + (isHovered && !isCreating ? 12 : 8)}
+          className={isGhost ? 'opacity-80 animate-pulse' : ''}
+          style={{ 
+            filter: isGhost ? 'none' : `drop-shadow(0 ${isHovered && !isCreating ? '12px 24px' : '8px 16px'} rgba(0,0,0,${isHovered && !isCreating ? '0.2' : '0.15'}))`,
+            transition: 'all 0.2s ease-out'
+          }}
+        >
+          <defs>
+            <linearGradient id={`gradient-${id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={isCompleted ? darkenColor(color, 20) : color} stopOpacity="1" />
+              <stop offset="100%" stopColor={isCompleted ? darkenColor(color, 30) : color} stopOpacity="0.9" />
+            </linearGradient>
+            
+            <linearGradient id={`side-gradient-${id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={darkenColor(color, 20)} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={darkenColor(color, 40)} stopOpacity="0.4" />
+            </linearGradient>
+          </defs>
 
-        {/* Side faces for 2.5D effect */}
-        <g className="transition-transform duration-200">
-          <path
-            d={sideFaces.right}
-            fill={`url(#side-gradient-${id})`}
-            className="transition-all duration-200"
-            opacity="0.7"
-          />
-          <path
-            d={sideFaces.bottomRight}
-            fill={`url(#side-gradient-${id})`}
-            className="transition-all duration-200"
-            opacity="0.85"
-          />
-          <path
-            d={sideFaces.bottomLeft}
-            fill={`url(#side-gradient-${id})`}
-            className="transition-all duration-200"
-            opacity="0.7"
-          />
-          <path
-            d={sideFaces.rightShadow}
-            fill={`url(#side-gradient-${id})`}
-            className="transition-all duration-200"
-            opacity="0.7"
-          />
-        </g>
+          <g className="transition-transform duration-200">
+            <path d={sideFaces.left} fill={`url(#side-gradient-${id})`} opacity="0.7" />
+            <path d={sideFaces.bottom} fill={`url(#side-gradient-${id})`} opacity="0.85" />
+            <path d={sideFaces.right} fill={`url(#side-gradient-${id})`} opacity="0.7" />
+          </g>
 
-        {/* Main hexagon face */}
-        <polygon
-          points={points.join(' ')}
-          fill={`url(#gradient-${id})`}
-          stroke={isSelected ? '#D97706' : '#F59E0B'}
-          strokeWidth={isSelected ? "3" : "2"}
-          className={`transition-all duration-200 ${
-            isLinking ? '!stroke-blue-500 stroke-[3]' : ''
-          }`}
-        />
+          <polygon
+            points={points.join(' ')}
+            fill={`url(#gradient-${id})`}
+            stroke={isSelected ? '#D97706' : '#F59E0B'}
+            strokeWidth={isSelected || isMain ? "3" : "2"}
+            className="transition-all duration-200"
+          />
 
-        {/* Content group */}
-        <g transform={`translate(${width/2}, ${height/2})`}>
-          {/* Completion checkmark */}
-          {isCompleted && (
-            <path
-              d="M-30,-5 L-10,15 L30,-20"
-              stroke="#22C55E"
-              strokeWidth="3"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="animate-draw"
-            />
-          )}
-          
-          {/* Title text */}
-          <text
-            dominantBaseline="middle"
-            textAnchor="middle"
-            className={`text-base font-semibold fill-gray-800 pointer-events-none select-none
-              ${isCompleted ? 'line-through opacity-70' : ''}`}
-            style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
-          >
-            {title}
-          </text>
-        </g>
+          <g transform={`translate(${width/2}, ${height/2})`}>
+            {isCompleted && !isMain && (
+              <path
+                d="M-30,-5 L-10,15 L30,-20"
+                stroke="#22C55E"
+                strokeWidth="3"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="animate-draw"
+              />
+            )}
+            
+            <text
+              dominantBaseline="middle"
+              textAnchor="middle"
+              className={`text-base font-semibold fill-gray-800 pointer-events-none select-none
+                ${isCompleted && !isMain ? 'line-through opacity-70' : ''}`}
+              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
+            >
+              {title}
+            </text>
+          </g>
 
-        {/* Connection points - only show when hovered and not ghost */}
-        {!isGhost && isHovered && (
-          <g>
-            {connectionPoints.map((point, index) => (
-              <circle
-                key={index}
-                cx={point.x}
-                cy={point.y}
-                r="6"
-                className="fill-orange-100 stroke-orange-300 stroke-2 cursor-pointer
-                  hover:fill-orange-200 hover:stroke-orange-400 transition-colors"
+          {isHovered && !isGhost && !isCreating && !isMain && (
+            <g>
+              <rect
+                x="0"
+                y="0"
+                width={width}
+                height={height/2}
+                fill={`${color}CC`}
+                className="cursor-pointer transition-opacity backdrop-blur-sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Handle connection point click
+                  onMarkComplete?.();
                 }}
               />
-            ))}
-          </g>
-        )}
-      </svg>
-    </div>
+              <foreignObject x={width/2-12} y={height/4-12} width="24" height="24">
+                <Check className="text-green-600" />
+              </foreignObject>
+
+              <rect
+                x="0"
+                y={height/2}
+                width={width}
+                height={height/2}
+                fill={`${color}CC`}
+                className="cursor-pointer transition-opacity backdrop-blur-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.();
+                }}
+              />
+              <foreignObject x={width/2-12} y={height*3/4-12} width="24" height="24">
+                <Settings className="text-gray-600" />
+              </foreignObject>
+            </g>
+          )}
+        </svg>
+      </div>
+    </>
   );
 };

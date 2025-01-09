@@ -30,7 +30,7 @@ const TaskSidebar = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed right-0 top-[149px] bottom-0 w-72 bg-white/90 backdrop-blur-sm border-l border-gray-200 transition-all duration-300 overflow-hidden">
+    <div className="fixed right-0 top-[149px] bottom-0 w-80 h-full bg-white/90 backdrop-blur-sm border-l border-gray-200 transition-all duration-300 overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-900">{t('Tasks List')}</h2>
         <button

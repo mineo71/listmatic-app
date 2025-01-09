@@ -305,8 +305,8 @@ export const HoneycombCanvas = ({
               {...item}
               isSelected={selectedItemId === item.id}
               onClick={() => handleHexagonClick(item.id)}
-              onDoubleClick={() => handleHexagonDoubleClick(item)}
               onDragStart={handleHexagonDragStart}
+              onEdit={() => handleHexagonDoubleClick(item)}
             />
           ))}
 

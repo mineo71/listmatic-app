@@ -1,10 +1,14 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { HoneycombHexagon } from './HoneycombHexagon';
-import { HoneycombTaskModal } from './HoneycombTaskModal';
 import { HoneycombEditModal } from './HoneycombEditModal';
 import TaskSidebar from './TaskSidebar';
+
+interface Offset {
+  x: number;
+  y: number;
+}
 
 interface HoneycombItem {
   id: string;
@@ -13,24 +17,23 @@ interface HoneycombItem {
   title: string;
   color?: string;
   isCompleted?: boolean;
-}
-
-interface DragState {
-  itemId: string;
-  startX: number;
-  startY: number;
-  initialX: number;
-  initialY: number;
+  isMain?: boolean;
+  connections: string[];
 }
 
 interface HoneycombCanvasProps {
   zoom: number;
   setZoom: (zoom: number | ((prev: number) => number)) => void;
-  offset: { x: number; y: number };
-  setOffset: (offset: { x: number; y: number }) => void;
+  offset: Offset;
+  setOffset: (offset: Offset | ((prev: Offset) => Offset)) => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
+  onProgressUpdate: (progress: number) => void;
 }
+
+const HEXAGON_SIZE = 60;
+const HEXAGON_HEIGHT = Math.sqrt(3) * HEXAGON_SIZE;
+const HEXAGON_WIDTH = 2 * HEXAGON_SIZE;
 
 export const HoneycombCanvas = ({
   zoom,
@@ -38,230 +41,263 @@ export const HoneycombCanvas = ({
   offset,
   setOffset,
   isSidebarOpen,
-  setIsSidebarOpen
+  setIsSidebarOpen,
+  onProgressUpdate
 }: HoneycombCanvasProps) => {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const lastMousePosRef = useRef({ x: 0, y: 0 });
   
-  // Core state
   const [items, setItems] = useState<HoneycombItem[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [ghostPosition, setGhostPosition] = useState<{ x: number; y: number } | null>(null);
-  const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
-  
-  // Modal state
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [ghostPosition, setGhostPosition] = useState<Offset | null>(null);
   const [editingItem, setEditingItem] = useState<HoneycombItem | null>(null);
-  
-  // Drag state
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragState, setDragState] = useState<DragState | null>(null);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Mouse event handlers
+  useEffect(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const centerX = 0;
+      const centerY = 0;
+      
+      setItems([{
+        id: 'main',
+        x: centerX,
+        y: centerY,
+        title: 'Main Goal',
+        isMain: true,
+        connections: [],
+        color: '#FDE68A'
+      }]);
+
+      setOffset({
+        x: rect.width / 2,
+        y: rect.height / 2
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const totalItems = items.filter(item => !item.isMain).length;
+    const completedItems = items.filter(item => !item.isMain && item.isCompleted).length;
+    const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+    onProgressUpdate(progress);
+  }, [items, onProgressUpdate]);
+
+  const getAvailablePositions = (centerX: number, centerY: number) => {
+    const positions = [
+      { x: centerX, y: centerY - HEXAGON_HEIGHT },
+      { x: centerX + HEXAGON_WIDTH * 0.75, y: centerY - HEXAGON_HEIGHT * 0.5 },
+      { x: centerX + HEXAGON_WIDTH * 0.75, y: centerY + HEXAGON_HEIGHT * 0.5 },
+      { x: centerX, y: centerY + HEXAGON_HEIGHT },
+      { x: centerX - HEXAGON_WIDTH * 0.75, y: centerY + HEXAGON_HEIGHT * 0.5 },
+      { x: centerX - HEXAGON_WIDTH * 0.75, y: centerY - HEXAGON_HEIGHT * 0.5 },
+    ];
+
+    return positions.filter(pos => 
+      !items.some(item => 
+        Math.abs(item.x - pos.x) < 10 && Math.abs(item.y - pos.y) < 10
+      )
+    );
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0 && !isCreating && !dragState) {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+    if (e.button === 0 && !isCreating && !isEditModalOpen) {
+      isDraggingRef.current = true;
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
     }
   };
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isDragging && !dragState) {
-      setOffset({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
-      });
-    }
-
-    if (dragState) {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (rect) {
-        let x = (e.clientX - rect.left) / zoom;
-        let y = (e.clientY - rect.top) / zoom;
-        
-        // Snap to grid
-        x = Math.round(x / 50) * 50;
-        y = Math.round(y / 50) * 50;
-
-        setItems(prevItems => 
-          prevItems.map(item => 
-            item.id === dragState.itemId
-              ? { ...item, x, y }
-              : item
-          )
-        );
-      }
-    }
-
-    if (isCreating && containerRef.current) {
+    if (isDraggingRef.current) {
+      const dx = e.clientX - lastMousePosRef.current.x;
+      const dy = e.clientY - lastMousePosRef.current.y;
+      
+      setOffset(prev => ({
+        x: prev.x + dx,
+        y: prev.y + dy
+      }));
+      
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+    } else if (isCreating && containerRef.current && !isEditModalOpen) {
       const rect = containerRef.current.getBoundingClientRect();
-      if (e.clientX >= rect.left && 
-          e.clientX <= rect.right && 
-          e.clientY >= rect.top && 
-          e.clientY <= rect.bottom) {
-        let x = (e.clientX - rect.left) / zoom - offset.x;
-        let y = (e.clientY - rect.top) / zoom - offset.y;
-        
-        // Snap to grid
-        x = Math.round(x / 50) * 50;
-        y = Math.round(y / 50) * 50;
-        
-        setGhostPosition({ x, y });
-      } else {
-        setGhostPosition(null);
-      }
-    }
-  }, [isDragging, dragStart, isCreating, zoom, offset, dragState, setOffset]);
-
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (isCreating && !dragState && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      if (e.clientX >= rect.left && 
-          e.clientX <= rect.right && 
-          e.clientY >= rect.top && 
-          e.clientY <= rect.bottom) {
-        const x = (e.clientX - rect.left) / zoom - offset.x;
-        const y = (e.clientY - rect.top) / zoom - offset.y;
-        setPendingPosition({ x, y });
-        setIsCreateModalOpen(true);
-      } else {
-        setIsCreating(false);
-        setGhostPosition(null);
-      }
-    }
-    setIsDragging(false);
-    setDragState(null);
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const deltaY = e.deltaY;
-    const delta = deltaY > 0 ? -0.1 : 0.1;
-    
-    setZoom(prevZoom => {
-      const newZoom = Math.max(0.5, Math.min(2, prevZoom + delta));
-      return newZoom;
-    });
-  };
-
-  // Hexagon handlers
-  const handleHexagonDragStart = (id: string, e: React.MouseEvent) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (rect) {
-      const x = (e.clientX - rect.left) / zoom;
-      const y = (e.clientY - rect.top) / zoom;
-      const item = items.find(item => item.id === id);
-      if (item) {
-        setDragState({
-          itemId: id,
-          startX: x,
-          startY: y,
-          initialX: item.x,
-          initialY: item.y
+      const mouseX = (e.clientX - rect.left) / zoom - (offset.x / zoom);
+      const mouseY = (e.clientY - rect.top) / zoom - (offset.y / zoom);
+      
+      let closestDistance = Infinity;
+      let closestPosition = null;
+      
+      items.forEach(item => {
+        const availablePositions = getAvailablePositions(item.x, item.y);
+        availablePositions.forEach(pos => {
+          const distance = Math.sqrt(
+            Math.pow(mouseX - pos.x, 2) + Math.pow(mouseY - pos.y, 2)
+          );
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestPosition = pos;
+          }
         });
+      });
+
+      if (closestPosition && closestDistance < HEXAGON_WIDTH) {
+        setGhostPosition(closestPosition);
+      } else {
+        setGhostPosition(null);
       }
     }
+  }, [isCreating, zoom, offset, items, isEditModalOpen]);
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
   };
 
-  const handleHexagonDoubleClick = (item: HoneycombItem) => {
-    setEditingItem(item);
-    setIsEditModalOpen(true);
+  const handleMouseLeave = () => {
+    isDraggingRef.current = false;
   };
 
-  const handleHexagonClick = (id: string) => {
-    if (selectedItemId === id) {
-      setItems(prevItems =>
-        prevItems.map(item =>
-          item.id === id
-            ? { ...item, isCompleted: !item.isCompleted }
-            : item
-        )
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    if (isEditModalOpen) return;
+    
+    if (isCreating && ghostPosition && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) / zoom - (offset.x / zoom);
+      const clickY = (e.clientY - rect.top) / zoom - (offset.y / zoom);
+
+      // Check if click is close enough to ghost position
+      const distanceToGhost = Math.sqrt(
+        Math.pow(clickX - ghostPosition.x, 2) + 
+        Math.pow(clickY - ghostPosition.y, 2)
       );
-    } else {
-      setSelectedItemId(id);
-    }
-  };
 
-  // Modal handlers
-  const handleTaskSubmit = (data: { title: string }) => {
-    if (pendingPosition) {
-      const newItem: HoneycombItem = {
+      // Only create if click is within 20 pixels of ghost center
+      if (distanceToGhost > 20) return;
+
+      const newItem = {
         id: Date.now().toString(),
-        x: pendingPosition.x,
-        y: pendingPosition.y,
-        title: data.title,
-        isCompleted: false
+        x: ghostPosition.x,
+        y: ghostPosition.y,
+        title: 'New Task',
+        connections: [] as string[],
+        isCompleted: false,
+        color: '#FDE68A'
       };
-      setItems(prev => [...prev, newItem]);
-      setPendingPosition(null);
+
+      const closestItem = items.reduce((closest, item) => {
+        const distance = Math.sqrt(
+          Math.pow(item.x - ghostPosition.x, 2) + 
+          Math.pow(item.y - ghostPosition.y, 2)
+        );
+        if (!closest || distance < closest.distance) {
+          return { item, distance };
+        }
+        return closest;
+      }, null as { item: HoneycombItem; distance: number; } | null);
+
+      let itemToAdd = newItem;
+      if (closestItem) {
+        itemToAdd = {
+          ...newItem,
+          connections: [closestItem.item.id]
+        };
+        setItems(prev => [
+          ...prev.map(item => 
+            item.id === closestItem.item.id
+              ? { ...item, connections: [...item.connections, newItem.id] }
+              : item
+          ),
+          itemToAdd
+        ]);
+      } else {
+        setItems(prev => [...prev, itemToAdd]);
+      }
+
+      setEditingItem(itemToAdd);
+      setIsEditModalOpen(true);
       setIsCreating(false);
       setGhostPosition(null);
-      setIsCreateModalOpen(false);
     }
   };
 
-  const handleEditSubmit = (data: { title: string; color?: string }) => {
+  const handleMarkComplete = (id: string) => {
+    setItems(prev => prev.map(item => 
+      item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+    ));
+  };
+
+  const handleModalClose = () => {
+    setIsEditModalOpen(false);
+    setEditingItem(null);
+    if (editingItem && !items.some(item => item.id === editingItem.id)) {
+      setItems(prev => prev.filter(item => item.id !== editingItem.id));
+    }
+  };
+
+  const handleEditSubmit = (data: { title: string; color: string }) => {
     if (editingItem) {
-      setItems(prevItems => 
-        prevItems.map(item => 
-          item.id === editingItem.id
-            ? { ...item, ...data }
-            : item
-        )
-      );
+      setItems(prev => prev.map(item => 
+        item.id === editingItem.id
+          ? { ...item, ...data }
+          : item
+      ));
       setIsEditModalOpen(false);
       setEditingItem(null);
     }
   };
 
-  const handleDeleteHexagon = () => {
-    if (editingItem) {
-      setItems(prevItems => prevItems.filter(item => item.id !== editingItem.id));
-      setIsEditModalOpen(false);
-      setEditingItem(null);
-    }
-  };
-
-  const scrollToHexagon = (id: string) => {
-    const item = items.find(item => item.id === id);
-    if (item && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
+  const handleDeleteItem = () => {
+    if (editingItem && !editingItem.isMain) {
+      setItems(prev => prev.map(item => ({
+        ...item,
+        connections: item.connections.filter(id => id !== editingItem.id)
+      })));
       
-      setOffset({
-        x: centerX - (item.x * zoom),
-        y: centerY - (item.y * zoom)
-      });
-      setSelectedItemId(id);
+      setItems(prev => prev.filter(item => item.id !== editingItem.id));
+      setIsEditModalOpen(false);
+      setEditingItem(null);
     }
   };
 
-  // Keyboard handler
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (isCreating) {
-          setIsCreating(false);
-          setGhostPosition(null);
-          setPendingPosition(null);
-        }
-        if (selectedItemId) {
-          setSelectedItemId(null);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCreating, selectedItemId]);
+  const handleSidebarEditClick = (id: string) => {
+    if (isCreating) return;
+    
+    const item = items.find(i => i.id === id);
+    if (item) {
+      setEditingItem(item);
+      setIsEditModalOpen(true);
+    }
+  };
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-gray-50">
-      {/* Add Button */}
+    <div 
+      ref={containerRef}
+      className="relative w-full h-full overflow-hidden bg-gray-50"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+      onClick={handleCanvasClick}
+    >
+      <svg className="absolute inset-0 w-full h-full opacity-[0.02]">
+        <defs>
+          <pattern id="infinity-pattern" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
+            <g transform="translate(60,60)">
+              <path
+                d="M-20,-10 C-20,-25 -35,-25 -35,-10 C-35,5 -20,20 0,0 C20,20 35,5 35,-10 C35,-25 20,-25 20,-10 C20,5 0,15 0,0 C0,-15 -20,5 -20,-10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <circle cx="-30" cy="-10" r="3" fill="currentColor" opacity="0.5" />
+              <circle cx="30" cy="-10" r="3" fill="currentColor" opacity="0.5" />
+            </g>
+          </pattern>
+        </defs>
+        <rect x="0" y="0" width="100%" height="100%" fill="url(#infinity-pattern)" />
+      </svg>
+
       <div className="absolute top-4 left-4 z-10">
         <button
           onClick={() => setIsCreating(!isCreating)}
@@ -269,34 +305,23 @@ export const HoneycombCanvas = ({
             isCreating ? 'bg-amber-500 text-white' : 'bg-white hover:bg-gray-50'
           }`}
         >
-          <Plus size={22} />
-          <span className="font-xl">{t('actions.addHexagon')}</span>
+          {isCreating ? <X size={22} /> : <Plus size={22} />}
+          <span className="font-xl">
+            {isCreating ? t('actions.done') : t('actions.addHexagon')}
+          </span>
         </button>
       </div>
 
-      {/* Main Canvas */}
-      <div 
-        ref={containerRef}
-        className={`w-full h-full ${isCreating ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
+      <div
+        className="absolute inset-0"
+        style={{
+          transform: `scale(${zoom})`,
+        }}
       >
         <div
           className="absolute inset-0"
           style={{
-            width: '400%',
-            height: '400%',
-            left: '-150%',
-            top: '-150%',
-            transform: `scale(${zoom}) translate(${offset.x}px, ${offset.y}px)`,
-            backgroundImage: `
-              linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-              linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
-            `,
-            backgroundSize: '50px 50px',
+            transform: `translate(${offset.x}px, ${offset.y}px)`,
           }}
         >
           {items.map(item => (
@@ -304,60 +329,114 @@ export const HoneycombCanvas = ({
               key={item.id}
               {...item}
               isSelected={selectedItemId === item.id}
-              onClick={() => handleHexagonClick(item.id)}
-              onDoubleClick={() => handleHexagonDoubleClick(item)}
-              onDragStart={handleHexagonDragStart}
+              isCreating={isCreating}
+              connectedHexagons={items.filter(other => 
+                item.connections.includes(other.id)
+              ).map(other => ({
+                id: other.id,
+                x: other.x,
+                y: other.y
+              }))}
+              onClick={() => !isCreating && setSelectedItemId(item.id)}
+              onMarkComplete={() => !isCreating && handleMarkComplete(item.id)}
+              onEdit={() => !isCreating && handleSidebarEditClick(item.id)}
             />
           ))}
 
-          {isCreating && ghostPosition && (
+{isCreating && ghostPosition && (
             <HoneycombHexagon
               id="ghost"
               x={ghostPosition.x}
               y={ghostPosition.y}
-              title={t('placeholders.newHexagon')}
+              title="Click to Create"
               isGhost
+              connections={[]}
+              color="#60A5FA"
+              onClick={() => {
+                if (isCreating && ghostPosition) {
+                  const newItem = {
+                    id: Date.now().toString(),
+                    x: ghostPosition.x,
+                    y: ghostPosition.y,
+                    title: 'New Task',
+                    connections: [] as string[],
+                    isCompleted: false,
+                    color: '#FDE68A'
+                  };
+
+                  // Find closest item for connection
+                  const closestItem = items.reduce((closest, item) => {
+                    const distance = Math.sqrt(
+                      Math.pow(item.x - ghostPosition.x, 2) + 
+                      Math.pow(item.y - ghostPosition.y, 2)
+                    );
+                    if (!closest || distance < closest.distance) {
+                      return { item, distance };
+                    }
+                    return closest;
+                  }, null as { item: HoneycombItem; distance: number; } | null);
+
+                  let itemToAdd = newItem;
+                  if (closestItem) {
+                    itemToAdd = {
+                      ...newItem,
+                      connections: [closestItem.item.id]
+                    };
+                    setItems(prev => [
+                      ...prev.map(item => 
+                        item.id === closestItem.item.id
+                          ? { ...item, connections: [...item.connections, newItem.id] }
+                          : item
+                      ),
+                      itemToAdd
+                    ]);
+                  } else {
+                    setItems(prev => [...prev, itemToAdd]);
+                  }
+
+                  setEditingItem(itemToAdd);
+                  setIsEditModalOpen(true);
+                  setIsCreating(false);
+                  setGhostPosition(null);
+                }
+              }}
             />
           )}
         </div>
       </div>
 
-      {/* Task Sidebar */}
+      {isEditModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
+
       <TaskSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         items={items}
         selectedItemId={selectedItemId}
-        onItemClick={scrollToHexagon}
-        onEditClick={(id) => {
-          const item = items.find(item => item.id === id);
-          if (item) {
-            setEditingItem(item);
-            setIsEditModalOpen(true);
+        onItemClick={(id) => {
+          if (isCreating) return;
+          setSelectedItemId(id);
+          const item = items.find(i => i.id === id);
+          if (item && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            setOffset({
+              x: (rect.width / 2 / zoom) - item.x,
+              y: (rect.height / 2 / zoom) - item.y
+            });
           }
         }}
-      />
-
-      {/* Modals */}
-      <HoneycombTaskModal
-        isOpen={isCreateModalOpen}
-        onClose={() => {
-          setIsCreateModalOpen(false);
-          setIsCreating(false);
-          setPendingPosition(null);
-          setGhostPosition(null);
-        }}
-        onSubmit={handleTaskSubmit}
+        onEditClick={handleSidebarEditClick}
       />
 
       <HoneycombEditModal
         isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingItem(null);
-        }}
+        onClose={handleModalClose}
         onSubmit={handleEditSubmit}
-        onDelete={handleDeleteHexagon}
+        onDelete={handleDeleteItem}
         initialData={editingItem ? {
           title: editingItem.title,
           color: editingItem.color

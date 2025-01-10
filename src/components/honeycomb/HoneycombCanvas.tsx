@@ -37,6 +37,7 @@ const HEXAGON_WIDTH = 2 * HEXAGON_SIZE;
 
 export const HoneycombCanvas = ({
   zoom,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setZoom,
   offset,
   setOffset,

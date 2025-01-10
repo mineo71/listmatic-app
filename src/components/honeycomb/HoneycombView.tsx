@@ -6,6 +6,12 @@ export const HoneycombView = () => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+
+  //TODO: Implement progress update
+  const handleProgressUpdate = (progress: number) => {
+    console.log(`Progress: ${progress}%`);
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 relative">
@@ -16,6 +22,7 @@ export const HoneycombView = () => {
           setOffset={setOffset}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
+          onProgressUpdate={handleProgressUpdate}
         />
       </div>
     </div>

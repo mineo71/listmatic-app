@@ -26,16 +26,16 @@ export const HexagonActions = ({
   ).join(' ') + ' Z';
 
   // Create dividing line for top and bottom sections
-  const dividerPath = `M ${points[5].x},${points[5].y} L ${points[2].x},${points[2].y}`;
+  const dividerPath = `M ${points[0].x},${(points[0].y + points[3].y) / 2} L ${points[3].x},${(points[0].y + points[3].y) / 2}`;
 
   const handleTopClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onMarkComplete(e);
+    onEdit(e);
   };
 
   const handleBottomClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onEdit(e);
+    onMarkComplete(e);
   };
 
   return (
@@ -62,17 +62,17 @@ export const HexagonActions = ({
 
       {/* Clickable areas */}
       <g clipPath="url(#hexagonClip)">
-        {/* Top half - Complete */}
+        {/* Top half - Edit */}
         <path
-          d={`M ${points[0].x},${points[0].y} L ${points[1].x},${points[1].y} L ${points[2].x},${points[2].y} L ${points[5].x},${points[5].y} Z`}
+          d={`M ${points[0].x},${points[0].y} L ${points[1].x},${points[1].y} L ${points[2].x},${points[2].y} L ${points[3].x},${(points[0].y + points[3].y) / 2} Z`}
           fill="transparent"
           className="cursor-pointer"
           onClick={handleTopClick}
         />
 
-        {/* Bottom half - Edit */}
+        {/* Bottom half - Complete */}
         <path
-          d={`M ${points[2].x},${points[2].y} L ${points[3].x},${points[3].y} L ${points[4].x},${points[4].y} L ${points[5].x},${points[5].y} Z`}
+          d={`M ${points[3].x},${(points[0].y + points[3].y) / 2} L ${points[4].x},${points[4].y} L ${points[5].x},${points[5].y} L ${points[0].x},${points[0].y} Z`}
           fill="transparent"
           className="cursor-pointer"
           onClick={handleBottomClick}

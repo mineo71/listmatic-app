@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { HoneycombHexagon } from './HoneycombHexagon';
+import { HoneycombHexagon } from './hexagon/HoneycombHexagon';
 import { HoneycombEditModal } from './HoneycombEditModal';
 import TaskSidebar from './TaskSidebar';
 

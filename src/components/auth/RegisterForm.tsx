@@ -1,14 +1,15 @@
-// src/components/auth/RegisterForm.tsx
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate, Link } from 'react-router-dom';
+'use client'
+
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, Link } from 'react-router-dom'
 
 interface RegisterFormData {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  firstName: string;
-  lastName: string;
+  email: string
+  password: string
+  confirmPassword: string
+  firstName: string
+  lastName: string
 }
 
 export const RegisterForm = () => {
@@ -18,165 +19,165 @@ export const RegisterForm = () => {
     confirmPassword: '',
     firstName: '',
     lastName: '',
-  });
-  const [errors, setErrors] = useState<Partial<RegisterFormData>>({});
-  const navigate = useNavigate();
-  const { t } = useTranslation();
+  })
+  const [errors, setErrors] = useState<Partial<RegisterFormData>>({})
+  const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<RegisterFormData> = {};
+    const newErrors: Partial<RegisterFormData> = {}
 
     if (!formData.email) {
-      newErrors.email = t('register.errors.emailRequired');
+      newErrors.email = t('register.errors.emailRequired')
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = t('register.errors.emailInvalid');
+      newErrors.email = t('register.errors.emailInvalid')
     }
 
     if (!formData.password) {
-      newErrors.password = t('register.errors.passwordRequired');
+      newErrors.password = t('register.errors.passwordRequired')
     } else if (formData.password.length < 8) {
-      newErrors.password = t('register.errors.passwordLength');
+      newErrors.password = t('register.errors.passwordLength')
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = t('register.errors.confirmPasswordRequired');
+      newErrors.confirmPassword = t('register.errors.confirmPasswordRequired')
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = t('register.errors.passwordsDoNotMatch');
+      newErrors.confirmPassword = t('register.errors.passwordsDoNotMatch')
     }
 
     if (!formData.firstName) {
-      newErrors.firstName = t('register.errors.firstNameRequired');
+      newErrors.firstName = t('register.errors.firstNameRequired')
     }
 
     if (!formData.lastName) {
-      newErrors.lastName = t('register.errors.lastNameRequired');
+      newErrors.lastName = t('register.errors.lastNameRequired')
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
     if (errors[name as keyof RegisterFormData]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      setErrors(prev => ({ ...prev, [name]: undefined }))
     }
-  };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+    e.preventDefault()
+
     if (!validateForm()) {
-      return;
+      return
     }
 
     try {
-      // Add your registration API call here
-      console.log('Registration data:', formData);
-      
-      // On successful registration, navigate to login
-      navigate('/login', { state: { registered: true } });
+      console.log('Registration data:', formData)
+      navigate('/login', { state: { registered: true } })
     } catch (error) {
-      console.error('Registration error:', error);
-      // Handle registration error
+      console.error('Registration error:', error)
     }
-  };
-
-  const inputClasses = "appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm";
-  const errorClasses = "text-red-500 text-xs mt-1";
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50 to-white">
+        <div className="max-w-[400px] w-full bg-gradient-to-b from-white to-amber-50 rounded-[40px] p-[25px_35px] border-[5px] border-white shadow-[0_30px_30px_-20px_rgba(133,189,215,0.88)] m-5">
+          <div className="text-center font-black text-3xl text-amber-600">
             {t('register.title')}
-          </h2>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm space-y-4">
-            <div>
-              <input
-                name="firstName"
-                type="text"
-                value={formData.firstName}
-                onChange={handleChange}
-                className={inputClasses}
-                placeholder={t('register.firstName')}
-              />
-              {errors.firstName && <p className={errorClasses}>{errors.firstName}</p>}
-            </div>
-
-            <div>
-              <input
-                name="lastName"
-                type="text"
-                value={formData.lastName}
-                onChange={handleChange}
-                className={inputClasses}
-                placeholder={t('register.lastName')}
-              />
-              {errors.lastName && <p className={errorClasses}>{errors.lastName}</p>}
-            </div>
-
-            <div>
-              <input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={inputClasses}
-                placeholder={t('register.email')}
-              />
-              {errors.email && <p className={errorClasses}>{errors.email}</p>}
-            </div>
-
-            <div>
-              <input
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={inputClasses}
-                placeholder={t('register.password')}
-              />
-              {errors.password && <p className={errorClasses}>{errors.password}</p>}
-            </div>
-
-            <div>
-              <input
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className={inputClasses}
-                placeholder={t('register.confirmPassword')}
-              />
-              {errors.confirmPassword && <p className={errorClasses}>{errors.confirmPassword}</p>}
-            </div>
           </div>
 
-          <div>
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+            <div className="space-y-4">
+              <div>
+                <input
+                    name="firstName"
+                    type="text"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className="w-full bg-white border-none py-4 px-5 rounded-[20px] shadow-[0_10px_10px_-5px_#fff3e0] border-x-2 border-transparent focus:outline-none focus:border-x-2 focus:border-amber-400 transition-all"
+                    placeholder={t('register.firstName')}
+                />
+                {errors.firstName && (
+                    <p className="text-amber-600 text-xs mt-2 ml-2">{errors.firstName}</p>
+                )}
+              </div>
+
+              <div>
+                <input
+                    name="lastName"
+                    type="text"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    className="w-full bg-white border-none py-4 px-5 rounded-[20px] shadow-[0_10px_10px_-5px_#fff3e0] border-x-2 border-transparent focus:outline-none focus:border-x-2 focus:border-amber-400 transition-all"
+                    placeholder={t('register.lastName')}
+                />
+                {errors.lastName && (
+                    <p className="text-amber-600 text-xs mt-2 ml-2">{errors.lastName}</p>
+                )}
+              </div>
+
+              <div>
+                <input
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full bg-white border-none py-4 px-5 rounded-[20px] shadow-[0_10px_10px_-5px_#fff3e0] border-x-2 border-transparent focus:outline-none focus:border-x-2 focus:border-amber-400 transition-all"
+                    placeholder={t('register.email')}
+                />
+                {errors.email && (
+                    <p className="text-amber-600 text-xs mt-2 ml-2">{errors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <input
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full bg-white border-none py-4 px-5 rounded-[20px] shadow-[0_10px_10px_-5px_#fff3e0] border-x-2 border-transparent focus:outline-none focus:border-x-2 focus:border-amber-400 transition-all"
+                    placeholder={t('register.password')}
+                />
+                {errors.password && (
+                    <p className="text-amber-600 text-xs mt-2 ml-2">{errors.password}</p>
+                )}
+              </div>
+
+              <div>
+                <input
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className="w-full bg-white border-none py-4 px-5 rounded-[20px] shadow-[0_10px_10px_-5px_#fff3e0] border-x-2 border-transparent focus:outline-none focus:border-x-2 focus:border-amber-400 transition-all"
+                    placeholder={t('register.confirmPassword')}
+                />
+                {errors.confirmPassword && (
+                    <p className="text-amber-600 text-xs mt-2 ml-2">{errors.confirmPassword}</p>
+                )}
+              </div>
+            </div>
+
             <button
-              type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                type="submit"
+                className="w-full font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-white py-4 px-4 rounded-[20px] shadow-[0_20px_10px_-15px_rgba(133,189,215,0.88)] border-none transition-all hover:scale-[1.03] hover:shadow-[0_23px_10px_-20px_rgba(133,189,215,0.88)] active:scale-95 active:shadow-[0_15px_10px_-10px_rgba(133,189,215,0.88)]"
             >
               {t('register.submit')}
             </button>
-          </div>
 
-          <div className="text-center">
-            <Link 
-              to="/login" 
-              className="text-indigo-600 hover:text-indigo-500 transition-colors"
-            >
-              {t('register.loginLink')}
-            </Link>
-          </div>
-        </form>
+            <div className="text-center">
+              <Link
+                  to="/login"
+                  className="text-xs text-amber-600 hover:text-amber-700 transition-colors"
+              >
+                {t('register.loginLink')}
+              </Link>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
-  );
-};
+  )
+}
+

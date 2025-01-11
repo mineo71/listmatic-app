@@ -66,11 +66,16 @@ export const HoneycombHexagon = ({
     }
   };
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClick?.(e);
+  };
+
   return (
     <div
-      className={`absolute transform transition-all duration-200 ease-out
+      className={`absolute transform transition-all duration-200 ease-out cursor-pointer
         ${isHovered ? '-translate-y-3' : ''} 
-        ${isDragging ? 'cursor-grabbing z-50' : 'cursor-pointer'}
+        ${isDragging ? 'cursor-grabbing z-50' : ''}
         ${isCompleted ? 'opacity-80' : ''}`}
       style={{ 
         left: x, 
@@ -81,7 +86,7 @@ export const HoneycombHexagon = ({
       onMouseLeave={() => setIsHovered(false)}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
-      onClick={onClick}
+      onClick={handleClick}
     >
       <svg
         width={width}

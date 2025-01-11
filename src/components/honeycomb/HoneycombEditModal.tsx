@@ -6,11 +6,12 @@ interface EditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: { title: string; color: string }) => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   initialData?: {
     title: string;
     color?: string;
   };
+  isCreating?: boolean;
 }
 
 const COLORS = [
@@ -27,7 +28,8 @@ export const HoneycombEditModal = ({
   onClose,
   onSubmit,
   onDelete,
-  initialData = { title: '', color: COLORS[0] }, // Provide default value
+  initialData = { title: '', color: COLORS[0] },
+  isCreating = false,
 }: EditModalProps) => {
   const { t } = useTranslation();
   const [title, setTitle] = useState(initialData.title);
@@ -64,7 +66,9 @@ export const HoneycombEditModal = ({
           <X size={24} />
         </button>
         
-        <h2 className="text-xl font-semibold mb-4">{t('modals.editHexagon')}</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {isCreating ? t('modals.createHexagon') : t('modals.editHexagon')}
+        </h2>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -100,16 +104,18 @@ export const HoneycombEditModal = ({
           </div>
 
           <div className="flex justify-between items-center pt-4">
-            <button
-              type="button"
-              onClick={onDelete}
-              className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center gap-2"
-            >
-              <Trash2 size={16} />
-              {t('actions.delete')}
-            </button>
+            {!isCreating && onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center gap-2"
+              >
+                <Trash2 size={16} />
+                {t('actions.delete')}
+              </button>
+            )}
             
-            <div className="flex gap-2">
+            <div className={`flex gap-2 ${!isCreating && onDelete ? '' : 'ml-auto'}`}>
               <button
                 type="button"
                 onClick={onClose}
@@ -122,7 +128,7 @@ export const HoneycombEditModal = ({
                 disabled={!title.trim()}
                 className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50"
               >
-                {t('actions.save')}
+                {isCreating ? t('actions.create') : t('actions.save')}
               </button>
             </div>
           </div>

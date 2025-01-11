@@ -57,6 +57,7 @@ export const HoneycombCanvas = ({
   const [ghostPosition, setGhostPosition] = useState<Offset | null>(null);
   const [editingItem, setEditingItem] = useState<HoneycombItem | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isModalCreating, setIsModalCreating] = useState(false);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -218,6 +219,7 @@ export const HoneycombCanvas = ({
 
       setEditingItem(itemToAdd);
       setIsEditModalOpen(true);
+      setIsModalCreating(true);
       setIsCreating(false);
       setGhostPosition(null);
     }
@@ -256,9 +258,7 @@ export const HoneycombCanvas = ({
   const handleModalClose = () => {
     setIsEditModalOpen(false);
     setEditingItem(null);
-    if (editingItem && !items.some(item => item.id === editingItem.id)) {
-      setItems(prev => prev.filter(item => item.id !== editingItem.id));
-    }
+    setIsModalCreating(false); // Reset the creation state
   };
 
   const handleEditSubmit = (data: { title: string; color: string }) => {
@@ -270,6 +270,7 @@ export const HoneycombCanvas = ({
       ));
       setIsEditModalOpen(false);
       setEditingItem(null);
+      setIsModalCreating(false);
     }
   };
 
@@ -423,6 +424,7 @@ export const HoneycombCanvas = ({
                   setEditingItem(itemToAdd);
                   setIsEditModalOpen(true);
                   setIsCreating(false);
+                  setIsModalCreating(true);
                   setGhostPosition(null);
                 }
               }}
@@ -458,7 +460,7 @@ export const HoneycombCanvas = ({
         onEditClick={handleSidebarEditClick}
       />
 
-      <HoneycombEditModal
+    <HoneycombEditModal
         isOpen={isEditModalOpen}
         onClose={handleModalClose}
         onSubmit={handleEditSubmit}
@@ -467,6 +469,7 @@ export const HoneycombCanvas = ({
           title: editingItem.title,
           color: editingItem.color
         } : undefined}
+        isCreating={isModalCreating}
       />
     </div>
   );

@@ -344,7 +344,7 @@ export const HoneycombCanvas = ({
             />
           ))}
 
-{isCreating && ghostPosition && (
+          {isCreating && ghostPosition && (
             <HoneycombHexagon
               id="ghost"
               x={ghostPosition.x}

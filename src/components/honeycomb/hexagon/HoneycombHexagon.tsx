@@ -35,6 +35,7 @@ export const HoneycombHexagon = ({
   isSelected = false,
   isLinking = false,
   isCompleted = false,
+  isCreating = false,
   onClick,
   onDragStart,
   onDragEnd,
@@ -113,7 +114,7 @@ export const HoneycombHexagon = ({
           isCompleted={isCompleted}
         />
 
-        {isHovered && !isGhost && onMarkComplete && onEdit && (
+        {isHovered && !isGhost && !isCreating && onMarkComplete && onEdit && (
           <HexagonActions
             points={points}
             width={width}

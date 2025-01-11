@@ -116,5 +116,41 @@
     "title": "Назва",
     "color": "Колір",
     "pickColor": "Обрати колір"
+  },
+  "auth": {
+    "login": {
+      "title": "Увійти",
+      "email": "Електронна пошта",
+      "password": "Пароль",
+      "submit": "Увійти",
+      "forgotPassword": "Забули пароль?",
+      "registerLink": "Немає облікового запису? Зареєструватися",
+      "errors": {
+        "emailRequired": "Введіть електронну пошту",
+        "emailInvalid": "Введіть дійсну електронну пошту",
+        "passwordRequired": "Введіть пароль"
+      }
+    },
+    "register": {
+      "title": "Реєстрація",
+      "firstName": "Ім'я",
+      "lastName": "Прізвище",
+      "email": "Електронна пошта",
+      "password": "Пароль",
+      "confirmPassword": "Підтвердіть пароль",
+      "submit": "Зареєструватися",
+      "loginLink": "Вже маєте обліковий запис? Увійти",
+      "errors": {
+        "firstNameRequired": "Введіть ім'я",
+        "lastNameRequired": "Введіть прізвище",
+        "emailRequired": "Введіть електронну пошту",
+        "emailInvalid": "Введіть дійсну електронну пошту",
+        "passwordRequired": "Введіть пароль",
+        "passwordLength": "Пароль має містити щонайменше 8 символів",
+        "confirmPasswordRequired": "Підтвердіть пароль",
+        "passwordsDoNotMatch": "Паролі не співпадають"
+      }
+    }
   }
 }
+

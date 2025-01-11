@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { HoneycombHexagon } from './hexagon/HoneycombHexagon';
 import { HoneycombEditModal } from './HoneycombEditModal';
 import TaskSidebar from './TaskSidebar';
+import toast from 'react-hot-toast';
 
 interface Offset {
   x: number;
@@ -223,6 +224,30 @@ export const HoneycombCanvas = ({
   };
 
   const handleMarkComplete = (id: string) => {
+    const item = items.find(i => i.id === id);
+    
+    // If trying to complete main goal, check if all other tasks are completed
+    if (item?.isMain) {
+      const otherItems = items.filter(i => !i.isMain);
+      const allOthersCompleted = otherItems.every(i => i.isCompleted);
+      
+      if (!allOthersCompleted) {
+        toast.error('Complete all other tasks first');
+        return;
+      }
+      
+      // If all others are completed, allow completing main goal and show congratulations
+      setItems(prev => prev.map(item => 
+        item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+      ));
+      
+      if (!item.isCompleted){
+        toast.success('Greetings on finishing the project! 🎉');
+      }
+      return;
+    }
+    
+    // For non-main goals, toggle completion as normal
     setItems(prev => prev.map(item => 
       item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
     ));

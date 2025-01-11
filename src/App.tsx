@@ -13,6 +13,7 @@ import { HoneycombViewWrapper } from '@/components/hive/HoneycombViewWrapper';
 import { config } from '@/config';
 import './i18n/config';
 import './index.css';
+import { Toaster } from 'react-hot-toast';
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ function App() {
             {/* Catch all route */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <Toaster />
         </Router>
       </AuthProvider>
     </QueryClientProvider>

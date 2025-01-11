@@ -2,6 +2,34 @@
   "appName": "BeeTask",
   "totalProgress": "Total Progress",
   "language": "Language",
+  "login": {
+    "title": "Login",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign In",
+    "forgotPassword": "Forgot Password?",
+    "registerLink": "Don't have an account? Sign up"
+  },
+  "register": {
+    "title": "Register",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "submit": "Sign Up",
+    "loginLink": "Already have an account? Sign in",
+    "errors": {
+      "emailRequired": "Email is required",
+      "emailInvalid": "Invalid email format",
+      "passwordRequired": "Password is required",
+      "passwordLength": "Password must be at least 8 characters",
+      "confirmPasswordRequired": "Please confirm your password",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required"
+    }
+  },
   "settings": {
     "title": "Settings",
     "description": "Manage your application preferences",
@@ -38,18 +66,6 @@
       "confirmExport": "Are you sure you want to export all your data?",
       "confirmDelete": "Are you sure you want to delete all your data? This action cannot be undone.",
       "description": "Manage your data preferences"
-    },
-    "privacy": {
-      "title": "Privacy Settings",
-      "analytics": "Allow analytics",
-      "sharing": "Allow data sharing",
-      "description": "Manage your privacy preferences"
-    },
-    "sound": {
-      "title": "Sound Settings",
-      "enable": "Enable sounds",
-      "volume": "Volume",
-      "description": "Manage sound preferences"
     }
   },
   "profile": {
@@ -71,7 +87,12 @@
     "moreActions": "More Actions",
     "save": "Save",
     "cancel": "Cancel",
-    "addHexagon": "Add Hexagon"
+    "create": "Create",
+    "addHexagon": "Add Hexagon",
+    "done": "Done",
+    "resetView": "Reset View",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out"
   },
   "navigation": {
     "settings": "Settings",
@@ -81,6 +102,7 @@
   "modals": {
     "createHive": "Create New Hive",
     "createHoneycomb": "Create New Honeycomb",
+    "createTask": "Create New Task",
     "cancel": "Cancel",
     "create": "Create",
     "rename": "Rename",
@@ -92,9 +114,11 @@
     "newTask": "Add a new task...",
     "search": "Search...",
     "newHiveName": "Enter hive name...",
-    "newHoneycombName": "Enter honeycomb name..."
+    "newHoneycombName": "Enter honeycomb name...",
+    "taskTitle": "Enter task title..."
   },
   "confirmations": {
+    "delete": "Are you sure? This action cannot be undone.",
     "deleteHive": "Are you sure you want to delete this hive?",
     "deleteHoneycomb": "Are you sure you want to delete this honeycomb?",
     "deleteTask": "Are you sure you want to delete this task?",
@@ -105,7 +129,9 @@
     "noTasks": "No tasks yet",
     "loading": "Loading...",
     "settingsSaved": "Settings saved successfully",
-    "profileUpdated": "Profile updated successfully"
+    "profileUpdated": "Profile updated successfully",
+    "taskCompleted": "Greetings on finishing the project! 🎉",
+    "completeOtherTasks": "Complete all other tasks first"
   },
   "prompts": {
     "enterNewName": "Enter new name",
@@ -116,40 +142,9 @@
     "color": "Color",
     "pickColor": "Pick a color"
   },
-  "auth": {
-    "login": {
-      "title": "Sign In",
-      "email": "Email",
-      "password": "Password",
-      "submit": "Sign In",
-      "forgotPassword": "Forgot Password?",
-      "registerLink": "Don't have an account? Sign up",
-      "errors": {
-        "emailRequired": "Email is required",
-        "emailInvalid": "Please enter a valid email",
-        "passwordRequired": "Password is required"
-      }
-    },
-    "register": {
-      "title": "Sign Up",
-      "firstName": "First Name",
-      "lastName": "Last Name",
-      "email": "Email",
-      "password": "Password",
-      "confirmPassword": "Confirm Password",
-      "submit": "Sign Up",
-      "loginLink": "Already have an account? Sign in",
-      "errors": {
-        "firstNameRequired": "First name is required",
-        "lastNameRequired": "Last name is required",
-        "emailRequired": "Email is required",
-        "emailInvalid": "Please enter a valid email",
-        "passwordRequired": "Password is required",
-        "passwordLength": "Password must be at least 8 characters",
-        "confirmPasswordRequired": "Please confirm your password",
-        "passwordsDoNotMatch": "Passwords do not match"
-      }
-    }
+  "task": {
+    "title": "Title",
+    "status": "Status",
+    "progress": "Progress"
   }
 }
-

@@ -38,7 +38,6 @@ const HEXAGON_WIDTH = 2 * HEXAGON_SIZE;
 
 export const HoneycombCanvas = ({
   zoom,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setZoom,
   offset,
   setOffset,
@@ -57,6 +56,8 @@ export const HoneycombCanvas = ({
   const [ghostPosition, setGhostPosition] = useState<Offset | null>(null);
   const [editingItem, setEditingItem] = useState<HoneycombItem | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isModalCreating, setIsModalCreating] = useState(false);
+  const [pendingHexagon, setPendingHexagon] = useState<HoneycombItem | null>(null);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -160,94 +161,71 @@ export const HoneycombCanvas = ({
     isDraggingRef.current = false;
   };
 
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    if (isEditModalOpen) return;
-    
-    if (isCreating && ghostPosition && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const clickX = (e.clientX - rect.left) / zoom - (offset.x / zoom);
-      const clickY = (e.clientY - rect.top) / zoom - (offset.y / zoom);
+  const createNewHexagon = () => {
+    if (!ghostPosition || !containerRef.current) return;
 
-      // Check if click is close enough to ghost position
-      const distanceToGhost = Math.sqrt(
-        Math.pow(clickX - ghostPosition.x, 2) + 
-        Math.pow(clickY - ghostPosition.y, 2)
+    const newItem = {
+      id: Date.now().toString(),
+      x: ghostPosition.x,
+      y: ghostPosition.y,
+      title: 'New Task',
+      connections: [] as string[],
+      isCompleted: false,
+      color: '#FDE68A'
+    };
+
+    const closestItem = items.reduce((closest, item) => {
+      const distance = Math.sqrt(
+        Math.pow(item.x - ghostPosition.x, 2) + 
+        Math.pow(item.y - ghostPosition.y, 2)
       );
-
-      // Only create if click is within 20 pixels of ghost center
-      if (distanceToGhost > 20) return;
-
-      const newItem = {
-        id: Date.now().toString(),
-        x: ghostPosition.x,
-        y: ghostPosition.y,
-        title: 'New Task',
-        connections: [] as string[],
-        isCompleted: false,
-        color: '#FDE68A'
-      };
-
-      const closestItem = items.reduce((closest, item) => {
-        const distance = Math.sqrt(
-          Math.pow(item.x - ghostPosition.x, 2) + 
-          Math.pow(item.y - ghostPosition.y, 2)
-        );
-        if (!closest || distance < closest.distance) {
-          return { item, distance };
-        }
-        return closest;
-      }, null as { item: HoneycombItem; distance: number; } | null);
-
-      let itemToAdd = newItem;
-      if (closestItem) {
-        itemToAdd = {
-          ...newItem,
-          connections: [closestItem.item.id]
-        };
-        setItems(prev => [
-          ...prev.map(item => 
-            item.id === closestItem.item.id
-              ? { ...item, connections: [...item.connections, newItem.id] }
-              : item
-          ),
-          itemToAdd
-        ]);
-      } else {
-        setItems(prev => [...prev, itemToAdd]);
+      if (!closest || distance < closest.distance) {
+        return { item, distance };
       }
+      return closest;
+    }, null as { item: HoneycombItem; distance: number; } | null);
 
-      setEditingItem(itemToAdd);
-      setIsEditModalOpen(true);
-      setIsCreating(false);
-      setGhostPosition(null);
+    setPendingHexagon({
+      ...newItem,
+      connections: closestItem ? [closestItem.item.id] : []
+    });
+
+    setEditingItem(newItem);
+    setIsEditModalOpen(true);
+    setIsModalCreating(true);
+    setIsCreating(false);
+    setGhostPosition(null);
+  };
+
+  const handleGhostClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isEditModalOpen) {
+      createNewHexagon();
     }
   };
 
   const handleMarkComplete = (id: string) => {
     const item = items.find(i => i.id === id);
     
-    // If trying to complete main goal, check if all other tasks are completed
     if (item?.isMain) {
       const otherItems = items.filter(i => !i.isMain);
       const allOthersCompleted = otherItems.every(i => i.isCompleted);
       
       if (!allOthersCompleted) {
-        toast.error('Complete all other tasks first');
+        toast.error(t('messages.completeOtherTasks'));
         return;
       }
       
-      // If all others are completed, allow completing main goal and show congratulations
       setItems(prev => prev.map(item => 
         item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
       ));
       
-      if (!item.isCompleted){
-        toast.success('Greetings on finishing the project! 🎉');
+      if (!item.isCompleted) {
+        toast.success(t('messages.taskCompleted'));
       }
       return;
     }
     
-    // For non-main goals, toggle completion as normal
     setItems(prev => prev.map(item => 
       item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
     ));
@@ -256,21 +234,44 @@ export const HoneycombCanvas = ({
   const handleModalClose = () => {
     setIsEditModalOpen(false);
     setEditingItem(null);
-    if (editingItem && !items.some(item => item.id === editingItem.id)) {
-      setItems(prev => prev.filter(item => item.id !== editingItem.id));
-    }
+    setIsModalCreating(false);
+    setPendingHexagon(null); // Clear pending hexagon on cancel
   };
 
   const handleEditSubmit = (data: { title: string; color: string }) => {
-    if (editingItem) {
+    if (editingItem && pendingHexagon) {
+      // Only create the hexagon when the modal is submitted
+      const hexagonToAdd = {
+        ...pendingHexagon,
+        title: data.title,
+        color: data.color
+      };
+
+      if (pendingHexagon.connections.length > 0) {
+        setItems(prev => [
+          ...prev.map(item => 
+            pendingHexagon.connections.includes(item.id)
+              ? { ...item, connections: [...item.connections, hexagonToAdd.id] }
+              : item
+          ),
+          hexagonToAdd
+        ]);
+      } else {
+        setItems(prev => [...prev, hexagonToAdd]);
+      }
+    } else if (editingItem) {
+      // Handle regular edit
       setItems(prev => prev.map(item => 
         item.id === editingItem.id
           ? { ...item, ...data }
           : item
       ));
-      setIsEditModalOpen(false);
-      setEditingItem(null);
     }
+    
+    setIsEditModalOpen(false);
+    setEditingItem(null);
+    setIsModalCreating(false);
+    setPendingHexagon(null);
   };
 
   const handleDeleteItem = () => {
@@ -304,25 +305,22 @@ export const HoneycombCanvas = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
-      onClick={handleCanvasClick}
     >
-      <svg className="absolute inset-0 w-full h-full opacity-[0.02]">
-        <defs>
-          <pattern id="infinity-pattern" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
-            <g transform="translate(60,60)">
-              <path
-                d="M-20,-10 C-20,-25 -35,-25 -35,-10 C-35,5 -20,20 0,0 C20,20 35,5 35,-10 C35,-25 20,-25 20,-10 C20,5 0,15 0,0 C0,-15 -20,5 -20,-10"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <circle cx="-30" cy="-10" r="3" fill="currentColor" opacity="0.5" />
-              <circle cx="30" cy="-10" r="3" fill="currentColor" opacity="0.5" />
-            </g>
-          </pattern>
-        </defs>
-        <rect x="0" y="0" width="100%" height="100%" fill="url(#infinity-pattern)" />
-      </svg>
+      {/* Dynamic Background */}
+      <div 
+        className="absolute w-[200vw] h-[200vh] left-[-50vw] top-[-50vh]"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px),
+            linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px, 50px 50px, 25px 25px, 25px 25px',
+          transform: `translate(${offset.x}px, ${offset.y}px)`,
+          transition: isDraggingRef.current ? 'none' : 'transform 0.15s ease-out'
+        }}
+      />
 
       <div className="absolute top-4 left-4 z-10">
         <button
@@ -374,58 +372,11 @@ export const HoneycombCanvas = ({
               id="ghost"
               x={ghostPosition.x}
               y={ghostPosition.y}
-              title="Click to Create"
+              title="+"
               isGhost
               connections={[]}
-              color="#60A5FA"
-              onClick={() => {
-                if (isCreating && ghostPosition) {
-                  const newItem = {
-                    id: Date.now().toString(),
-                    x: ghostPosition.x,
-                    y: ghostPosition.y,
-                    title: 'New Task',
-                    connections: [] as string[],
-                    isCompleted: false,
-                    color: '#FDE68A'
-                  };
-
-                  // Find closest item for connection
-                  const closestItem = items.reduce((closest, item) => {
-                    const distance = Math.sqrt(
-                      Math.pow(item.x - ghostPosition.x, 2) + 
-                      Math.pow(item.y - ghostPosition.y, 2)
-                    );
-                    if (!closest || distance < closest.distance) {
-                      return { item, distance };
-                    }
-                    return closest;
-                  }, null as { item: HoneycombItem; distance: number; } | null);
-
-                  let itemToAdd = newItem;
-                  if (closestItem) {
-                    itemToAdd = {
-                      ...newItem,
-                      connections: [closestItem.item.id]
-                    };
-                    setItems(prev => [
-                      ...prev.map(item => 
-                        item.id === closestItem.item.id
-                          ? { ...item, connections: [...item.connections, newItem.id] }
-                          : item
-                      ),
-                      itemToAdd
-                    ]);
-                  } else {
-                    setItems(prev => [...prev, itemToAdd]);
-                  }
-
-                  setEditingItem(itemToAdd);
-                  setIsEditModalOpen(true);
-                  setIsCreating(false);
-                  setGhostPosition(null);
-                }
-              }}
+              color="rgba(251, 146, 60, 0.8)"
+              onClick={handleGhostClick}
             />
           )}
         </div>
@@ -435,7 +386,7 @@ export const HoneycombCanvas = ({
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={(e) => e.stopPropagation()}
-        />
+          />
       )}
 
       <TaskSidebar
@@ -467,6 +418,7 @@ export const HoneycombCanvas = ({
           title: editingItem.title,
           color: editingItem.color
         } : undefined}
+        isCreating={isModalCreating}
       />
     </div>
   );

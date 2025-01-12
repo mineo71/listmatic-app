@@ -162,7 +162,7 @@ export const Layout = () => {
           isSidebarOpen={isSidebarOpen}
         />
 
-        <main className="pt-16 h-[calc(100vh-4rem)] overflow-auto">
+        <main className="h-[calc(100vh-4rem)] overflow-auto">
           <Outlet context={{ 
             hives,
             selectedHiveId,

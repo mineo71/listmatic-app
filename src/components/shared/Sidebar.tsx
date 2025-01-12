@@ -74,7 +74,7 @@ export const Sidebar = ({
         {!isOpen && (
             <button
                 onClick={onToggleSidebar}
-                className="fixed top-[14px] left-4 p-2 rounded-md bg-white shadow-md hover:bg-gray-50 z-50"
+                className="fixed top-[14px] left-4 p-2 rounded-md bg-white shadow-md hover:bg-gray-50 z-30"
                 aria-label={t('actions.openSidebar')}
             >
               <Menu size={20} />
@@ -83,7 +83,7 @@ export const Sidebar = ({
 
         {/* Main Sidebar */}
         <aside
-            className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 z-40
+            className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 z-9
           ${isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full'}`}
         >
           {/* Header with Logo and Toggle */}
@@ -104,7 +104,9 @@ export const Sidebar = ({
               <div className="p-4">
                 <button
                     onClick={onCreateHive}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium
+                         text-white bg-amber-600 rounded-md hover:bg-amber-700 focus:outline-none
+                         focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
                 >
                   <Plus size={16} />
                   {t('actions.createHive')}
@@ -122,14 +124,13 @@ export const Sidebar = ({
                   })).map((hive) => (
                       <div key={hive.id} className="select-none">
                         <div
-                            className={`group flex items-center px-2 py-2 rounded-md cursor-pointer hover:bg-gray-100 ${
-                                selectedHiveId === hive.id ? 'bg-amber-50' : ''
-                            }`}
+                            className={`group flex items-center px-2 py-2 rounded-md cursor-pointer 
+                               hover:bg-gray-100 ${selectedHiveId === hive.id ? 'bg-amber-50' : ''}`}
                             onClick={() => onSelectItem(hive.id, 'hive')}
                         >
                           <button
                               onClick={(e) => toggleHive(hive.id, e)}
-                              className="p-1 hover:bg-gray-200 rounded-md mr-1"
+                              className="p-1 hover:bg-gray-200 rounded-md mr-1 transition-colors"
                           >
                             {expandedHives.has(hive.id) ? (
                                 <ChevronDown size={16} />
@@ -138,10 +139,10 @@ export const Sidebar = ({
                             )}
                           </button>
                           <span className="flex-1 truncate mr-2">{hive.name}</span>
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                                 onClick={(e) => toggleFavorite(hive.id, e)}
-                                className="p-1 hover:bg-gray-200 rounded-md"
+                                className="p-1 hover:bg-gray-200 rounded-md transition-colors"
                                 aria-label={favoriteHives.has(hive.id) ? "Remove from favorites" : "Add to favorites"}
                             >
                               <Star
@@ -159,7 +160,7 @@ export const Sidebar = ({
                                     y: e.clientY
                                   });
                                 }}
-                                className="p-1 hover:bg-gray-200 rounded-md"
+                                className="p-1 hover:bg-gray-200 rounded-md transition-colors"
                             >
                               <MoreHorizontal size={16} />
                             </button>
@@ -173,7 +174,8 @@ export const Sidebar = ({
                                     onCreateHoneycomb();
                                     onSelectItem(hive.id, 'hive');
                                   }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600
+                                   hover:bg-gray-100 rounded-md transition-colors"
                               >
                                 <Plus size={14} />
                                 {t('actions.createHoneycomb')}
@@ -182,9 +184,8 @@ export const Sidebar = ({
                               {hive.honeycombs.map((honeycomb) => (
                                   <div
                                       key={honeycomb.id}
-                                      className={`group flex items-center px-3 py-2 rounded-md cursor-pointer hover:bg-gray-100 ${
-                                          selectedHoneycombId === honeycomb.id ? 'bg-amber-50' : ''
-                                      }`}
+                                      className={`group flex items-center px-3 py-2 rounded-md cursor-pointer 
+                                     hover:bg-gray-100 ${selectedHoneycombId === honeycomb.id ? 'bg-amber-50' : ''}`}
                                       onClick={() => onSelectItem(honeycomb.id, 'honeycomb')}
                                   >
                                     <span className="flex-1 truncate">{honeycomb.name}</span>
@@ -198,7 +199,8 @@ export const Sidebar = ({
                                             y: e.clientY
                                           });
                                         }}
-                                        className="p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded-md"
+                                        className="p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-200
+                                       rounded-md transition-all"
                                     >
                                       <MoreHorizontal size={16} />
                                     </button>
@@ -216,21 +218,24 @@ export const Sidebar = ({
             <div className="border-t border-gray-200 p-4 space-y-2">
               <button
                   onClick={() => onSelectItem('settings', 'settings')}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100
+                       rounded-md transition-colors"
               >
                 <Settings size={20} />
                 {t('navigation.settings')}
               </button>
               <button
                   onClick={() => onSelectItem('profile', 'settings')}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100
+                       rounded-md transition-colors"
               >
                 <User size={20} />
                 {t('navigation.profile')}
               </button>
               <button
                   onClick={onLogout}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50
+                       rounded-md transition-colors"
               >
                 <LogOut size={20} />
                 {t('navigation.logout')}
@@ -243,20 +248,20 @@ export const Sidebar = ({
         {contextMenu && (
             <>
               <div
-                  className="fixed inset-0 z-50"
+                  className="fixed inset-0 z-40"
                   onClick={() => setContextMenu(null)}
               />
               <div
-                  className="fixed bg-white rounded-md shadow-lg py-1 border border-gray-200"
+                  className="fixed bg-white rounded-md shadow-lg py-1 border border-gray-200 z-50"
                   style={{
                     top: contextMenu.y,
                     left: Math.min(contextMenu.x, window.innerWidth - 128),
                     width: '128px',
-                    zIndex: 51,
                   }}
               >
                 <button
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100
+                       transition-colors"
                     onClick={() => {
                       const newName = prompt(t('prompts.enterNewName'));
                       if (newName?.trim()) {
@@ -268,7 +273,8 @@ export const Sidebar = ({
                   {t('actions.rename')}
                 </button>
                 <button
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100"
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100
+                       transition-colors"
                     onClick={() => {
                       if (window.confirm(t('confirmations.delete'))) {
                         if (contextMenu.type === 'hive') {
@@ -288,4 +294,3 @@ export const Sidebar = ({
       </>
   );
 };
-

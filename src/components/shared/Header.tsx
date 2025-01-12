@@ -11,7 +11,7 @@ export const Header = ({ isSidebarOpen }: HeaderProps) => {
   const { t } = useTranslation();
 
   return (
-    <header className="bg-white shadow-sm fixed top-0 right-0 left-0 z-40">
+    <header className="bg-white shadow-sm  top-0 right-0 left-0 z-40">
       <div className={`transition-all duration-300 flex items-center h-16 px-8 ${
         isSidebarOpen ? 'pl-72' : 'pl-24'
       }`}>

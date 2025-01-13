@@ -38,6 +38,7 @@ const HEXAGON_WIDTH = 2 * HEXAGON_SIZE;
 
 export const HoneycombCanvas = ({
   zoom,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setZoom,
   offset,
   setOffset,
@@ -374,6 +375,7 @@ export const HoneycombCanvas = ({
               y={ghostPosition.y}
               title="+"
               isGhost
+              isCreating={isCreating}
               connections={[]}
               color="rgba(251, 146, 60, 0.8)"
               onClick={handleGhostClick}

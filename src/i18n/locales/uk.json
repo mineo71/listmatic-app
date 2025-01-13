@@ -92,7 +92,9 @@
     "done": "Готово",
     "resetView": "Скинути вигляд",
     "zoomIn": "Збільшити",
-    "zoomOut": "Зменшити"
+    "zoomOut": "Зменшити",
+    "close": "Закрити",
+    "share": "Поділитися"
   },
   "navigation": {
     "settings": "Налаштування",
@@ -146,5 +148,25 @@
     "title": "Назва",
     "status": "Статус",
     "progress": "Прогрес"
+  },
+  "sharing": {
+    "title": "Поділитися",
+    "qrCodeAlt": "QR-код для посилання на спільний доступ",
+    "shareLink": "Посилання для спільного доступу",
+    "enterEmail": "Введіть email",
+    "invite": "Запросити",
+    "copyLink": "Копіювати посилання"
+  },
+  "notifications": {
+    "linkCopied": "Посилання скопійовано!",
+    "inviteSent": "Запрошення надіслано на {{email}}"
+  },
+  "errors": {
+    "copyError": "Помилка копіювання:",
+    "failedToCopyLink": "Не вдалося скопіювати посилання"
+  },
+  "logs": {
+    "inviteSent": "Запрошення надіслано на {{email}}"
   }
 }
+

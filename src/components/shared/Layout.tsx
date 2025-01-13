@@ -22,7 +22,12 @@ export const Layout = () => {
     if (type === 'hive') {
       setSelectedHiveId(id);
     } else if (type === 'honeycomb') {
-      navigate(`/honeycomb/${id}`);
+      if (id) {
+        navigate(`/honeycomb/${id}`);
+      } else {
+        navigate('/');
+        setSelectedHiveId(null);
+      }
     } else if (type === 'settings') {
       if (id === 'settings') {
         navigate('/settings');
@@ -157,10 +162,12 @@ export const Layout = () => {
       <div className={`fixed right-0 top-0 bottom-0 transition-all duration-300 ${
         isSidebarOpen ? 'left-64' : 'left-0'
       }`}>
-        <Header 
-          allHives={hives}
-          isSidebarOpen={isSidebarOpen}
-        />
+        <div className='border-gray-200 border-b'>
+          <Header 
+            allHives={hives}
+            isSidebarOpen={isSidebarOpen}
+          />
+        </div>
 
         <main className="h-[calc(100vh-4rem)] overflow-auto">
           <Outlet context={{ 

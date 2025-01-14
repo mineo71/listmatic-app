@@ -94,16 +94,23 @@ export const Sidebar = ({
           ${isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full'}`}
       >
       {/* Header with Logo and Toggle */}
-      <div className="flex items-center justify-between p-[14px] border-b border-gray-200">
-        <button 
-          onClick={() => {
-            onSelectItem('', 'honeycomb');
-            navigate('/');
-          }} 
-          className="text-2xl font-bold text-amber-600 hover:text-amber-700 transition-colors"
-        >
-          {t('appName')}
-        </button>
+      <div className="flex items-center justify-between p-[10px] border-b border-gray-200 pl-6">
+        <div className='flex items-center justify-center gap-2'>
+          <img
+              src="/public/LogoBeeTask.ico"
+              alt="Combly"
+              className="h-11 w-auto"
+            />
+          <button 
+            onClick={() => {
+              onSelectItem('', 'honeycomb');
+              navigate('/');
+            }} 
+            className="text-2xl font-bold text-amber-600 hover:text-amber-700 transition-colors"
+          >
+            {t('appName')}
+          </button>
+        </div>
         <button
           onClick={onToggleSidebar}
           className="p-2 rounded-md hover:bg-gray-100"

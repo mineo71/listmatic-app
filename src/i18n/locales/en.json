@@ -92,7 +92,9 @@
     "done": "Done",
     "resetView": "Reset View",
     "zoomIn": "Zoom In",
-    "zoomOut": "Zoom Out"
+    "zoomOut": "Zoom Out",
+    "close": "Close",
+    "share": "Share"
   },
   "navigation": {
     "settings": "Settings",
@@ -146,5 +148,24 @@
     "title": "Title",
     "status": "Status",
     "progress": "Progress"
+  },
+  "sharing": {
+    "title": "Share",
+    "qrCodeAlt": "QR Code for sharing link",
+    "shareLink": "Share link",
+    "enterEmail": "Enter email",
+    "invite": "Invite",
+    "copyLink": "Copy link"
+  },
+  "notifications": {
+    "linkCopied": "Link copied!",
+    "inviteSent": "Invitation sent to {{email}}"
+  },
+  "errors": {
+    "copyError": "Copy error:",
+    "failedToCopyLink": "Failed to copy link"
+  },
+  "logs": {
+    "inviteSent": "Invitation sent to {{email}}"
   }
 }

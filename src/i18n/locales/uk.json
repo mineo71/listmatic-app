@@ -88,7 +88,7 @@
     "save": "Зберегти",
     "cancel": "Скасувати",
     "create": "Створити",
-    "addHexagon": "Додати гексагон",
+    "addHexagon": "Додати соту",
     "done": "Готово",
     "resetView": "Скинути вигляд",
     "zoomIn": "Збільшити",
@@ -109,22 +109,42 @@
     "create": "Створити",
     "rename": "Перейменувати",
     "delete": "Видалити",
-    "editHexagon": "Редагувати гексагон",
-    "createHexagon": "Створити новий гексагон"
+    "editHexagon": "Редагувати соту",
+    "createHexagon": "Створити нову соту"
   },
   "placeholders": {
     "newTask": "Додати нове завдання...",
     "search": "Пошук...",
     "newHiveName": "Введіть назву вулика...",
     "newHoneycombName": "Введіть назву сот...",
-    "taskTitle": "Введіть назву завдання..."
+    "taskTitle": "Введіть назву завдання...",
+    "hexagonName": "Введіть назву соти...",
+    "Deadline": "За Терміном",
+    "Title": "За Назвою",
+    "Color": "За Кольором",
+    "TasksList": "Список завдань",
+    "Filters": "Фільтри",
+    "NoGrouping": "Без групування",
+    "GroupColor": "Групування за кольором",
+    "GroupStatus": "Групування за статусом",
+    "GroupDeadline": "Групування за терміном",
+    "Overdue": "Прострочено",
+    "Today": "Сьогодні",
+    "Tomorrow": "Завтра",
+    "NoDeadline": "Без терміну",
+    "ThisWeek": "Цього тижня",
+    "Later": "Пізніше",
+    "AllTasks": "Всі завдання",
+    "NoColor": "Без кольору",
+    "Completed": "Завершено",
+    "pending": "В процесі"
   },
   "confirmations": {
     "delete": "Ви впевнені? Цю дію неможливо скасувати.",
     "deleteHive": "Ви впевнені, що хочете видалити цей вулик?",
     "deleteHoneycomb": "Ви впевнені, що хочете видалити ці соти?",
     "deleteTask": "Ви впевнені, що хочете видалити це завдання?",
-    "deleteHexagon": "Ви впевнені, що хочете видалити цей гексагон?"
+    "deleteHexagon": "Ви впевнені, що хочете видалити цю соту?"
   },
   "messages": {
     "selectHoneycomb": "Оберіть соти для перегляду завдань",
@@ -142,7 +162,17 @@
   "hexagon": {
     "title": "Назва",
     "color": "Колір",
-    "pickColor": "Обрати колір"
+    "pickColor": "Обрати колір",
+    "description": "Опис",
+    "icon": "Іконка",
+    "priority": "Пріорітет",
+    "deadline": "Термін",
+    "descriptionPlaceholder": "Введіть опис"
+  },
+  "priority": {
+    "low": "Малий",
+    "medium": "Середній",
+    "high": "Високий "
   },
   "task": {
     "title": "Назва",
@@ -167,6 +197,8 @@
   },
   "logs": {
     "inviteSent": "Запрошення надіслано на {{email}}"
+  },
+  "wrapper": {
+    "progress": "Прогрес"
   }
 }
-

@@ -337,8 +337,8 @@ isCreating = false,
                 </div>
               </div>
 
+              {/* Priority Selection */}
               <div className="grid grid-cols-2 gap-4">
-                {/* Priority Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('hexagon.priority')}
@@ -356,7 +356,7 @@ isCreating = false,
                             } border border-gray-300 font-medium capitalize
                         ${p !== PRIORITIES[PRIORITIES.length - 1] ? 'border-r-0' : ''}`}
                         >
-                          {p}
+                          {t(`priority.${p}`)}
                         </button>
                     ))}
                   </div>

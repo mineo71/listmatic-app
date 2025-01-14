@@ -97,7 +97,7 @@ export const Sidebar = ({
       <div className="flex items-center justify-between p-[10px] border-b border-gray-200 pl-6">
         <div className='flex items-center justify-center gap-2'>
           <img
-              src="/public/LogoBeeTask.ico"
+              src="/LogoBeeTask.ico"
               alt="Combly"
               className="h-11 w-auto"
             />

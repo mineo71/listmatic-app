@@ -77,8 +77,8 @@
     "password": "Change Password"
   },
   "actions": {
-    "createHive": "New Hive",
-    "createHoneycomb": "New Honeycomb",
+    "createHive": "New Bee-Garden",
+    "createHoneycomb": "New Hive",
     "rename": "Rename",
     "delete": "Delete",
     "addTask": "Add Task",
@@ -88,7 +88,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "create": "Create",
-    "addHexagon": "Add Hexagon",
+    "addHexagon": "Add Honeycomb",
     "done": "Done",
     "resetView": "Reset View",
     "zoomIn": "Zoom In",
@@ -102,21 +102,21 @@
     "logout": "Logout"
   },
   "modals": {
-    "createHive": "Create New Hive",
-    "createHoneycomb": "Create New Honeycomb",
-    "createTask": "Create New Task",
+    "createHive": "Create New Bee-Garden",
+    "createHoneycomb": "Create New Hive",
+    "createTask": "Create New Honeycomb",
     "cancel": "Cancel",
     "create": "Create",
     "rename": "Rename",
     "delete": "Delete",
-    "editHexagon": "Edit Hexagon",
-    "createHexagon": "Create New Hexagon"
+    "editHexagon": "Edit Honeycomb",
+    "createHexagon": "Create New Honeycomb"
   },
   "placeholders": {
     "newTask": "Add a new task...",
     "search": "Search...",
-    "newHiveName": "Enter hive name...",
-    "newHoneycombName": "Enter honeycomb name...",
+    "newHiveName": "Enter bee-garden name...",
+    "newHoneycombName": "Enter hive name...",
     "taskTitle": "Enter task title...",
     "Deadline": "by Deadline",
     "Title": " by Title",
@@ -140,13 +140,13 @@
   },
   "confirmations": {
     "delete": "Are you sure? This action cannot be undone.",
-    "deleteHive": "Are you sure you want to delete this hive?",
-    "deleteHoneycomb": "Are you sure you want to delete this honeycomb?",
+    "deleteHive": "Are you sure you want to delete this bee-garden?",
+    "deleteHoneycomb": "Are you sure you want to delete this hive?",
     "deleteTask": "Are you sure you want to delete this task?",
-    "deleteHexagon": "Are you sure you want to delete this hexagon?"
+    "deleteHexagon": "Are you sure you want to delete this honeycomb?"
   },
   "messages": {
-    "selectHoneycomb": "Select a honeycomb to view tasks",
+    "selectHoneycomb": "Select a hive to view tasks",
     "noTasks": "No tasks yet",
     "loading": "Loading...",
     "settingsSaved": "Settings saved successfully",
@@ -166,7 +166,9 @@
     "icon": "Icon",
     "priority": "Priority",
     "deadline": "Deadline",
-    "descriptionPlaceholder": "Enter description"
+    "titlePlaceholder": "Enter title",
+    "descriptionPlaceholder": "Enter description",
+    "new_honeycomb": "New Honeycomb"
   },
   "priority": {
     "low": "Low",

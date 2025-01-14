@@ -74,7 +74,7 @@ onProgressUpdate
       id: Date.now().toString(),
       x: ghostPosition.x,
       y: ghostPosition.y,
-      title: 'New Task',
+      title: t("hexagon.new_honeycomb"),
       description: '',
       icon: 'None',
       priority: 'medium',

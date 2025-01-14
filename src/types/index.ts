@@ -15,6 +15,31 @@ export interface Task {
 }
 
 export type TaskIcon = 
+  | 'None'
+  // IT & Development
+  | 'Code'
+  | 'Bug'
+  | 'Database'
+  | 'Terminal'
+  | 'Gitlab'
+  | 'Webhook'
+  | 'FileCode'
+  | 'Boxes'
+  | 'LayoutGrid'
+  | 'Component'
+  | 'Braces'
+  | 'FolderGit'
+  // Analytics & Planning
+  | 'BarChart'  
+  | 'PieChart'
+  | 'Target'    
+  | 'FileText'
+  // Common
+  | 'Briefcase'
+  | 'MessageCircle'
+  | 'Settings'
+  | 'Star'
+  | 'Flag'
   | 'AlertCircle'
   | 'Archive'
   | 'Bell'
@@ -80,6 +105,7 @@ export interface HoneycombItem {
   color: string;
   connections: string[];
   completed: boolean;
+  isMain?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

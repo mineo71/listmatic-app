@@ -94,12 +94,12 @@ export const Sidebar = ({
           ${isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full'}`}
       >
       {/* Header with Logo and Toggle */}
-      <div className="flex items-center justify-between p-[10px] border-b border-gray-200 pl-6">
-        <div className='flex items-center justify-center gap-2'>
+      <div className="flex items-center justify-between p-[12px] border-b border-gray-200 pl-4">
+        <div className='flex items-center justify-center gap-1'>
           <img
               src="/LogoBeeTask.ico"
               alt="Combly"
-              className="h-11 w-auto"
+              className="h-10 w-auto"
             />
           <button 
             onClick={() => {

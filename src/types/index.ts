@@ -35,6 +35,7 @@ export type TaskIcon =
   | 'Target'    
   | 'FileText'
   // Common
+  | 'Plus'
   | 'Briefcase'
   | 'MessageCircle'
   | 'Settings'

@@ -322,17 +322,18 @@ onProgressUpdate
             ))}
 
             {isCreating && ghostPosition && (
-                <HoneycombHexagon
-                    id="ghost"
-                    x={ghostPosition.x}
-                    y={ghostPosition.y}
-                    title="+"
-                    isGhost
-                    isCreating={isCreating}
-                    connections={[]}
-                    color="rgba(251, 146, 60, 0.8)"
-                    onClick={handleGhostClick}
-                />
+              <HoneycombHexagon
+                id="ghost"
+                x={ghostPosition.x}
+                y={ghostPosition.y}
+                isGhost
+                isCreating={isCreating}
+                connections={[]}
+                color="rgba(251, 146, 60, 0.8)"
+                onClick={handleGhostClick}
+                icon="Plus"
+                title=""
+              />
             )}
           </div>
         </div>

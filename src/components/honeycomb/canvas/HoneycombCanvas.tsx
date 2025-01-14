@@ -227,7 +227,7 @@ onProgressUpdate
         id: 'main',
         x: centerX,
         y: centerY,
-        title: 'Main Goal',
+        title: t('hexagon.main_goal'),
         description: '',
         icon: 'Star',
         priority: 'high',

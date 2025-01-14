@@ -168,7 +168,8 @@
     "deadline": "Deadline",
     "titlePlaceholder": "Enter title",
     "descriptionPlaceholder": "Enter description",
-    "new_honeycomb": "New Honeycomb"
+    "new_honeycomb": "New Honeycomb",
+    "main_goal": "Goal"
   },
   "priority": {
     "low": "Low",

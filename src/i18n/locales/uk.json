@@ -168,7 +168,8 @@
     "deadline": "Термін",
     "titlePlaceholder": "Введіть назву",
     "descriptionPlaceholder": "Введіть опис",
-    "new_honeycomb": "Нова сота"
+    "new_honeycomb": "Нова сота",
+    "main_goal": "Мета"
   },
   "priority": {
     "low": "Низький",

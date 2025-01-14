@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { HoneycombItem } from './HoneycombtTypes';
+import { useTranslation } from 'react-i18next';
 
 export const useHoneycombItems = (onProgressUpdate: (progress: number) => void) => {
     const [items, setItems] = useState<HoneycombItem[]>([]);
+    const { t } = useTranslation();
 
     useEffect(() => {
         const centerX = 0;
@@ -12,7 +14,7 @@ export const useHoneycombItems = (onProgressUpdate: (progress: number) => void) 
             id: 'main',
             x: centerX,
             y: centerY,
-            title: 'Main Goal',
+            title: t("hexagon.main_goal"),
             description: '',
             icon: 'Star',
             priority: 'high',

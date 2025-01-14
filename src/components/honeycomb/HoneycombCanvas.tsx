@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, Wand2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { HoneycombHexagon } from './hexagon/HoneycombHexagon';
 import { HoneycombEditModal } from './HoneycombEditModal';
@@ -325,19 +325,24 @@ export const HoneycombCanvas = ({
         }}
       />
 
-      <div className="absolute top-4 left-4 z-10">
-        <button
-          onClick={() => setIsCreating(!isCreating)}
-          className={`flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all ${
-            isCreating ? 'bg-amber-500 text-white' : 'bg-white hover:bg-gray-50'
-          }`}
-        >
-          {isCreating ? <X size={22} /> : <Plus size={22} />}
-          <span className="font-xl">
+        <div className="absolute top-4 left-4 z-10 flex">
+          <button
+              onClick={() => setIsCreating(!isCreating)}
+              className={`flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all ${
+                  isCreating ? 'bg-amber-500 text-white' : 'bg-white hover:bg-gray-50'
+              }`}
+          >
+            {isCreating ? <X size={22} /> : <Plus size={22} />}
+            <span className="font-xl">
             {isCreating ? t('actions.done') : t('actions.addHexagon')}
           </span>
-        </button>
-      </div>
+          </button>
+          <button
+              className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2"
+          >
+            <Wand2 size={22} />
+          </button>
+        </div>
 
       <div
         className="absolute inset-0"

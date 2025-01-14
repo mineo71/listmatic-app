@@ -3,7 +3,7 @@ import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { RotateCcw, ZoomIn, ZoomOut, List, Share } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Hive, Honeycomb } from '@/types';
-import { HoneycombCanvas } from '../honeycomb/HoneycombCanvas';
+import { HoneycombCanvas } from '../honeycomb/canvas/HoneycombCanvas.tsx';
 import SharingModal from '../honeycomb/SharingModal';
 
 type ContextType = {

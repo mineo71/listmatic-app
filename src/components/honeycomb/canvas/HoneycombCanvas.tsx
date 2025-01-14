@@ -301,22 +301,23 @@ onProgressUpdate
               }}
           >
             {items.map(item => (
-                <HoneycombHexagon
-                    key={item.id}
-                    {...item}
-                    isSelected={selectedItemId === item.id}
-                    isCreating={isCreating}
-                    connectedHexagons={items.filter(other =>
-                        item.connections.includes(other.id)
-                    ).map(other => ({
-                      id: other.id,
-                      x: other.x,
-                      y: other.y
-                    }))}
-                    onClick={() => !isCreating && setSelectedItemId(item.id)}
-                    onMarkComplete={() => !isCreating && handleMarkComplete(item.id)}
-                    onEdit={() => !isCreating && handleSidebarEditClick(item.id)}
-                />
+              <HoneycombHexagon
+                key={item.id}
+                {...item}
+                isSelected={selectedItemId === item.id}
+                isCreating={isCreating}
+                isCompleted={item.completed}
+                connectedHexagons={items.filter(other =>
+                  item.connections.includes(other.id)
+                ).map(other => ({
+                  id: other.id,
+                  x: other.x,
+                  y: other.y
+                }))}
+                onClick={() => !isCreating && setSelectedItemId(item.id)}
+                onMarkComplete={() => !isCreating && handleMarkComplete(item.id)}
+                onEdit={() => !isCreating && handleSidebarEditClick(item.id)}
+              />
             ))}
 
             {isCreating && ghostPosition && (

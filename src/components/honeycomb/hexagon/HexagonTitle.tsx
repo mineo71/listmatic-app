@@ -19,18 +19,6 @@ export const HexagonTitle = ({ width, height, title, isCompleted, icon }: Hexago
 
   return (
     <g transform={`translate(${width/2}, ${height/2})`}>
-      {isCompleted && (
-        <path
-          d="M-30,-5 L-10,15 L30,-20"
-          stroke="#22C55E"
-          strokeWidth="3"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="animate-draw"
-        />
-      )}
-      
       {IconComponent && (
         <foreignObject
           x="-16"
@@ -51,11 +39,23 @@ export const HexagonTitle = ({ width, height, title, isCompleted, icon }: Hexago
           textAnchor="middle"
           y={IconComponent ? "20" : "0"}
           className={`text-sm font-semibold fill-gray-800 pointer-events-none select-none
-            ${isCompleted ? 'line-through opacity-70' : ''}`}
+            ${isCompleted ? 'line-through opacity-80' : ''}`}
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
         >
           {truncateText(title, IconComponent ? 9 : 11)}
         </text>
+      )}
+
+      {isCompleted && (
+        <path
+          d="M-30,-5 L-10,15 L30,-20"
+          stroke="#22C55E"
+          strokeWidth="7"
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="animate-draw"
+        />
       )}
     </g>
   );

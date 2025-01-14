@@ -11,6 +11,7 @@ import { findClosestPosition } from './honeycombUtils.ts';
 
 export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
 zoom,
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 setZoom,
 offset,
 setOffset,

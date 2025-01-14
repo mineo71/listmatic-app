@@ -40,7 +40,7 @@ export const HexagonTitle = ({ width, height, title, isCompleted, icon }: Hexago
           className="pointer-events-none"
         >
           <div className="flex items-center justify-center w-full h-full">
-            <IconComponent className="w-full h-full text-gray-700" />
+            <IconComponent className="w-full h-full text-gray-800" />
           </div>
         </foreignObject>
       )}

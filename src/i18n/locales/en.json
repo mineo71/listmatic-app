@@ -117,7 +117,26 @@
     "search": "Search...",
     "newHiveName": "Enter hive name...",
     "newHoneycombName": "Enter honeycomb name...",
-    "taskTitle": "Enter task title..."
+    "taskTitle": "Enter task title...",
+    "Deadline": "Deadline",
+    "Title": "Title",
+    "Color": "Color",
+    "TasksList": "Tasks List",
+    "Filters": "Filters",
+    "NoGrouping": "No Grouping",
+    "GroupColor": "Group by Color",
+    "GroupStatus": "Group by Status",
+    "GroupDeadline": "Group by Deadline",
+    "Overdue": "Overdue",
+    "Today": "Today",
+    "Tomorrow": "Tomorrow",
+    "NoDeadline": "No Deadline",
+    "ThisWeek": "This Week",
+    "Later": "Later",
+    "AllTasks": "All Tasks",
+    "NoColor": "No Color",
+    "Completed": "Completed",
+    "pending": "Pending"
   },
   "confirmations": {
     "delete": "Are you sure? This action cannot be undone.",
@@ -142,12 +161,17 @@
   "hexagon": {
     "title": "Title",
     "color": "Color",
-    "pickColor": "Pick a color"
+    "pickColor": "Pick a color",
+    "description": "Description",
+    "icon": "Icon",
+    "priority": "Priority",
+    "deadline": "Deadline",
+    "descriptionPlaceholder": "Enter description"
   },
-  "task": {
-    "title": "Title",
-    "status": "Status",
-    "progress": "Progress"
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
   },
   "sharing": {
     "title": "Share",
@@ -167,5 +191,13 @@
   },
   "logs": {
     "inviteSent": "Invitation sent to {{email}}"
+  },
+  "wrapper": {
+    "progress": "Progress"
+  },
+  "taskSidebar": {
+    "TasksList": "Title",
+    "status": "Status",
+    "progress": "Progress"
   }
 }

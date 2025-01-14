@@ -95,7 +95,7 @@ export const HoneycombViewWrapper = () => {
               {/* Progress bar */}
               <div className="w-64">
                 <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700">Progress</span>
+                  <span className="text-sm font-medium text-gray-700">{t('wrapper.progress')}</span>
                   <span className="text-sm text-gray-500">{Math.round(progress)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">

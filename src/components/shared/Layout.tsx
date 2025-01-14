@@ -105,7 +105,10 @@ export const Layout = () => {
         honeycombs: [],
         subHives: [],
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        description: '',
+        icon: 'None',
+        color: ''
       };
       setHives([...hives, newHive]);
     } else if (modalType === 'honeycomb' && selectedHiveId) {
@@ -114,7 +117,10 @@ export const Layout = () => {
         name,
         tasks: [],
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        description: '',
+        icon: 'None',
+        color: ''
       };
 
       const updateHive = (hive: Hive): Hive => {

@@ -1,52 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  X,
-  Trash2,
-  Calendar,
-  Clock,
-  ChevronDown,
-  Check,
-  Plus,
-  AlertCircle,
-  Archive,
-  Bell,
-  Bookmark,
-  Briefcase,
-  CheckCircle,
-  Code,
-  FileText,
-  Flag,
-  Heart,
-  Home,
-  Mail,
-  MessageCircle,
-  Settings,
-  Star,
-  Tag,
-  Target,
-  Timer,
-  Trophy,
-  Truck,
-  Tv,
-  Upload,
-  User,
-  Users,
-  Video,
-  Wallet,
-  Watch,
-  Zap,
-  Bug,
-  Building,
-  Camera,
-  Car,
-  BarChart,
-  PieChart,
-  Cloud,
-  Coffee
-} from 'lucide-react';
+import { X, Trash2, Calendar, Clock, ChevronDown, Check, Plus } from 'lucide-react';
 import type { TaskIcon, TaskPriority } from '../../types';
+import { ICONS_MAP, ICONS } from '@/utils/icons';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -61,12 +18,14 @@ interface EditModalProps {
   }) => void;
   onDelete?: () => void;
   initialData?: {
+    id?: string;
     title: string;
     description?: string;
     icon?: TaskIcon;
     priority?: TaskPriority;
     deadline?: Date;
     color?: string;
+    isMain?: boolean;
   };
   isCreating?: boolean;
 }
@@ -82,48 +41,7 @@ const PRESET_COLORS = [
   '#FEF3C7', '#FEE2E2', '#D1FAE5', '#DBEAFE', '#EDE9FE', '#FCE7F3',
 ];
 
-const ICONS_MAP = {
-  AlertCircle,
-  Archive,
-  Bell,
-  Bookmark,
-  Briefcase,
-  CheckCircle,
-  Code,
-  FileText,
-  Flag,
-  Heart,
-  Home,
-  Mail,
-  MessageCircle,
-  Settings,
-  Star,
-  Tag,
-  Target,
-  Timer,
-  Trophy,
-  Truck,
-  Tv,
-  Upload,
-  User,
-  Users,
-  Video,
-  Wallet,
-  Watch,
-  Zap,
-  Bug,
-  Building,
-  Camera,
-  Car,
-  BarChart,
-  PieChart,
-  Cloud,
-  Coffee
-} as const;
-
-const ICONS = Object.keys(ICONS_MAP) as TaskIcon[];
-const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high'];
-
+const PRIORITIES = ['low', 'medium', 'high'];
 // Dropdown component
 const Dropdown = ({ 
   label, 
@@ -191,10 +109,10 @@ export const HoneycombEditModal = ({
   onClose,
   onSubmit,
   onDelete,
-  initialData = { 
-    title: '', 
-    description: '', 
-    icon: 'Target' as TaskIcon, 
+  initialData = {
+    title: '',
+    description: '',
+    icon: 'None' as TaskIcon,
     priority: 'medium' as TaskPriority,
     color: PRESET_COLORS[0]
   },
@@ -203,7 +121,7 @@ export const HoneycombEditModal = ({
   const { t } = useTranslation();
   const [title, setTitle] = useState(initialData.title);
   const [description, setDescription] = useState(initialData.description || '');
-  const [selectedIcon, setSelectedIcon] = useState<TaskIcon>(initialData.icon || 'Target');
+  const [selectedIcon, setSelectedIcon] = useState<TaskIcon>(initialData.icon || 'None');
   const [selectedColor, setSelectedColor] = useState(initialData.color || PRESET_COLORS[0]);
   const [customColor, setCustomColor] = useState('');
   const [priority, setPriority] = useState<TaskPriority>(initialData.priority || 'medium');
@@ -215,7 +133,7 @@ export const HoneycombEditModal = ({
     if (isOpen) {
       setTitle(initialData.title);
       setDescription(initialData.description || '');
-      setSelectedIcon(initialData.icon || 'Target');
+      setSelectedIcon(initialData.icon || 'None');
       setSelectedColor(initialData.color || PRESET_COLORS[0]);
       setPriority(initialData.priority || 'medium');
       if (initialData.deadline) {
@@ -329,8 +247,17 @@ export const HoneycombEditModal = ({
                 label={t('hexagon.icon')}
                 value={selectedIcon}
                 onChange={setSelectedIcon}
-                options={ICONS}
+                options={['None', ...ICONS]} // Add 'None' as first option
                 renderOption={(icon) => {
+                  if (icon === 'None') {
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4" /> {/* Empty space for alignment */}
+                        <span>None</span>
+                        {icon === selectedIcon && <Check size={16} className="ml-auto text-amber-500" />}
+                      </div>
+                    );
+                  }
                   const Icon = ICONS_MAP[icon as keyof typeof ICONS_MAP];
                   return (
                     <div className="flex items-center gap-2">
@@ -341,6 +268,14 @@ export const HoneycombEditModal = ({
                   );
                 }}
                 renderValue={(icon) => {
+                  if (icon === 'None') {
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4" /> {/* Empty space for alignment */}
+                        <span>None</span>
+                      </div>
+                    );
+                  }
                   const Icon = ICONS_MAP[icon as keyof typeof ICONS_MAP];
                   return (
                     <div className="flex items-center gap-2">
@@ -382,7 +317,7 @@ export const HoneycombEditModal = ({
                       />
                     )}
                   />
-                  <div className="relative">
+                  <div className="relative mt-2">
                     <input
                       type="color"
                       value={customColor}
@@ -413,7 +348,7 @@ export const HoneycombEditModal = ({
                     <button
                       key={p}
                       type="button"
-                      onClick={() => setPriority(p)}
+                      onClick={() => setPriority(p as TaskPriority)}
                       className={`flex-1 px-4 py-2 text-sm first:rounded-l-md last:rounded-r-md
                         ${priority === p 
                           ? 'bg-amber-500 text-white' 
@@ -463,7 +398,7 @@ export const HoneycombEditModal = ({
 
             {/* Action Buttons */}
             <div className="flex justify-between items-center pt-4">
-              {!isCreating && onDelete && (
+              {!isCreating && onDelete && initialData?.id !== 'main' && (
                 <button
                   type="button"
                   onClick={onDelete}
@@ -476,7 +411,7 @@ export const HoneycombEditModal = ({
                 </button>
               )}
 
-              <div className={`flex gap-2 ${!isCreating && onDelete ? '' : 'ml-auto'}`}>
+              <div className={`flex gap-2 ${!isCreating && onDelete && initialData?.id !== 'main' ? '' : 'ml-auto'}`}>
                 <button
                   type="button"
                   onClick={onClose}
@@ -486,6 +421,7 @@ export const HoneycombEditModal = ({
                 >
                   {t('actions.cancel')}
                 </button>
+                
                 <button
                   type="submit"
                   disabled={!title.trim()}

@@ -5,21 +5,11 @@ import { HoneycombHexagon } from './hexagon/HoneycombHexagon';
 import { HoneycombEditModal } from './HoneycombEditModal';
 import TaskSidebar from './TaskSidebar';
 import toast from 'react-hot-toast';
+import type { HoneycombItem, TaskIcon } from '@/types';
 
 interface Offset {
   x: number;
   y: number;
-}
-
-interface HoneycombItem {
-  id: string;
-  x: number;
-  y: number;
-  title: string;
-  color?: string;
-  isCompleted?: boolean;
-  isMain?: boolean;
-  connections: string[];
 }
 
 interface HoneycombCanvasProps {
@@ -71,9 +61,15 @@ export const HoneycombCanvas = ({
         x: centerX,
         y: centerY,
         title: 'Main Goal',
-        isMain: true,
+        description: '',
+        icon: 'Star',
+        priority: 'high',
+        completed: false,
         connections: [],
-        color: '#FDE68A'
+        color: '#FDE68A',
+        isMain: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
       }]);
 
       setOffset({
@@ -85,7 +81,7 @@ export const HoneycombCanvas = ({
 
   useEffect(() => {
     const totalItems = items.filter(item => !item.isMain).length;
-    const completedItems = items.filter(item => !item.isMain && item.isCompleted).length;
+    const completedItems = items.filter(item => !item.isMain && item.completed).length;
     const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
     onProgressUpdate(progress);
   }, [items, onProgressUpdate]);
@@ -165,14 +161,19 @@ export const HoneycombCanvas = ({
   const createNewHexagon = () => {
     if (!ghostPosition || !containerRef.current) return;
 
-    const newItem = {
+    const newItem: HoneycombItem = {
       id: Date.now().toString(),
       x: ghostPosition.x,
       y: ghostPosition.y,
       title: 'New Task',
-      connections: [] as string[],
-      isCompleted: false,
-      color: '#FDE68A'
+      description: '',
+      icon: 'None',
+      priority: 'medium',
+      completed: false,
+      connections: [],
+      color: '#FDE68A',
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     const closestItem = items.reduce((closest, item) => {
@@ -210,7 +211,7 @@ export const HoneycombCanvas = ({
     
     if (item?.isMain) {
       const otherItems = items.filter(i => !i.isMain);
-      const allOthersCompleted = otherItems.every(i => i.isCompleted);
+      const allOthersCompleted = otherItems.every(i => i.completed);
       
       if (!allOthersCompleted) {
         toast.error(t('messages.completeOtherTasks'));
@@ -218,17 +219,17 @@ export const HoneycombCanvas = ({
       }
       
       setItems(prev => prev.map(item => 
-        item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+        item.id === id ? { ...item, completed: !item.completed } : item
       ));
       
-      if (!item.isCompleted) {
+      if (!item.completed) {
         toast.success(t('messages.taskCompleted'));
       }
       return;
     }
     
     setItems(prev => prev.map(item => 
-      item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+      item.id === id ? { ...item, completed: !item.completed } : item
     ));
   };
 
@@ -239,13 +240,15 @@ export const HoneycombCanvas = ({
     setPendingHexagon(null); // Clear pending hexagon on cancel
   };
 
-  const handleEditSubmit = (data: { title: string; color: string }) => {
+  const handleEditSubmit = (data: { title: string; color: string; icon: TaskIcon; description: string }) => {
     if (editingItem && pendingHexagon) {
       // Only create the hexagon when the modal is submitted
       const hexagonToAdd = {
         ...pendingHexagon,
         title: data.title,
-        color: data.color
+        color: data.color,
+        icon: data.icon,
+        description: data.description
       };
 
       if (pendingHexagon.connections.length > 0) {
@@ -319,7 +322,6 @@ export const HoneycombCanvas = ({
           `,
           backgroundSize: '50px 50px, 50px 50px, 25px 25px, 25px 25px',
           transform: `translate(${offset.x}px, ${offset.y}px)`,
-          transition: isDraggingRef.current ? 'none' : 'transform 0.15s ease-out'
         }}
       />
 
@@ -418,7 +420,9 @@ export const HoneycombCanvas = ({
         onDelete={handleDeleteItem}
         initialData={editingItem ? {
           title: editingItem.title,
-          color: editingItem.color
+          color: editingItem.color,
+          icon: editingItem.icon,
+          description: editingItem.description
         } : undefined}
         isCreating={isModalCreating}
       />

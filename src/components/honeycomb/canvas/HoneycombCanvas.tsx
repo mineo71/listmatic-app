@@ -209,7 +209,10 @@ onProgressUpdate
         y: (rect.height / 2 / zoom) - item.y
       });
       setSelectedItemId(id);
-      setEditingItem(item);
+      setEditingItem({
+        ...item,
+        isMain: item.id === 'main'
+      });
       setIsEditModalOpen(true);
     }
   };
@@ -317,17 +320,18 @@ onProgressUpdate
             ))}
 
             {isCreating && ghostPosition && (
-                <HoneycombHexagon
-                    id="ghost"
-                    x={ghostPosition.x}
-                    y={ghostPosition.y}
-                    title="+"
-                    isGhost
-                    isCreating={isCreating}
-                    connections={[]}
-                    color="rgba(251, 146, 60, 0.8)"
-                    onClick={handleGhostClick}
-                />
+              <HoneycombHexagon
+                id="ghost"
+                x={ghostPosition.x}
+                y={ghostPosition.y}
+                isGhost
+                isCreating={isCreating}
+                connections={[]}
+                color="rgba(251, 146, 60, 0.8)"
+                onClick={handleGhostClick}
+                icon="Plus"
+                title=""
+              />
             )}
           </div>
         </div>
@@ -365,10 +369,12 @@ onProgressUpdate
             onSubmit={handleEditSubmit}
             onDelete={handleDeleteItem}
             initialData={editingItem ? {
+              id: editingItem.id,
               title: editingItem.title,
               color: editingItem.color,
               icon: editingItem.icon,
-              description: editingItem.description
+              description: editingItem.description,
+              isMain: editingItem.isMain
             } : undefined}
             isCreating={isModalCreating}
         />

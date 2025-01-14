@@ -4,7 +4,7 @@ import type { TaskIcon } from '@/types';
 interface HexagonTitleProps {
   width: number;
   height: number;
-  title: string;
+  title?: string;
   isCompleted: boolean;
   icon?: TaskIcon;
 }
@@ -34,7 +34,7 @@ export const HexagonTitle = ({ width, height, title, isCompleted, icon }: Hexago
       {IconComponent && (
         <foreignObject
           x="-16"
-          y="-30"
+          y={title ? "-30" : "-17"}
           width="34"
           height="34"
           className="pointer-events-none"
@@ -45,16 +45,18 @@ export const HexagonTitle = ({ width, height, title, isCompleted, icon }: Hexago
         </foreignObject>
       )}
       
-      <text
-        dominantBaseline="middle"
-        textAnchor="middle"
-        y={IconComponent ? "20" : "0"}
-        className={`text-sm font-semibold fill-gray-800 pointer-events-none select-none
-          ${isCompleted ? 'line-through opacity-70' : ''}`}
-        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
-      >
-        {truncateText(title, IconComponent ? 9 : 11)}
-      </text>
+      {title && (
+        <text
+          dominantBaseline="middle"
+          textAnchor="middle"
+          y={IconComponent ? "20" : "0"}
+          className={`text-sm font-semibold fill-gray-800 pointer-events-none select-none
+            ${isCompleted ? 'line-through opacity-70' : ''}`}
+          style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
+        >
+          {truncateText(title, IconComponent ? 9 : 11)}
+        </text>
+      )}
     </g>
   );
 };

@@ -10,7 +10,7 @@ export interface HexagonProps {
   id: string;
   x: number;
   y: number;
-  title: string;
+  title?: string;
   icon?: TaskIcon;  // Add this line
   color?: string;
   isGhost?: boolean;

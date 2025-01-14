@@ -44,14 +44,14 @@ const PRESET_COLORS = [
 const PRIORITIES = ['low', 'medium', 'high'];
 // Dropdown component
 const Dropdown = ({
-                    label,
-                    value,
-                    onChange,
-                    options,
-                    renderOption,
-                    renderValue,
-                    className = ''
-                  }: {
+label,
+value,
+onChange,
+options,
+renderOption,
+renderValue,
+className = ''
+}: {
   label: string;
   value: any;
   onChange: (value: any) => void;
@@ -105,19 +105,19 @@ const Dropdown = ({
 };
 
 export const HoneycombEditModal = ({
-                                     isOpen,
-                                     onClose,
-                                     onSubmit,
-                                     onDelete,
-                                     initialData = {
-                                       title: '',
-                                       description: '',
-                                       icon: 'None' as TaskIcon,
-                                       priority: 'medium' as TaskPriority,
-                                       color: PRESET_COLORS[0]
-                                     },
-                                     isCreating = false,
-                                   }: EditModalProps) => {
+isOpen,
+onClose,
+onSubmit,
+onDelete,
+initialData = {
+title: '',
+description: '',
+icon: 'None' as TaskIcon,
+priority: 'medium' as TaskPriority,
+color: PRESET_COLORS[0]
+},
+isCreating = false,
+}: EditModalProps) => {
   const { t } = useTranslation();
   const [title, setTitle] = useState(initialData.title);
   const [description, setDescription] = useState(initialData.description || '');
@@ -397,12 +397,12 @@ export const HoneycombEditModal = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-between items-center pt-4">
-                {!isCreating && onDelete && initialData?.id !== 'main' && (
+              <div className="flex justify-end items-center pt-4">
+                {!isCreating && onDelete && !initialData?.isMain && (
                     <button
                         type="button"
                         onClick={onDelete}
-                        className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-md
+                        className="mr-auto px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-md
                     hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2
                     focus:ring-red-500 flex items-center gap-2 transition-colors"
                     >
@@ -411,7 +411,7 @@ export const HoneycombEditModal = ({
                     </button>
                 )}
 
-                <div className={`flex gap-2 ${!isCreating && onDelete && initialData?.id !== 'main' ? '' : 'ml-auto'}`}>
+                <div className="flex gap-2">
                   <button
                       type="button"
                       onClick={onClose}

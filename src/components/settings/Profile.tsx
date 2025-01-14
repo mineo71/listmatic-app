@@ -6,9 +6,9 @@ import { Camera } from 'lucide-react';
 export const Profile = () => {
   const { t } = useTranslation();
   const [profile, setProfile] = useState({
-    name: 'John Doe',
-    email: 'john@example.com',
-    avatar: '/api/placeholder/100/100'
+    name: 'Jumbo Coders Team',
+    email: 'help@combly.com',
+    avatar: '/LogoBeeTask.ico'
   });
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -362,6 +362,7 @@ onProgressUpdate
               }
             }}
             onEditClick={handleSidebarEditClick}
+            onCompleteTask={handleMarkComplete}
         />
 
         <HoneycombEditModal

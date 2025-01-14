@@ -4,12 +4,14 @@ import { HexagonGradient } from './HexagonGradient';
 import { HexagonShape } from './HexagonShape';
 import { HexagonTitle } from './HexagonTitle';
 import { HexagonActions } from './HexagonActions';
+import type { TaskIcon } from '@/types';
 
 export interface HexagonProps {
   id: string;
   x: number;
   y: number;
   title: string;
+  icon?: TaskIcon;  // Add this line
   color?: string;
   isGhost?: boolean;
   isSelected?: boolean;
@@ -24,7 +26,6 @@ export interface HexagonProps {
   onMarkComplete?: (e: React.MouseEvent) => void;
   onEdit?: (e: React.MouseEvent) => void;
 }
-
 export const HoneycombHexagon = ({
   id,
   x,
@@ -36,6 +37,7 @@ export const HoneycombHexagon = ({
   isLinking = false,
   isCompleted = false,
   isCreating = false,
+  icon,
   onClick,
   onDragStart,
   onDragEnd,
@@ -117,6 +119,7 @@ export const HoneycombHexagon = ({
           height={height}
           title={title}
           isCompleted={isCompleted}
+          icon={icon}
         />
 
         {isHovered && !isGhost && !isCreating && onMarkComplete && onEdit && (

@@ -211,7 +211,10 @@ onProgressUpdate
         y: (rect.height / 2 / zoom) - item.y
       });
       setSelectedItemId(id);
-      setEditingItem(item);
+      setEditingItem({
+        ...item,
+        isMain: item.id === 'main'
+      });
       setIsEditModalOpen(true);
     }
   };
@@ -367,10 +370,12 @@ onProgressUpdate
             onSubmit={handleEditSubmit}
             onDelete={handleDeleteItem}
             initialData={editingItem ? {
+              id: editingItem.id,
               title: editingItem.title,
               color: editingItem.color,
               icon: editingItem.icon,
-              description: editingItem.description
+              description: editingItem.description,
+              isMain: editingItem.isMain
             } : undefined}
             isCreating={isModalCreating}
         />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HoneycombCanvas } from './HoneycombCanvas';
+import { HoneycombCanvas } from './canvas/HoneycombCanvas.tsx';
 
 export const HoneycombView = () => {
   const [zoom, setZoom] = useState(1);

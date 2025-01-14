@@ -1,5 +1,5 @@
 {
-  "appName": "BeeTask",
+  "appName": "Combly",
   "totalProgress": "Total Progress",
   "language": "Language",
   "login": {
@@ -77,8 +77,8 @@
     "password": "Change Password"
   },
   "actions": {
-    "createHive": "New Hive",
-    "createHoneycomb": "New Honeycomb",
+    "createHive": "New Bee-Garden",
+    "createHoneycomb": "New Hive",
     "rename": "Rename",
     "delete": "Delete",
     "addTask": "Add Task",
@@ -88,11 +88,13 @@
     "save": "Save",
     "cancel": "Cancel",
     "create": "Create",
-    "addHexagon": "Add Hexagon",
+    "addHexagon": "Add Honeycomb",
     "done": "Done",
     "resetView": "Reset View",
     "zoomIn": "Zoom In",
-    "zoomOut": "Zoom Out"
+    "zoomOut": "Zoom Out",
+    "close": "Close",
+    "share": "Share"
   },
   "navigation": {
     "settings": "Settings",
@@ -100,32 +102,51 @@
     "logout": "Logout"
   },
   "modals": {
-    "createHive": "Create New Hive",
-    "createHoneycomb": "Create New Honeycomb",
-    "createTask": "Create New Task",
+    "createHive": "Create New Bee-Garden",
+    "createHoneycomb": "Create New Hive",
+    "createTask": "Create New Honeycomb",
     "cancel": "Cancel",
     "create": "Create",
     "rename": "Rename",
     "delete": "Delete",
-    "editHexagon": "Edit Hexagon",
-    "createHexagon": "Create New Hexagon"
+    "editHexagon": "Edit Honeycomb",
+    "createHexagon": "Create New Honeycomb"
   },
   "placeholders": {
     "newTask": "Add a new task...",
     "search": "Search...",
-    "newHiveName": "Enter hive name...",
-    "newHoneycombName": "Enter honeycomb name...",
-    "taskTitle": "Enter task title..."
+    "newHiveName": "Enter bee-garden name...",
+    "newHoneycombName": "Enter hive name...",
+    "taskTitle": "Enter task title...",
+    "Deadline": "by Deadline",
+    "Title": " by Title",
+    "Color": "by Color",
+    "TasksList": "Tasks List",
+    "Filters": "Filters",
+    "NoGrouping": "No Grouping",
+    "GroupColor": "Group by Color",
+    "GroupStatus": "Group by Status",
+    "GroupDeadline": "Group by Deadline",
+    "Overdue": "Overdue",
+    "Today": "Today",
+    "Tomorrow": "Tomorrow",
+    "NoDeadline": "No Deadline",
+    "ThisWeek": "This Week",
+    "Later": "Later",
+    "AllTasks": "All Tasks",
+    "NoColor": "No Color",
+    "Completed": "Completed",
+    "pending": "Pending"
   },
   "confirmations": {
     "delete": "Are you sure? This action cannot be undone.",
-    "deleteHive": "Are you sure you want to delete this hive?",
-    "deleteHoneycomb": "Are you sure you want to delete this honeycomb?",
+    "deleteHive": "Are you sure you want to delete this bee-garden?",
+    "deleteHoneycomb": "Are you sure you want to delete this hive?",
     "deleteTask": "Are you sure you want to delete this task?",
-    "deleteHexagon": "Are you sure you want to delete this hexagon?"
+    "deleteHexagon": "Are you sure you want to delete this honeycomb?"
   },
   "messages": {
-    "selectHoneycomb": "Select a honeycomb to view tasks",
+    "selectHoneycomb": "Select a hive to view tasks",
     "noTasks": "No tasks yet",
     "loading": "Loading...",
     "settingsSaved": "Settings saved successfully",
@@ -140,10 +161,45 @@
   "hexagon": {
     "title": "Title",
     "color": "Color",
-    "pickColor": "Pick a color"
+    "pickColor": "Pick a color",
+    "description": "Description",
+    "icon": "Icon",
+    "priority": "Priority",
+    "deadline": "Deadline",
+    "titlePlaceholder": "Enter title",
+    "descriptionPlaceholder": "Enter description",
+    "new_honeycomb": "New Honeycomb",
+    "main_goal": "Goal"
   },
-  "task": {
-    "title": "Title",
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
+  "sharing": {
+    "title": "Share",
+    "qrCodeAlt": "QR Code for sharing link",
+    "shareLink": "Share link",
+    "enterEmail": "Enter email",
+    "invite": "Invite",
+    "copyLink": "Copy link"
+  },
+  "notifications": {
+    "linkCopied": "Link copied!",
+    "inviteSent": "Invitation sent to {{email}}"
+  },
+  "errors": {
+    "copyError": "Copy error:",
+    "failedToCopyLink": "Failed to copy link"
+  },
+  "logs": {
+    "inviteSent": "Invitation sent to {{email}}"
+  },
+  "wrapper": {
+    "progress": "Progress"
+  },
+  "taskSidebar": {
+    "TasksList": "Title",
     "status": "Status",
     "progress": "Progress"
   }

@@ -1,5 +1,5 @@
 {
-  "appName": "BeeTask",
+  "appName": "Combly",
   "totalProgress": "Загальний Прогрес",
   "language": "Мова",
   "login": {
@@ -57,7 +57,7 @@
         "system": "Системна"
       },
       "compactMode": "Компактний режим",
-      "description": "Налаштуйте зовнішній вигляд BeeTask"
+      "description": "Налаштуйте зовнішній вигляд додатку"
     },
     "data": {
       "title": "Керування даними",
@@ -77,8 +77,8 @@
     "password": "Змінити пароль"
   },
   "actions": {
-    "createHive": "Новий вулик",
-    "createHoneycomb": "Нові соти",
+    "createHive": "Нова пасіка",
+    "createHoneycomb": "Новий вулик",
     "rename": "Перейменувати",
     "delete": "Видалити",
     "addTask": "Додати завдання",
@@ -88,11 +88,13 @@
     "save": "Зберегти",
     "cancel": "Скасувати",
     "create": "Створити",
-    "addHexagon": "Додати гексагон",
+    "addHexagon": "Додати соту",
     "done": "Готово",
     "resetView": "Скинути вигляд",
     "zoomIn": "Збільшити",
-    "zoomOut": "Зменшити"
+    "zoomOut": "Зменшити",
+    "close": "Закрити",
+    "share": "Поділитися"
   },
   "navigation": {
     "settings": "Налаштування",
@@ -100,32 +102,51 @@
     "logout": "Вийти"
   },
   "modals": {
-    "createHive": "Створити новий вулик",
-    "createHoneycomb": "Створити нові соти",
-    "createTask": "Створити нове завдання",
+    "createHive": "Створити нову пасіку",
+    "createHoneycomb": "Створити новий вулик",
+    "createTask": "Створити нову соту",
     "cancel": "Скасувати",
     "create": "Створити",
     "rename": "Перейменувати",
     "delete": "Видалити",
-    "editHexagon": "Редагувати гексагон",
-    "createHexagon": "Створити новий гексагон"
+    "editHexagon": "Редагувати соту",
+    "createHexagon": "Створити нову соту"
   },
   "placeholders": {
     "newTask": "Додати нове завдання...",
     "search": "Пошук...",
-    "newHiveName": "Введіть назву вулика...",
-    "newHoneycombName": "Введіть назву сот...",
-    "taskTitle": "Введіть назву завдання..."
+    "newHiveName": "Введіть назву пасіки...",
+    "newHoneycombName": "Введіть назву вулика...",
+    "taskTitle": "Введіть назву завдання...",
+    "Deadline": "За терміном",
+    "Title": "За назвою",
+    "Color": "За кольором",
+    "TasksList": "Список завдань",
+    "Filters": "Фільтри",
+    "NoGrouping": "Без групування",
+    "GroupColor": "Групування за кольором",
+    "GroupStatus": "Групування за статусом",
+    "GroupDeadline": "Групування за терміном",
+    "Overdue": "Прострочено",
+    "Today": "Сьогодні",
+    "Tomorrow": "Завтра",
+    "NoDeadline": "Без терміну",
+    "ThisWeek": "Цього тижня",
+    "Later": "Пізніше",
+    "AllTasks": "Всі завдання",
+    "NoColor": "Без кольору",
+    "Completed": "Завершено",
+    "pending": "В процесі"
   },
   "confirmations": {
     "delete": "Ви впевнені? Цю дію неможливо скасувати.",
-    "deleteHive": "Ви впевнені, що хочете видалити цей вулик?",
-    "deleteHoneycomb": "Ви впевнені, що хочете видалити ці соти?",
+    "deleteHive": "Ви впевнені, що хочете видалити цю пасіку?",
+    "deleteHoneycomb": "Ви впевнені, що хочете видалити цей вулик?",
     "deleteTask": "Ви впевнені, що хочете видалити це завдання?",
-    "deleteHexagon": "Ви впевнені, що хочете видалити цей гексагон?"
+    "deleteHexagon": "Ви впевнені, що хочете видалити цю соту?"
   },
   "messages": {
-    "selectHoneycomb": "Оберіть соти для перегляду завдань",
+    "selectHoneycomb": "Оберіть вулик для перегляду завдань",
     "noTasks": "Поки що немає завдань",
     "loading": "Завантаження...",
     "settingsSaved": "Налаштування збережено",
@@ -140,10 +161,45 @@
   "hexagon": {
     "title": "Назва",
     "color": "Колір",
-    "pickColor": "Обрати колір"
+    "pickColor": "Обрати колір",
+    "description": "Опис",
+    "icon": "Іконка",
+    "priority": "Пріоритет",
+    "deadline": "Термін",
+    "titlePlaceholder": "Введіть назву",
+    "descriptionPlaceholder": "Введіть опис",
+    "new_honeycomb": "Нова сота",
+    "main_goal": "Мета"
   },
-  "task": {
-    "title": "Назва",
+  "priority": {
+    "low": "Низький",
+    "medium": "Середній",
+    "high": "Високий"
+  },
+  "sharing": {
+    "title": "Поділитися",
+    "qrCodeAlt": "QR-код для посилання",
+    "shareLink": "Посилання",
+    "enterEmail": "Введіть email",
+    "invite": "Запросити",
+    "copyLink": "Копіювати посилання"
+  },
+  "notifications": {
+    "linkCopied": "Посилання скопійовано!",
+    "inviteSent": "Запрошення надіслано на {{email}}"
+  },
+  "errors": {
+    "copyError": "Помилка копіювання:",
+    "failedToCopyLink": "Не вдалося скопіювати посилання"
+  },
+  "logs": {
+    "inviteSent": "Запрошення надіслано на {{email}}"
+  },
+  "wrapper": {
+    "progress": "Прогрес"
+  },
+  "taskSidebar": {
+    "TasksList": "Назва",
     "status": "Статус",
     "progress": "Прогрес"
   }

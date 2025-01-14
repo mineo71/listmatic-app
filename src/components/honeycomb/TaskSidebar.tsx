@@ -170,7 +170,7 @@ const TaskSidebar = ({
               >
                 <option value="deadline">{t('placeholders.Deadline')}</option>
                 <option value="title">{t('placeholders.Title')}</option>
-                <option value="color">{t('placeholders.Color')}</option>
+                {/* <option value="color">{t('placeholders.Color')}</option> */}
               </select>
             </div>
           </div>

@@ -15,7 +15,7 @@ interface TaskSidebarProps {
 }
 
 type SortOption = 'deadline' | 'title' | 'color';
-type GroupOption = 'none' | 'color' | 'completion' | 'deadline';
+type GroupOption = 'none' | 'color' | 'completion' | 'deadline' | 'priority';
 
 const TaskSidebar = ({
   isOpen,
@@ -80,6 +80,9 @@ const TaskSidebar = ({
         case 'completion':
           groupKey = item.completed ? t('placeholders.Completed') : t('placeholders.pending');
           break;
+        case 'priority':
+          groupKey = t(`priority.${item.priority || 'medium'}`);
+          break;
         case 'deadline':
           if (!item.deadline) {
             groupKey = t('placeholders.NoDeadline');
@@ -126,6 +129,19 @@ const TaskSidebar = ({
     return date.toLocaleDateString();
   };
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case t('priority.high'):
+        return 'bg-red-500';
+      case t('priority.medium'):
+        return 'bg-yellow-500';
+      case t('priority.low'):
+        return 'bg-green-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
   if (!isOpen) return null;
 
   const renderGroupHeader = (group: string) => {
@@ -137,6 +153,13 @@ const TaskSidebar = ({
             style={{ backgroundColor: group === t('placeholders.NoColor') ? '#E5E7EB' : group }}
           />
           <span>{group === t('placeholders.NoColor') ? t('placeholders.NoColor') : ''}</span>
+        </div>
+      );
+    } else if (groupBy === 'priority') {
+      return (
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${getPriorityColor(group)}`} />
+          <span>{group}</span>
         </div>
       );
     }
@@ -204,6 +227,7 @@ const TaskSidebar = ({
               <option value="color">{t('placeholders.GroupColor')}</option>
               <option value="completion">{t('placeholders.GroupStatus')}</option>
               <option value="deadline">{t('placeholders.GroupDeadline')}</option>
+              <option value="priority">{t('placeholders.GroupPriority')}</option>
             </select>
           </div>
         )}

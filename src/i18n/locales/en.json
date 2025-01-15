@@ -127,6 +127,7 @@
     "GroupColor": "Group by Color",
     "GroupStatus": "Group by Status",
     "GroupDeadline": "Group by Deadline",
+    "GroupPriority": "Group by Priority",
     "Overdue": "Overdue",
     "Today": "Today",
     "Tomorrow": "Tomorrow",

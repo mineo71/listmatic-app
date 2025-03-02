@@ -88,11 +88,11 @@ export const HoneycombViewWrapper = () => {
   };
 
   const handleZoomIn = () => {
-    setZoom(z => Math.min(z + 0.1, 2));
+    setZoom(z => Math.min(z + 0.1, 3));
   };
 
   const handleZoomOut = () => {
-    setZoom(z => Math.max(z - 0.1, 0.5));
+    setZoom(z => Math.max(z - 0.1, 0.9));
   };
 
   const toggleTaskSidebar = () => {

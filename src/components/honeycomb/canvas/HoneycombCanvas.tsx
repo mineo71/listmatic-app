@@ -3,8 +3,8 @@
 import type React from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Plus, Wand2, X } from "lucide-react"
-// import { Download } from "lucide-react"
-// import { Upload } from "lucide-react"
+import { Download } from "lucide-react"
+import { Upload } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { HoneycombHexagon } from "../hexagon/HoneycombHexagon"
 import { HoneycombEditModal } from "../HoneycombEditModal"
@@ -36,6 +36,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isModalCreating, setIsModalCreating] = useState(false)
   const [pendingHexagon, setPendingHexagon] = useState<HoneycombItem | null>(null)
+  const [idCounter, setIdCounter] = useState<number>(1); // Початкове значення idCounter — 10
 
   // Обробники миші для перетягування полотна
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -81,35 +82,42 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
 
   // Створення нового шестикутника
   const createNewHexagon = () => {
-    if (!ghostHex || !containerRef.current) return
-    const pixel = axialToPixel(ghostHex.q, ghostHex.r)
-
+    if (!ghostHex || !containerRef.current) return;
+  
+    const pixel = axialToPixel(ghostHex.q, ghostHex.r);
+  
+    // Створюємо новий ID
+    const newId = (idCounter + 1).toString();
+  
     // Створюємо об’єкт нового елемента
     const newItem: HoneycombItem = {
-      id: Date.now().toString(),
+      id: newId, // Використовуємо інкрементований ID
       q: ghostHex.q,
       r: ghostHex.r,
       x: pixel.x,
       y: pixel.y,
       title: t("hexagon.new_honeycomb"),
       description: "",
-      icon: "None" as TaskIcon, //Corrected line
+      icon: "None" as TaskIcon, 
       priority: "medium",
       completed: false,
       connections: [ghostHex.parentId],
       color: "#FDE68A",
       createdAt: new Date(),
       updatedAt: new Date(),
-    }
-
-    // Зберігаємо його, але спочатку відкриваємо модалку для вводу детальної інформації
-    setPendingHexagon(newItem)
-    setEditingItem(newItem)
-    setIsEditModalOpen(true)
-    setIsModalCreating(true)
-    setIsCreating(false)
-    setGhostHex(null)
-  }
+    };
+  
+    // Збільшуємо лічильник для наступного елемента
+    setIdCounter(idCounter + 1);
+  
+    // Зберігаємо новий елемент
+    setPendingHexagon(newItem);
+    setEditingItem(newItem);
+    setIsEditModalOpen(true);
+    setIsModalCreating(true);
+    setIsCreating(false);
+    setGhostHex(null);
+  };
 
   // Клік по "привиду" нового шестикутника
   const handleGhostClick = (e: React.MouseEvent) => {
@@ -234,37 +242,35 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     }
   }
 
-  // Експорт у JSON
-  // const exportToJson = (items: HoneycombItem[]) => {
-  //   const dataStr = JSON.stringify(items, null, 2)
-  //   const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr)
-  //   const exportFileDefaultName = "honeycomb-data.json"
-  //   const linkElement = document.createElement("a")
-  //   linkElement.setAttribute("href", dataUri)
-  //   linkElement.setAttribute("download", exportFileDefaultName)
-  //   linkElement.click()
-  // }
+  const exportToJson = (items: HoneycombItem[]) => {
+    const dataStr = JSON.stringify(items, null, 2)
+    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr)
+    const exportFileDefaultName = "honeycomb-data.json"
+    const linkElement = document.createElement("a")
+    linkElement.setAttribute("href", dataUri)
+    linkElement.setAttribute("download", exportFileDefaultName)
+    linkElement.click()
+  }
 
-  // Імпорт з JSON
-  // const importFromJson = (event: React.ChangeEvent<HTMLInputElement>) => {
-  //   const file = event.target.files?.[0]
-  //   if (file) {
-  //     const reader = new FileReader()
-  //     reader.onload = (e) => {
-  //       const content = e.target?.result
-  //       if (typeof content === "string") {
-  //         try {
-  //           const importedItems = JSON.parse(content) as HoneycombItem[]
-  //           setItems(importedItems)
-  //         } catch (error) {
-  //           console.error("Error parsing JSON:", error)
-  //           toast.error(t("messages.invalidJsonFile"))
-  //         }
-  //       }
-  //     }
-  //     reader.readAsText(file)
-  //   }
-  // }
+  const importFromJson = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const content = e.target?.result
+        if (typeof content === "string") {
+          try {
+            const importedItems = JSON.parse(content) as HoneycombItem[]
+            setItems(importedItems)
+          } catch (error) {
+            console.error("Error parsing JSON:", error)
+            toast.error(t("messages.invalidJsonFile"))
+          }
+        }
+      }
+      reader.readAsText(file)
+    }
+  }
 
   // При першому завантаженні центруємо полотно
   useEffect(() => {
@@ -339,21 +345,19 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
             <Wand2 size={22} />
           </button>
 
-          {/* Експорт у JSON */}
-          {/*<button*/}
-          {/*    onClick={() => exportToJson(items)}*/}
-          {/*    className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2"*/}
-          {/*>*/}
-          {/*  <Download size={22} />*/}
-          {/*  <span className="font-xl">{t("actions.export")}</span>*/}
-          {/*</button>*/}
+          <button
+            onClick={() => exportToJson(items)}
+            className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2"
+            >
+              <Download size={22} />
+              <span className="font-xl">{t("actions.export")}</span>
+          </button>
 
-          {/* Імпорт з JSON */}
-          {/*<label className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2 cursor-pointer">*/}
-          {/*  <input type="file" accept=".json" onChange={importFromJson} style={{ display: "none" }} />*/}
-          {/*  <Upload size={22} />*/}
-          {/*  <span className="font-xl">{t("actions.import")}</span>*/}
-          {/*</label>*/}
+          <label className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2 cursor-pointer">
+            <input type="file" accept=".json" onChange={importFromJson} style={{ display: "none" }} />
+            <Upload size={22} />
+            <span className="font-xl">{t("actions.import")}</span>
+          </label>
         </div>
 
         {/* Полотно зі шестикутниками (масштабується за допомогою CSS transform: scale(zoom)) */}

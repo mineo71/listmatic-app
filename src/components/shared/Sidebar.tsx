@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MoreHorizontal, ChevronRight, ChevronDown, Plus, Settings, User, LogOut, Menu, ChevronLeft, Star } from 'lucide-react';
+import { MoreHorizontal, ChevronRight, ChevronDown, Plus, Settings, User,
+//  LogOut,
+Menu, ChevronLeft, Star } from 'lucide-react';
 import type { Hive } from '@/types';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,7 +33,7 @@ export const Sidebar = ({
   onDeleteHive,
   onDeleteHoneycomb,
   onRenameItem,
-  onLogout,
+  // onLogout,
 }: SidebarProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -81,7 +83,7 @@ export const Sidebar = ({
       {!isOpen && (
         <button
           onClick={onToggleSidebar}
-          className="fixed top-[14px] left-4 p-2 rounded-md bg-white shadow-md hover:bg-gray-50 z-30"
+          className="fixed top-[12px] left-4 p-2 rounded-md bg-white shadow-md hover:bg-gray-50 z-30"
           aria-label={t('actions.openSidebar')}
         >
           <Menu size={20} />
@@ -256,14 +258,14 @@ export const Sidebar = ({
               <User size={20} />
               {t('navigation.profile')}
             </button>
-            <button
+            {/* <button
               onClick={onLogout}
               className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50
                 rounded-md transition-colors"
             >
               <LogOut size={20} />
               {t('navigation.logout')}
-            </button>
+            </button> */}
           </div>
         </div>
       </aside>

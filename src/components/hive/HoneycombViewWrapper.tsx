@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { RotateCcw, ZoomIn, ZoomOut, List, Share } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import SharingModal from '../honeycomb/SharingModal';
 type ContextType = {
   hives: Hive[];
   onUpdateHoneycomb: (honeycomb: Honeycomb) => void;
+  isSidebarOpen?: boolean;
 };
 
 export const HoneycombViewWrapper = () => {
@@ -17,13 +18,41 @@ export const HoneycombViewWrapper = () => {
   const { t } = useTranslation();
   const { hives } = useOutletContext<ContextType>();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { isSidebarOpen } = useOutletContext<ContextType>();
 
   // View state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [progress, setProgress] = useState(0);
   const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
+
+  // Calculate the center position based on container size and sidebar state
+  const calculateCenterPosition = useCallback(() => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    return {
+      // When sidebar is open, shift center left by 320px
+      x: isTaskSidebarOpen ? rect.width / 2 - 162 : rect.width / 2,
+      y: rect.height / 2
+    };
+  }, [isTaskSidebarOpen]);
+
+  // Initialize and update center position when container loads or sidebar state changes
+  useEffect(() => {
+    setOffset(calculateCenterPosition());
+  }, [calculateCenterPosition]);
+
+  // Also update center when container size changes
+  useEffect(() => {
+    const handleResize = () => {
+      setOffset(calculateCenterPosition());
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [calculateCenterPosition]);
 
   // Progress update handler
   const handleProgressUpdate = (newProgress: number) => {
@@ -55,25 +84,19 @@ export const HoneycombViewWrapper = () => {
   // Handlers for view controls
   const handleReset = () => {
     setZoom(1);
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setOffset({
-        x: rect.width / 2,
-        y: rect.height / 2
-      });
-    }
+    setOffset(calculateCenterPosition());
   };
 
   const handleZoomIn = () => {
-    setZoom(z => Math.min(z + 0.1, 2));
+    setZoom(z => Math.min(z + 0.1, 3));
   };
 
   const handleZoomOut = () => {
-    setZoom(z => Math.max(z - 0.1, 0.5));
+    setZoom(z => Math.max(z - 0.1, 0.9));
   };
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+  const toggleTaskSidebar = () => {
+    setIsTaskSidebarOpen(!isTaskSidebarOpen);
   };
 
   const openSharingModal = () => {
@@ -87,9 +110,10 @@ export const HoneycombViewWrapper = () => {
   return (
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header with controls */}
-        <div className="flex-shrink-0 p-6 border-b border-gray-200 bg-white">
+        <div className="flex-shrink-0 px-6 py-[14px]  border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-8">
+            <div className={`flex items-center gap-8 transition-all duration-300
+              ${isSidebarOpen ? 'pl-0' : 'pl-12'}`}>
               <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
 
               {/* Progress bar */}
@@ -130,9 +154,9 @@ export const HoneycombViewWrapper = () => {
                 <ZoomOut size={20} />
               </button>
               <button
-                  onClick={toggleSidebar}
+                  onClick={toggleTaskSidebar}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                  title={isSidebarOpen ? t('actions.closeSidebar') : t('actions.openSidebar')}
+                  title={isTaskSidebarOpen ? t('actions.closeSidebar') : t('actions.openSidebar')}
               >
                 <List size={20} />
               </button>
@@ -147,16 +171,19 @@ export const HoneycombViewWrapper = () => {
           </div>
         </div>
 
-        {/* Canvas area */}
-        <div ref={containerRef} className="flex-grow h-0">
+        {/* Canvas area with transition for smooth sidebar toggling */}
+        <div 
+          ref={containerRef} 
+          className="flex-grow h-0 relative transition-all duration-300"
+        >
           <HoneycombCanvas
               key={honeycomb.id}
               zoom={zoom}
               setZoom={setZoom}
               offset={offset}
               setOffset={setOffset}
-              isSidebarOpen={isSidebarOpen}
-              setIsSidebarOpen={setIsSidebarOpen}
+              isTaskSidebarOpen={isTaskSidebarOpen}
+              setisTaskSidebarOpen={setIsTaskSidebarOpen}
               onProgressUpdate={handleProgressUpdate}
           />
         </div>
@@ -165,4 +192,3 @@ export const HoneycombViewWrapper = () => {
       </div>
   );
 };
-

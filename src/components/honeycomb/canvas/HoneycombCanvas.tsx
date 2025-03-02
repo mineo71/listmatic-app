@@ -350,13 +350,13 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
             className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2"
             >
               <Download size={22} />
-              <span className="font-xl">{t("actions.export")}</span>
+              {/* <span className="font-xl">{t("actions.export")}</span> */}
           </button>
 
           <label className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2 cursor-pointer">
             <input type="file" accept=".json" onChange={importFromJson} style={{ display: "none" }} />
             <Upload size={22} />
-            <span className="font-xl">{t("actions.import")}</span>
+            {/* <span className="font-xl">{t("actions.import")}</span> */}
           </label>
         </div>
 

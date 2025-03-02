@@ -19,7 +19,7 @@ export const HoneycombViewWrapper = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // View state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [progress, setProgress] = useState(0);
@@ -72,8 +72,8 @@ export const HoneycombViewWrapper = () => {
     setZoom(z => Math.max(z - 0.1, 0.5));
   };
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+  const toggleTaskSidebar = () => {
+    setIsTaskSidebarOpen(!isTaskSidebarOpen);
   };
 
   const openSharingModal = () => {
@@ -87,9 +87,9 @@ export const HoneycombViewWrapper = () => {
   return (
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header with controls */}
-        <div className="flex-shrink-0 p-6 border-b border-gray-200 bg-white">
+        <div className="flex-shrink-0 px-6 py-[14px]  border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-8">
+            <div className={`flex items-center gap-8 `}>
               <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
 
               {/* Progress bar */}
@@ -130,9 +130,9 @@ export const HoneycombViewWrapper = () => {
                 <ZoomOut size={20} />
               </button>
               <button
-                  onClick={toggleSidebar}
+                  onClick={toggleTaskSidebar}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                  title={isSidebarOpen ? t('actions.closeSidebar') : t('actions.openSidebar')}
+                  title={isTaskSidebarOpen ? t('actions.closeSidebar') : t('actions.openSidebar')}
               >
                 <List size={20} />
               </button>
@@ -155,8 +155,8 @@ export const HoneycombViewWrapper = () => {
               setZoom={setZoom}
               offset={offset}
               setOffset={setOffset}
-              isSidebarOpen={isSidebarOpen}
-              setIsSidebarOpen={setIsSidebarOpen}
+              isSidebarOpen={isTaskSidebarOpen}
+              setIsSidebarOpen={setIsTaskSidebarOpen}
               onProgressUpdate={handleProgressUpdate}
           />
         </div>

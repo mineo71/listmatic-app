@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Globe, 
-  Moon, 
-  Bell, 
-  Volume2, 
-  Shield, 
+  // Moon, 
+  // Bell, 
+  // Volume2, 
+  // Shield, 
   Database,
   Trash2
 } from 'lucide-react';
@@ -33,10 +33,10 @@ export const Settings = () => {
 
   const sections: SettingsSection[] = [
     { key: 'general', icon: Globe, title: t('settings.sections.general') },
-    { key: 'notifications', icon: Bell, title: t('settings.sections.notifications') },
-    { key: 'appearance', icon: Moon, title: t('settings.sections.appearance') },
-    { key: 'sound', icon: Volume2, title: t('settings.sections.sound') },
-    { key: 'privacy', icon: Shield, title: t('settings.sections.privacy') },
+    // { key: 'notifications', icon: Bell, title: t('settings.sections.notifications') },
+    // { key: 'appearance', icon: Moon, title: t('settings.sections.appearance') },
+    // { key: 'sound', icon: Volume2, title: t('settings.sections.sound') },
+    // { key: 'privacy', icon: Shield, title: t('settings.sections.privacy') },
     { key: 'data', icon: Database, title: t('settings.sections.data') },
   ];
 

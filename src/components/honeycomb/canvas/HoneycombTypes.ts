@@ -25,8 +25,8 @@ export interface HoneycombCanvasProps {
     setZoom: (zoom: number | ((prev: number) => number)) => void
     offset: { x: number; y: number }
     setOffset: (offset: { x: number; y: number } | ((prev: { x: number; y: number }) => { x: number; y: number })) => void
-    isSidebarOpen: boolean
-    setIsSidebarOpen: (open: boolean) => void
+    isTaskSidebarOpen: boolean
+    setisTaskSidebarOpen: (open: boolean) => void
     onProgressUpdate: (progress: number) => void
 }
 

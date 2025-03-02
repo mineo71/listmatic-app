@@ -83,7 +83,7 @@ export const Sidebar = ({
       {!isOpen && (
         <button
           onClick={onToggleSidebar}
-          className="fixed top-[14px] left-4 p-2 rounded-md bg-white shadow-md hover:bg-gray-50 z-30"
+          className="fixed top-[12px] left-4 p-2 rounded-md bg-white shadow-md hover:bg-gray-50 z-30"
           aria-label={t('actions.openSidebar')}
         >
           <Menu size={20} />

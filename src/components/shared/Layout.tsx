@@ -179,7 +179,8 @@ export const Layout = () => {
           <Outlet context={{ 
             hives,
             selectedHiveId,
-            onUpdateHoneycomb: handleUpdateHoneycomb
+            onUpdateHoneycomb: handleUpdateHoneycomb,
+            isSidebarOpen
           }} />
         </main>
       </div>

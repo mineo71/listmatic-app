@@ -9,6 +9,7 @@ import SharingModal from '../honeycomb/SharingModal';
 type ContextType = {
   hives: Hive[];
   onUpdateHoneycomb: (honeycomb: Honeycomb) => void;
+  isSidebarOpen?: boolean;
 };
 
 export const HoneycombViewWrapper = () => {
@@ -17,6 +18,7 @@ export const HoneycombViewWrapper = () => {
   const { t } = useTranslation();
   const { hives } = useOutletContext<ContextType>();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { isSidebarOpen } = useOutletContext<ContextType>();
 
   // View state
   const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(true);
@@ -89,7 +91,8 @@ export const HoneycombViewWrapper = () => {
         {/* Header with controls */}
         <div className="flex-shrink-0 px-6 py-[14px]  border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between">
-            <div className={`flex items-center gap-8 `}>
+            <div className={`flex items-center gap-8 transition-all duration-300
+              ${isSidebarOpen ? 'pl-0' : 'pl-12'}`}>
               <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
 
               {/* Progress bar */}
@@ -155,8 +158,8 @@ export const HoneycombViewWrapper = () => {
               setZoom={setZoom}
               offset={offset}
               setOffset={setOffset}
-              isSidebarOpen={isTaskSidebarOpen}
-              setIsSidebarOpen={setIsTaskSidebarOpen}
+              isTaskSidebarOpen={isTaskSidebarOpen}
+              setisTaskSidebarOpen={setIsTaskSidebarOpen}
               onProgressUpdate={handleProgressUpdate}
           />
         </div>

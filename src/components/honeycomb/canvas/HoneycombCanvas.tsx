@@ -1,5 +1,3 @@
-"use client"
-
 import type React from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Plus, Wand2, X } from "lucide-react"
@@ -15,13 +13,13 @@ import { axialToPixel, findClosestNeighbor } from "./honeycombUtils"
 import { useHoneycombItems } from "./useHoneycombItems"
 
 export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
-                                                                  zoom,
-                                                                  offset,
-                                                                  setOffset,
-                                                                  isSidebarOpen,
-                                                                  setIsSidebarOpen,
-                                                                  onProgressUpdate,
-                                                                }) => {
+    zoom,
+    offset,
+    setOffset,
+    isTaskSidebarOpen,
+    setisTaskSidebarOpen,
+    onProgressUpdate,
+  }) => {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
@@ -419,8 +417,8 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
 
         {/* Бокова панель із завданнями */}
         <TaskSidebar
-            isOpen={isSidebarOpen}
-            onClose={() => setIsSidebarOpen(false)}
+            isOpen={isTaskSidebarOpen}
+            onClose={() => setisTaskSidebarOpen(false)}
             items={items}
             selectedItemId={selectedItemId}
             onItemClick={(id) => {

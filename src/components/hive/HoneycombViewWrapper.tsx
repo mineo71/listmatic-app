@@ -110,73 +110,79 @@ export const HoneycombViewWrapper = () => {
   return (
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header with controls */}
-        <div className="flex-shrink-0 px-6 py-[14px]  border-b border-gray-200 bg-white">
-          <div className="flex items-center justify-between">
-            <div className={`flex items-center gap-8 transition-all duration-300
-              ${isSidebarOpen ? 'pl-0' : 'pl-12'}`}>
-              <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
+        <div className="flex-shrink-0 px-6 sm:px-4 py-[14px] border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between flex-wrap gap-6 sm:gap-4">
+            <div className={`flex items-center gap-8 sm:gap-4 flex-wrap transition-all duration-300 ${
+                isSidebarOpen ? 'pl-0' : 'pl-12'
+            }`}>
 
-              {/* Progress bar */}
-              <div className="w-64">
+              <h1 className="text-2xl font-bold text-gray-900 break-words max-w-[60vw] sm:max-w-[50vw]">
+                {honeycomb.name}
+              </h1>
+
+              {/* progressbar */}
+              <div className="min-w-[140px] max-w-[280px] w-full sm:w-96">
                 <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-700">{t('wrapper.progress')}</span>
-                  <span className="text-sm text-gray-500">{Math.round(progress)}%</span>
+              <span className="text-sm sm:text-xs font-medium text-gray-700">
+                {t('wrapper.progress')}
+              </span>
+                  <span className="text-sm sm:text-xs text-gray-500">
+                {Math.round(progress)}%
+              </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                       className="bg-amber-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progress}%` }}
+                      style={{width: `${progress}%`}}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-2">
+            {/* Action buttons */}
+            <div className="flex gap-2 flex-wrap justify-center pl-12 sm:justify-center w-full sm:w-auto">
               <button
                   onClick={handleReset}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={t('actions.resetView')}
               >
-                <RotateCcw size={20} />
+                <RotateCcw size={20}/>
               </button>
               <button
                   onClick={handleZoomIn}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={t('actions.zoomIn')}
               >
-                <ZoomIn size={20} />
+                <ZoomIn size={20}/>
               </button>
               <button
                   onClick={handleZoomOut}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={t('actions.zoomOut')}
               >
-                <ZoomOut size={20} />
+                <ZoomOut size={20}/>
               </button>
               <button
                   onClick={toggleTaskSidebar}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={isTaskSidebarOpen ? t('actions.closeSidebar') : t('actions.openSidebar')}
               >
-                <List size={20} />
+                <List size={20}/>
               </button>
               <button
                   onClick={openSharingModal}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={t('actions.share')}
               >
-                <Share size={20} />
+                <Share size={20}/>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Canvas area with transition for smooth sidebar toggling */}
-        <div 
-          ref={containerRef} 
-          className="flex-grow h-0 relative transition-all duration-300"
-        >
-          <HoneycombCanvas
+        {/* Canvas */}
+        <div ref={containerRef} className="flex-grow h-0 relative transition-all duration-300">
+        <HoneycombCanvas
               key={honeycomb.id}
               zoom={zoom}
               setZoom={setZoom}
@@ -191,4 +197,5 @@ export const HoneycombViewWrapper = () => {
         <SharingModal isOpen={isSharingModalOpen} onClose={closeSharingModal} />
       </div>
   );
+
 };

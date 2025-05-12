@@ -17,29 +17,52 @@ interface Category {
 
 // Expanded set of icons for better task visualization
 const AVAILABLE_ICONS = [
-  // Main workflow icons
-  'Target', 'Star', 'Flag', 'Timer', 'CheckCircle', 
-  // Technical icons
-  'Code', 'Terminal', 'Database', 'Webhook', 'FileCode', 'Boxes', 'LayoutGrid', 'Component', 'Braces', 'FolderGit',
-  // Analytics icons
-  'BarChart', 'PieChart', 'FileText', 
-  // Business icons
-  'Briefcase', 'Building', 'Users', 'Mail', 'MessageCircle', 
-  // Life & Productivity icons
-  'Calendar', 'Clock', 'ShoppingCart', 'Coffee', 'Heart',
-  // Home-related icons
-  'Home', 'Settings', 'DollarSign', 'CreditCard', 'Truck',
-  // Education icons
-  'GraduationCap', 'BookOpen', 'PenTool',
-  // Health icons
-  'Activity', 'Heartbeat', 'Apple',
-  // Travel icons
-  'Map', 'Compass', 'Car', 'Plane',
-  // Social media icons
-  'Camera', 'Video', 'Image', 'Share',
-  // Misc
-  'Bell', 'Bookmark', 'Archive', 'Tag', 'Zap', 'Cloud'
-];
+// Main workflow icons
+'Target', 'Star', 'Flag', 'Timer', 'CheckCircle', 
+    
+// Technical icons
+'Code', 'Terminal', 'Database', 'Webhook', 'FileCode', 'Boxes', 'LayoutGrid', 'Component', 'Braces', 'FolderGit',
+'GitBranch', 'GitMerge', 'GitPullRequest', 'Codesandbox', 'Codepen', 'Figma',
+    
+// Analytics icons
+'BarChart', 'PieChart', 'FileText', 'ClipboardList', 'FilePlus', 'FileCheck', 'FileX',
+    
+// Business icons
+'Briefcase', 'Building', 'Users', 'Mail', 'MessageCircle', 'MessageSquare',
+    
+// Life & Productivity icons
+'Calendar', 'Clock', 'CalendarDays', 'CalendarClock', 'ShoppingCart', 'Coffee', 'Heart',
+    
+// Home & Lifestyle
+'Home', 'Settings', 'DollarSign', 'CreditCard', 'Truck', 'Hammer', 'Wrench', 'Lightbulb', 'Bed', 'Bath',
+    
+// Education icons
+'GraduationCap', 'BookOpen', 'PenTool', 'Book', 'Pencil',
+    
+// Health & Wellness
+'Activity', 'Apple', 'Dumbbell',
+    
+// Travel & Transport
+'Map', 'Compass', 'Car', 'Plane', 'Train', 'Bus', 'Globe', 'Mountain', 'Hotel',
+    
+// Shopping & Commerce
+'ShoppingBag', 'Package', 'Gift', 'Store', 'Pizza',
+    
+// Communication & Social
+'Camera', 'Video', 'Share', 'Send', 'Reply', 'AtSign', 'Hash',
+    
+// Weather & Environment
+'Sun', 'Moon', 'CloudRain', 'CloudSnow', 'Wind', 'Thermometer', 'Umbrella', 'Cloud',
+    
+// Security
+'Lock', 'Unlock', 'Shield', 'ShieldAlert', 'ShieldCheck', 'Key', 'KeyRound', 'Fingerprint',
+    
+// Devices & Hardware
+'Laptop', 'Printer', 'Phone', 'Headphones', 'Monitor', 'Smartphone', 'Tablet',
+    
+// Misc
+'Bell', 'Bookmark', 'Archive', 'Tag', 'Zap', 'Plus'
+  ];
 
 // Predefined colors for categories
 const DEFAULT_COLORS = [

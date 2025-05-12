@@ -1,6 +1,7 @@
 import type { TaskIcon as ImportedTaskIcon } from "@/types"
 
 export type TaskIcon = ImportedTaskIcon
+export type TaskPriority = "low" | "medium" | "high"
 
 export interface HoneycombItem {
     id: string
@@ -11,11 +12,13 @@ export interface HoneycombItem {
     title: string
     description: string
     icon: TaskIcon
-    priority: "low" | "medium" | "high"
+    priority: TaskPriority
     completed: boolean
     connections: string[]
     color: string
+    category?: string
     isMain?: boolean
+    deadline?: Date
     createdAt: Date
     updatedAt: Date
 }
@@ -29,4 +32,3 @@ export interface HoneycombCanvasProps {
     setisTaskSidebarOpen: (open: boolean) => void
     onProgressUpdate: (progress: number) => void
 }
-

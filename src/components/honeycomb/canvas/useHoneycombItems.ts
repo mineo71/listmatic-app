@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
-import type { HoneycombItem, TaskIcon } from "./HoneycombTypes"
+import type { HoneycombItem, TaskIcon, TaskPriority } from "./HoneycombTypes"
 import { axialToPixel } from "./honeycombUtils"
 
 export const useHoneycombItems = (onProgressUpdate: (progress: number) => void) => {
@@ -21,7 +21,7 @@ export const useHoneycombItems = (onProgressUpdate: (progress: number) => void) 
                 title: t("hexagon.main_goal"),
                 description: "",
                 icon: "Star" as TaskIcon,
-                priority: "high",
+                priority: "high" as TaskPriority,
                 completed: false,
                 connections: [],
                 color: "#FDE68A",
@@ -41,4 +41,3 @@ export const useHoneycombItems = (onProgressUpdate: (progress: number) => void) 
 
     return { items, setItems }
 }
-

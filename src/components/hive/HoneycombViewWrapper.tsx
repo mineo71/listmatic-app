@@ -154,18 +154,18 @@ export const HoneycombViewWrapper = () => {
                 <ZoomOut size={20} />
               </button>
               <button
-                  onClick={toggleTaskSidebar}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                  title={isTaskSidebarOpen ? t('actions.closeSidebar') : t('actions.openSidebar')}
-              >
-                <List size={20} />
-              </button>
-              <button
                   onClick={openSharingModal}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={t('actions.share')}
               >
                 <Share size={20} />
+              </button>
+              <button
+                  onClick={toggleTaskSidebar}
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                  title={isTaskSidebarOpen ? t('actions.closeSidebar') : t('actions.openSidebar')}
+              >
+                <List size={20} />
               </button>
             </div>
           </div>

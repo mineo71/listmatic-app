@@ -4,12 +4,12 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 // import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { CreateItemModal } from './Modal';
-import { initialHives } from '@/data/mockData';
+// import { initialHives } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
 import type { Hive, Honeycomb } from '@/types';
 
 export const Layout = () => {
-  const [hives, setHives] = useState<Hive[]>(initialHives);
+  const [hives, setHives] = useState<Hive[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [modalType, setModalType] = useState<'hive' | 'honeycomb' | null>(null);
   const [selectedHiveId, setSelectedHiveId] = useState<string | null>(null);
@@ -175,7 +175,7 @@ export const Layout = () => {
           />
         </div> */}
 
-        <main className="h-[calc(100vh-4rem)] overflow-auto">
+        <main className="h-[100%] overflow-auto">
           <Outlet context={{ 
             hives,
             selectedHiveId,

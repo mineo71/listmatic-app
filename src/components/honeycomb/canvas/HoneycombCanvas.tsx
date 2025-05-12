@@ -1,5 +1,4 @@
-import type React from "react"
-import { useState, useRef, useCallback, useEffect, useMemo } from "react"
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { Plus, Wand2, X } from "lucide-react"
 import { Download } from "lucide-react"
 import { Upload } from "lucide-react"
@@ -7,8 +6,9 @@ import { useTranslation } from "react-i18next"
 import { HoneycombHexagon } from "../hexagon/HoneycombHexagon"
 import { HoneycombEditModal } from "../HoneycombEditModal"
 import TaskSidebar from "../TaskSidebar"
+import GeminiModal from "../GeminiModal"
 import toast from "react-hot-toast"
-import type { HoneycombItem, HoneycombCanvasProps, TaskIcon } from "./HoneycombTypes"
+import type { HoneycombItem, HoneycombCanvasProps, TaskIcon, TaskPriority } from "./HoneycombTypes"
 import { axialToPixel, findClosestNeighbor } from "./honeycombUtils"
 import { useHoneycombItems } from "./useHoneycombItems"
 
@@ -18,8 +18,8 @@ const CANVAS_LIMITS = {
   maxX: 2000,
   minY: -2000,
   maxY: 2000,
-  minZoom: 0.9, // 0.7x of default zoom
-  maxZoom: 3,   // 5x of default zoom
+  minZoom: 0.9, // 0.9x of default zoom
+  maxZoom: 3,   // 3x of default zoom
 };
 
 // Typed debounce function
@@ -65,6 +65,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   const [isModalCreating, setIsModalCreating] = useState(false)
   const [pendingHexagon, setPendingHexagon] = useState<HoneycombItem | null>(null)
   const [idCounter, setIdCounter] = useState<number>(1)
+  const [isGeminiModalOpen, setIsGeminiModalOpen] = useState(false)
 
   // Function to limit canvas panning within bounds
   const limitOffsetToBounds = useCallback((newOffset: { x: number; y: number }) => {
@@ -95,6 +96,27 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
              item.y <= visibleBottom;
     });
   }, [items, offset, zoom]);
+
+  // Handle AI-generated honeycombs
+  const handleGeminiGenerate = useCallback((generatedItems: HoneycombItem[]) => {
+    // Reset the canvas by removing all items except the main one
+    setItems(generatedItems);
+    
+    // Update the ID counter to be larger than any ID in the generated items
+    const maxId = Math.max(...generatedItems.map(item => {
+      const numericId = parseInt(item.id.replace(/\D/g, ''));
+      return isNaN(numericId) ? 0 : numericId;
+    }));
+    setIdCounter(maxId + 1);
+    
+    // Recalculate progress
+    const totalItems = generatedItems.filter(item => !item.isMain).length;
+    const completedItems = generatedItems.filter(item => !item.isMain && item.completed).length;
+    const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+    onProgressUpdate(progress);
+    
+    toast.success(t('ai.successMessage'));
+  }, [setItems, onProgressUpdate, t]);
 
   // Fixed zoomAtPoint function for zooming at mouse position
   const zoomAtPoint = useCallback((newZoom: number, clientX: number, clientY: number) => {
@@ -375,6 +397,8 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     color: string;
     icon: TaskIcon;
     description: string;
+    priority: TaskPriority;
+    deadline?: Date;
   }) => {
     // Handle new hexagon
     if (editingItem && pendingHexagon) {
@@ -384,6 +408,8 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         color: data.color,
         icon: data.icon,
         description: data.description,
+        priority: data.priority,
+        deadline: data.deadline,
       };
 
       setItems((prev) => [
@@ -573,7 +599,10 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
           <span className="font-xl">{isCreating ? t("actions.done") : t("actions.addHexagon")}</span>
         </button>
 
-        <button className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2">
+        <button 
+          onClick={() => setIsGeminiModalOpen(true)}
+          className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2"
+        >
           <Wand2 size={22} />
         </button>
 
@@ -589,8 +618,6 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
           <Upload size={22} />
         </label>
       </div>
-
-
 
       {/* Canvas content - modified transformation for proper zooming */}
       <div
@@ -695,11 +722,20 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
                 color: editingItem.color,
                 icon: editingItem.icon,
                 description: editingItem.description,
+                priority: editingItem.priority,
+                deadline: editingItem.deadline,
                 isMain: editingItem.isMain,
               }
             : undefined
         }
         isCreating={isModalCreating}
+      />
+
+      {/* Gemini AI Modal */}
+      <GeminiModal
+        isOpen={isGeminiModalOpen}
+        onClose={() => setIsGeminiModalOpen(false)}
+        onGenerate={handleGeminiGenerate}
       />
     </div>
   );

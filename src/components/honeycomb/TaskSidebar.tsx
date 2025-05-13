@@ -168,7 +168,7 @@ const TaskSidebar = ({
 
   return (
       <div
-          className={`fixed top-[65px] bottom-0 right-0 transition-all duration-300 overflow-hidden flex flex-col z-50
+          className={`fixed top-[101px] sm:top-[65px] bottom-0 right-0 transition-all duration-300 overflow-hidden flex flex-col z-50
     bg-white/90 backdrop-blur-sm border-l border-gray-200
     sm:w-80 w-full ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >

@@ -114,12 +114,15 @@ export const HoneycombViewWrapper = () => {
         {/* Header with controls */}
         <div className="flex-shrink-0 px-6 py-[14px]  border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between">
-            <div className={`flex items-center gap-8 transition-all duration-300
-              ${isSidebarOpen ? 'pl-0' : 'pl-12'}`}>
+            <div
+                className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-8 transition-all duration-300 ${
+                    isSidebarOpen ? 'pl-0' : 'pl-12'
+                }`}
+            >
               <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
 
               {/* Progress bar */}
-              <div className="w-64">
+              <div className="w-[90%] sm:w-64">
                 <div className="flex justify-between mb-1">
                   <span className="text-sm font-medium text-gray-700">{t('wrapper.progress')}</span>
                   <span className="text-sm text-gray-500">{Math.round(progress)}%</span>
@@ -132,6 +135,7 @@ export const HoneycombViewWrapper = () => {
                 </div>
               </div>
             </div>
+
 
             <div className="hidden sm:flex gap-2">
               <button

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { Hive, Honeycomb } from '@/types';
 import { HoneycombCanvas } from '../honeycomb/canvas/HoneycombCanvas.tsx';
 import SharingModal from '../honeycomb/SharingModal';
+import MobileControlsMenu from '../honeycomb/MobileControlsMenu';
 
 type ContextType = {
   hives: Hive[];
@@ -125,7 +126,7 @@ export const HoneycombViewWrapper = () => {
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                       className="bg-amber-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progress}%` }}
+                      style={{width: `${progress}%`}}
                   />
                 </div>
               </div>
@@ -137,44 +138,44 @@ export const HoneycombViewWrapper = () => {
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={t('actions.resetView')}
               >
-                <RotateCcw size={20} />
+                <RotateCcw size={20}/>
               </button>
               <button
                   onClick={handleZoomIn}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={t('actions.zoomIn')}
               >
-                <ZoomIn size={20} />
+                <ZoomIn size={20}/>
               </button>
               <button
                   onClick={handleZoomOut}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={t('actions.zoomOut')}
               >
-                <ZoomOut size={20} />
+                <ZoomOut size={20}/>
               </button>
               <button
                   onClick={toggleTaskSidebar}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={isTaskSidebarOpen ? t('actions.closeSidebar') : t('actions.openSidebar')}
               >
-                <List size={20} />
+                <List size={20}/>
               </button>
               <button
                   onClick={openSharingModal}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                   title={t('actions.share')}
               >
-                <Share size={20} />
+                <Share size={20}/>
               </button>
             </div>
           </div>
         </div>
 
         {/* Canvas area with transition for smooth sidebar toggling */}
-        <div 
-          ref={containerRef} 
-          className="flex-grow h-0 relative transition-all duration-300"
+        <div
+            ref={containerRef}
+            className="flex-grow h-0 relative transition-all duration-300"
         >
           <HoneycombCanvas
               key={honeycomb.id}
@@ -188,7 +189,16 @@ export const HoneycombViewWrapper = () => {
           />
         </div>
 
-        <SharingModal isOpen={isSharingModalOpen} onClose={closeSharingModal} />
+        <SharingModal isOpen={isSharingModalOpen} onClose={closeSharingModal}/>
+
+        <MobileControlsMenu
+            zoom={zoom}
+            handleReset={handleReset}
+            handleZoomIn={handleZoomIn}
+            handleZoomOut={handleZoomOut}
+            openSharingModal={openSharingModal}
+        />
+
       </div>
   );
 };

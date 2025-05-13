@@ -110,7 +110,8 @@
     "rename": "Rename",
     "delete": "Delete",
     "editHexagon": "Edit Honeycomb",
-    "createHexagon": "Create New Honeycomb"
+    "createHexagon": "Create New Honeycomb",
+    "aiGenerate": "Generate with AI"
   },
   "placeholders": {
     "newTask": "Add a new task...",
@@ -203,5 +204,20 @@
     "TasksList": "Title",
     "status": "Status",
     "progress": "Progress"
+  },
+  "ai": {
+    "promptLabel": "What would you like to create?",
+    "promptPlaceholder": "Describe your project, task list, or goals...",
+    "generate": "Generate",
+    "generating": "Generating...",
+    "errorMessage": "Could not generate content. Please try again.",
+    "successMessage": "Successfully generated honeycomb structure!",
+    "categories": "Categories",
+    "showCategoryEditor": "Edit Categories",
+    "hideCategoryEditor": "Hide Editor",
+    "categoryName": "Category name",
+    "addCategory": "Add",
+    "mainGoalInfo": "Main Goal is always included at the center of your honeycomb.",
+    "noCategories": "No additional categories. AI will create appropriate categories."
   }
 }

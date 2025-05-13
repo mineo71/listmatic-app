@@ -339,7 +339,7 @@ isCreating = false,
               </div>
 
               {/* Priority Selection */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 grid-cols-1 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('hexagon.priority')}
@@ -371,7 +371,8 @@ isCreating = false,
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                                  size={16}/>
                         <input
                             type="date"
                             value={deadline}
@@ -383,7 +384,7 @@ isCreating = false,
                     </div>
                     <div className="flex-1">
                       <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16}/>
                         <input
                             type="time"
                             value={deadlineTime}

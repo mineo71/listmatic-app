@@ -16,67 +16,47 @@ export interface Task {
 
 export type TaskIcon = 
   | 'None'
-  // IT & Development
-  | 'Code'
-  | 'Bug'
-  | 'Database'
-  | 'Terminal'
-  | 'Gitlab'
-  | 'Webhook'
-  | 'FileCode'
-  | 'Boxes'
-  | 'LayoutGrid'
-  | 'Component'
-  | 'Braces'
-  | 'FolderGit'
-  // Analytics & Planning
-  | 'BarChart'  
-  | 'PieChart'
-  | 'Target'    
-  | 'FileText'
-  // Common
-  | 'Plus'
-  | 'Briefcase'
-  | 'MessageCircle'
-  | 'Settings'
-  | 'Star'
-  | 'Flag'
-  | 'AlertCircle'
-  | 'Archive'
-  | 'Bell'
-  | 'Bookmark'
-  | 'Briefcase'
-  | 'CheckCircle'
-  | 'Code'
-  | 'FileText'
-  | 'Flag'
-  | 'Heart'
-  | 'Home'
-  | 'Mail'
-  | 'MessageCircle'
-  | 'Settings'
-  | 'Star'
-  | 'Tag'
-  | 'Target'
-  | 'Timer'
-  | 'Trophy'
-  | 'Truck'
-  | 'Tv'
-  | 'Upload'
-  | 'User'
-  | 'Users'
-  | 'Video'
-  | 'Wallet'
-  | 'Watch'
-  | 'Zap'
-  | 'Bug'
-  | 'Building'
-  | 'Camera'
-  | 'Car'
-  | 'BarChart'
-  | 'PieChart'
-  | 'Cloud'
-  | 'Coffee';
+  // Original Icons
+  | 'AlertCircle' | 'Archive' | 'Bell' | 'Bookmark' | 'Briefcase' | 'CheckCircle'
+  | 'Code' | 'FileText' | 'Flag' | 'Heart' | 'Home' | 'Mail' | 'MessageCircle' | 'Settings'
+  | 'Star' | 'Tag' | 'Target' | 'Timer' | 'Trophy' | 'Truck' | 'Tv' | 'Upload' | 'User' | 'Users'
+  | 'Video' | 'Wallet' | 'Watch' | 'Zap' | 'Bug' | 'Building' | 'Camera' | 'Car' | 'BarChart'
+  | 'PieChart' | 'Cloud' | 'Coffee' | 'Database' | 'Terminal' | 'Gitlab' | 'Webhook' | 'FileCode'
+  | 'Boxes' | 'LayoutGrid' | 'Component' | 'Braces' | 'FolderGit' | 'Plus'
+  
+  // Education
+  | 'GraduationCap' | 'BookOpen' | 'PenTool' | 'Book' | 'Pencil'
+  
+  // Health & Wellness
+  | 'Activity' | 'Apple' | 'Dumbbell'
+  
+  // Travel & Transport
+  | 'Map' | 'Compass' | 'Plane' | 'Train' | 'Bus' | 'Globe' | 'Mountain' | 'Hotel'
+  
+  // Food & Shopping
+  | 'ShoppingCart' | 'ShoppingBag' | 'Package' | 'Gift' | 'CreditCard' | 'DollarSign' | 'Store' | 'Pizza'
+  
+  // Time & Planning
+  | 'Calendar' | 'Clock' | 'CalendarDays' | 'CalendarClock'
+  
+  // Work & Productivity
+  | 'Laptop' | 'Printer' | 'Phone' | 'Headphones' | 'Monitor' | 'Smartphone' | 'Tablet'
+  | 'ClipboardList' | 'FilePlus' | 'FileCheck' | 'FileX'
+  
+  // Home & Lifestyle
+  | 'Hammer' | 'Wrench' | 'Lightbulb' | 'Bed' | 'Bath'
+  
+  // Communication & Social
+  | 'MessageSquare' | 'Share' | 'Send' | 'Reply' | 'AtSign' | 'Hash'
+  
+  // Weather & Environment
+  | 'Sun' | 'Moon' | 'CloudRain' | 'CloudSnow' | 'Wind' | 'Thermometer' | 'Umbrella'
+  
+  // Development & Design
+  | 'Figma' | 'GitBranch' | 'GitMerge' | 'GitPullRequest' | 'Codesandbox' | 'Codepen'
+  
+  // Security
+  | 'Lock' | 'Unlock' | 'Shield' | 'ShieldAlert' | 'ShieldCheck' | 'Key' | 'KeyRound' | 'Fingerprint';
 
 // Task priority levels
 export type TaskPriority = 'low' | 'medium' | 'high';

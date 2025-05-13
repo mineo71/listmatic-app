@@ -1,40 +1,49 @@
-import { HoneycombItem, Offset } from './HoneycombtTypes';
-import { HEXAGON_HEIGHT, HEXAGON_WIDTH } from './HoneyComb';
+import type { HoneycombItem } from "./HoneycombTypes"
 
-export const getAvailablePositions = (centerX: number, centerY: number, items: HoneycombItem[]) => {
-    const positions = [
-        { x: centerX, y: centerY - HEXAGON_HEIGHT },
-        { x: centerX + HEXAGON_WIDTH * 0.75, y: centerY - HEXAGON_HEIGHT * 0.5 },
-        { x: centerX + HEXAGON_WIDTH * 0.75, y: centerY + HEXAGON_HEIGHT * 0.5 },
-        { x: centerX, y: centerY + HEXAGON_HEIGHT },
-        { x: centerX - HEXAGON_WIDTH * 0.75, y: centerY + HEXAGON_HEIGHT * 0.5 },
-        { x: centerX - HEXAGON_WIDTH * 0.75, y: centerY - HEXAGON_HEIGHT * 0.5 },
-    ];
+export const HEXAGON_SIZE = 60
+export const HEXAGON_WIDTH = 2 * HEXAGON_SIZE
 
-    return positions.filter(pos =>
-        !items.some(item =>
-            Math.abs(item.x - pos.x) < 10 && Math.abs(item.y - pos.y) < 10
-        )
-    );
-};
+export const axialToPixel = (q: number, r: number) => {
+    const x = HEXAGON_SIZE * (3 / 2) * q
+    const y = HEXAGON_SIZE * (Math.sqrt(3) * (r + q / 2))
+    return { x, y }
+}
 
-export const findClosestPosition = (mouseX: number, mouseY: number, items: HoneycombItem[]): Offset | null => {
-    let closestDistance = Infinity;
-    let closestPosition = null;
+export const hexagonDirections = [
+    { dq: 1, dr: 0 },
+    { dq: 0, dr: 1 },
+    { dq: -1, dr: 1 },
+    { dq: -1, dr: 0 },
+    { dq: 0, dr: -1 },
+    { dq: 1, dr: -1 },
+]
 
-    items.forEach(item => {
-        const availablePositions = getAvailablePositions(item.x, item.y, items);
-        availablePositions.forEach(pos => {
-            const distance = Math.sqrt(
-                Math.pow(mouseX - pos.x, 2) + Math.pow(mouseY - pos.y, 2)
-            );
+export const getAvailableNeighbors = (hex: HoneycombItem, items: HoneycombItem[]) => {
+    return hexagonDirections
+        .map((direction) => ({
+            q: hex.q + direction.dq,
+            r: hex.r + direction.dr,
+            parentId: hex.id,
+        }))
+        .filter((neighbor) => !items.some((item) => item.q === neighbor.q && item.r === neighbor.r))
+}
+
+export const findClosestNeighbor = (mouseX: number, mouseY: number, items: HoneycombItem[]) => {
+    let closestDistance = Number.POSITIVE_INFINITY
+    let closestNeighbor: { q: number; r: number; parentId: string } | null = null
+
+    items.forEach((hex) => {
+        const availableNeighbors = getAvailableNeighbors(hex, items)
+        availableNeighbors.forEach((neighbor) => {
+            const pixel = axialToPixel(neighbor.q, neighbor.r)
+            const distance = Math.sqrt(Math.pow(mouseX - pixel.x, 2) + Math.pow(mouseY - pixel.y, 2))
             if (distance < closestDistance) {
-                closestDistance = distance;
-                closestPosition = pos;
+                closestDistance = distance
+                closestNeighbor = neighbor
             }
-        });
-    });
+        })
+    })
 
-    return closestPosition && closestDistance < HEXAGON_WIDTH ? closestPosition : null;
-};
+    return closestNeighbor && closestDistance < HEXAGON_WIDTH ? closestNeighbor : null
+}
 

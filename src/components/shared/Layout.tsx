@@ -1,15 +1,15 @@
 // src/components/shared/Layout.tsx
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Header } from './Header';
+// import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { CreateItemModal } from './Modal';
-import { initialHives } from '@/data/mockData';
+// import { initialHives } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
 import type { Hive, Honeycomb } from '@/types';
 
 export const Layout = () => {
-  const [hives, setHives] = useState<Hive[]>(initialHives);
+  const [hives, setHives] = useState<Hive[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [modalType, setModalType] = useState<'hive' | 'honeycomb' | null>(null);
   const [selectedHiveId, setSelectedHiveId] = useState<string | null>(null);
@@ -165,21 +165,22 @@ export const Layout = () => {
         onLogout={handleLogout}
       />
 
-      <div className={`fixed right-0 top-0 bottom-0 transition-all duration-300 ${
-        isSidebarOpen ? 'left-64' : 'left-0'
-      }`}>
-        <div className='border-gray-200 border-b'>
+      <div className={`fixed right-0 top-0 bottom-0 transition-all duration-300 
+      ${ isSidebarOpen ? 'left-64' : 'left-0'}
+      `}>
+        {/* <div className='border-gray-200 border-b'>
           <Header 
             allHives={hives}
             isSidebarOpen={isSidebarOpen}
           />
-        </div>
+        </div> */}
 
-        <main className="h-[calc(100vh-4rem)] overflow-auto">
+        <main className="h-[100%] overflow-auto">
           <Outlet context={{ 
             hives,
             selectedHiveId,
-            onUpdateHoneycomb: handleUpdateHoneycomb
+            onUpdateHoneycomb: handleUpdateHoneycomb,
+            isSidebarOpen
           }} />
         </main>
       </div>

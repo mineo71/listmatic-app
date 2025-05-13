@@ -1,7 +1,9 @@
 // src/components/settings/Profile.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Camera } from 'lucide-react';
+import { Camera, LogOut } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export const Profile = () => {
   const { t } = useTranslation();
@@ -10,15 +12,22 @@ export const Profile = () => {
     email: 'help@combly.com',
     avatar: '/LogoBeeTask.ico'
   });
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle profile update
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('profile.title')}</h1>
+    <div className="px-6 py-4 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold text-gray-900 ml-12 mb-6">{t('profile.title')}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Avatar */}
@@ -80,6 +89,14 @@ export const Profile = () => {
           </div>
         </div>
       </form>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50
+          rounded-md transition-colors mt-4"
+          >
+          <LogOut size={20} />
+          {t('navigation.logout')}
+        </button>
     </div>
   );
 };

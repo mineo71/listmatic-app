@@ -26,8 +26,8 @@ export const Profile = () => {
   };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('profile.title')}</h1>
+    <div className="px-6 py-4 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold text-gray-900 ml-12 mb-6">{t('profile.title')}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Avatar */}

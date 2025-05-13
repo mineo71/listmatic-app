@@ -167,145 +167,149 @@ const TaskSidebar = ({
   };
 
   return (
-    <div className="fixed right-0 top-[65px] bottom-0 w-80 bg-white/90 backdrop-blur-sm border-l border-gray-200 transition-all duration-300 overflow-hidden flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">{t('placeholders.TasksList')}</h2>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <X size={20} />
-        </button>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="p-4 border-b border-gray-200 space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('placeholders.search')}
-            className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-          />
-        </div>
-
-        {/* Filter Toggle */}
-        <div className="flex items-center justify-between">
+      <div
+          className={`fixed top-[101px] sm:top-[65px] bottom-0 right-0 transition-all duration-300 overflow-hidden flex flex-col z-50 sm:z-0
+    bg-white/90 backdrop-blur-sm border-l border-gray-200
+    sm:w-80 w-full ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">{t('placeholders.TasksList')}</h2>
           <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              onClick={onClose}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <Filter size={16} />
-            {t('placeholders.Filters')}
+            <X size={20}/>
           </button>
-          <div className="flex items-center gap-2">
-            <ArrowUpDown size={16} className="text-gray-400" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            >
-              <option value="deadline">{t('placeholders.Deadline')}</option>
-              <option value="title">{t('placeholders.Title')}</option>
-            </select>
-          </div>
         </div>
 
-        {/* Extended Filters */}
-        {showFilters && (
-          <div className="pt-2 space-y-2">
-            <select
-              value={groupBy}
-              onChange={(e) => setGroupBy(e.target.value as GroupOption)}
-              className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            >
-              <option value="none">{t('placeholders.NoGrouping')}</option>
-              <option value="color">{t('placeholders.GroupColor')}</option>
-              <option value="completion">{t('placeholders.GroupStatus')}</option>
-              <option value="deadline">{t('placeholders.GroupDeadline')}</option>
-              <option value="priority">{t('placeholders.GroupPriority')}</option>
-            </select>
+        {/* Search and Filters */}
+        <div className="p-4 border-b border-gray-200 space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16}/>
+            <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('placeholders.search')}
+                className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
           </div>
-        )}
-      </div>
 
-      {/* Task List */}
-      <div className="flex-1 overflow-y-auto p-2">
-        {Object.entries(groupedItems).map(([group, groupItems]) => (
-          <div key={group} className="mb-4">
-            {groupBy !== 'none' && (
-              <h3 className="px-3 py-2 text-sm font-medium text-gray-500">
-                {renderGroupHeader(group)}
-              </h3>
-            )}
-            <div className="space-y-1">
-              {groupItems.map((item) => {
-                const IconComponent = item.icon && item.icon !== 'None' 
-                  ? ICONS_MAP[item.icon] 
-                  : null;
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`group flex items-center p-3 rounded-md cursor-pointer transition-all ${
-                      selectedItemId === item.id
-                        ? 'bg-amber-50'
-                        : 'hover:bg-gray-50'
-                    } ${
-                      item.completed ? 'opacity-70' : ''
-                    }`}
-                    onClick={() => onItemClick(item.id)}
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCompleteTask(item.id);
-                      }}
-                      className="mr-3 p-1 hover:bg-gray-200 rounded-md transition-colors"
-                    >
-                      <CheckCircle 
-                        size={16} 
-                        className={item.completed ? "text-green-700" : "text-gray-300"} 
-                        fill={item.completed ? "#22C55E" : "none"}
-                      />
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        {IconComponent && (
-                          <IconComponent size={16} className="text-gray-600 flex-shrink-0" />
-                        )}
-                        <span className={`truncate ${item.completed ? 'line-through text-gray-500' : ''}`}>
-                          {item.title}
-                        </span>
-                      </div>
-                      {item.deadline && (
-                        <div className="flex items-center mt-1 text-xs text-gray-500">
-                          <Clock size={12} className="mr-1" />
-                          {formatDeadline(item.deadline)}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditClick(item.id);
-                      }}
-                      className="p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded-md transition-opacity"
-                    >
-                      <MoreHorizontal size={16} />
-                    </button>
-                  </div>
-                );
-              })}
+          {/* Filter Toggle */}
+          <div className="flex items-center justify-between">
+            <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+            >
+              <Filter size={16}/>
+              {t('placeholders.Filters')}
+            </button>
+            <div className="flex items-center gap-2">
+              <ArrowUpDown size={16} className="text-gray-400"/>
+              <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              >
+                <option value="deadline">{t('placeholders.Deadline')}</option>
+                <option value="title">{t('placeholders.Title')}</option>
+              </select>
             </div>
           </div>
-        ))}
+
+          {/* Extended Filters */}
+          {showFilters && (
+              <div className="pt-2 space-y-2">
+                <select
+                    value={groupBy}
+                    onChange={(e) => setGroupBy(e.target.value as GroupOption)}
+                    className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                >
+                  <option value="none">{t('placeholders.NoGrouping')}</option>
+                  <option value="color">{t('placeholders.GroupColor')}</option>
+                  <option value="completion">{t('placeholders.GroupStatus')}</option>
+                  <option value="deadline">{t('placeholders.GroupDeadline')}</option>
+                  <option value="priority">{t('placeholders.GroupPriority')}</option>
+                </select>
+              </div>
+          )}
+        </div>
+
+        {/* Task List */}
+        <div className="flex-1 overflow-y-auto p-2">
+          {Object.entries(groupedItems).map(([group, groupItems]) => (
+              <div key={group} className="mb-4">
+                {groupBy !== 'none' && (
+                    <h3 className="px-3 py-2 text-sm font-medium text-gray-500">
+                      {renderGroupHeader(group)}
+                    </h3>
+                )}
+                <div className="space-y-1">
+                  {groupItems.map((item) => {
+                    const IconComponent = item.icon && item.icon !== 'None'
+                        ? ICONS_MAP[item.icon]
+                        : null;
+
+                    return (
+                        <div
+                            key={item.id}
+                            className={`group flex items-center p-3 rounded-md cursor-pointer transition-all ${
+                                selectedItemId === item.id
+                                    ? 'bg-amber-50'
+                                    : 'hover:bg-gray-50'
+                            } ${
+                                item.completed ? 'opacity-70' : ''
+                            }`}
+                            onClick={() => onItemClick(item.id)}
+                        >
+                          <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCompleteTask(item.id);
+                              }}
+                              className="mr-3 p-1 hover:bg-gray-200 rounded-md transition-colors"
+                          >
+                            <CheckCircle
+                                size={16}
+                                className={item.completed ? "text-green-700" : "text-gray-300"}
+                                fill={item.completed ? "#22C55E" : "none"}
+                            />
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {IconComponent && (
+                                  <IconComponent size={16} className="text-gray-600 flex-shrink-0"/>
+                              )}
+                              <span className={`truncate ${item.completed ? 'line-through text-gray-500' : ''}`}>
+                          {item.title}
+                        </span>
+                            </div>
+                            {item.deadline && (
+                                <div className="flex items-center mt-1 text-xs text-gray-500">
+                                  <Clock size={12} className="mr-1"/>
+                                  {formatDeadline(item.deadline)}
+                                </div>
+                            )}
+                          </div>
+                          <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditClick(item.id);
+                              }}
+                              className="p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded-md transition-opacity"
+                          >
+                            <MoreHorizontal size={16}/>
+                          </button>
+                        </div>
+                    );
+                  })}
+                </div>
+              </div>
+          ))}
+        </div>
       </div>
-    </div>
   );
 };
 

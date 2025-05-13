@@ -108,6 +108,7 @@ export const HoneycombViewWrapper = () => {
     setIsSharingModalOpen(false);
   };
 
+
   return (
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header with controls */}
@@ -132,7 +133,7 @@ export const HoneycombViewWrapper = () => {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="hidden sm:flex gap-2">
               <button
                   onClick={handleReset}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
@@ -196,7 +197,8 @@ export const HoneycombViewWrapper = () => {
             handleReset={handleReset}
             handleZoomIn={handleZoomIn}
             handleZoomOut={handleZoomOut}
-            openSharingModal={openSharingModal}
+            toggleTaskSidebar={toggleTaskSidebar}
+            isTaskSidebarOpen={isTaskSidebarOpen}
         />
 
       </div>

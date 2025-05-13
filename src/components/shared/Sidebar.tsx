@@ -92,7 +92,7 @@ export const Sidebar = ({
 
       {/* Main Sidebar */}
       <aside
-          className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 z-10
+          className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300  z-10 sm:z-0
     ${isOpen ? 'translate-x-0' : '-translate-x-full'}
     w-full sm:w-64 sm:max-w-sm`}
       >

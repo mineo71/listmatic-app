@@ -115,10 +115,11 @@ export const HoneycombViewWrapper = () => {
         <div className="flex-shrink-0 px-6 py-[14px]  border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between">
             <div
-                className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-8 transition-all duration-300 ${
+                className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-8 transition-all duration-300 w-full ${
                     isSidebarOpen ? 'pl-0' : 'pl-12'
                 }`}
             >
+
               <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
 
               {/* Progress bar */}

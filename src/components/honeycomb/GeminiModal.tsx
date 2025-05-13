@@ -409,7 +409,7 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
                   </div>
 
                   {/* Preset colors */}
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-4">
                     {DEFAULT_COLORS.map((color, index) => (
                       <button
                         key={index}

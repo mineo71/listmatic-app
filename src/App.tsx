@@ -7,6 +7,7 @@ import { ProtectedRoute } from '@/components/shared/ProtectedRoute';
 import { Layout } from '@/components/shared/Layout';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
+import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
 import { Settings } from '@/components/settings/Settings';
 import { Profile } from '@/components/settings/Profile';
 import { HoneycombViewWrapper } from '@/components/hive/HoneycombViewWrapper';
@@ -30,6 +31,7 @@ function App() {
               <>
                 <Route path="/login" element={<LoginForm />} />
                 <Route path="/register" element={<RegisterForm />} />
+                <Route path="/forgot-password" element={<ForgotPasswordForm />} />
               </>
             )}
 

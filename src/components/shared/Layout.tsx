@@ -16,7 +16,7 @@ export const Layout = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { signOut } = useAuth();
 
   const handleSelectItem = (id: string, type: 'hive' | 'honeycomb' | 'settings') => {
     if (type === 'hive') {
@@ -142,9 +142,13 @@ export const Layout = () => {
     setModalType(null);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (

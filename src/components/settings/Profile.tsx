@@ -67,7 +67,7 @@ export const Profile = () => {
       // For OAuth users, we typically can't update their profile data
       // as it's managed by the OAuth provider
       if (isOAuthUser) {
-        toast(`Profile data is managed by ${oauthProvider}. Changes may not be saved.`, {
+        toast(t('profile.oauthUpdateWarning', { provider: oauthProvider }), {
           icon: 'ℹ️',
           style: {
             background: '#3b82f6',
@@ -81,7 +81,7 @@ export const Profile = () => {
       toast.success(t('messages.profileUpdated'));
     } catch (error) {
       console.error('Profile update error:', error);
-      toast.error('Failed to update profile');
+      toast.error(t('profile.updateError'));
     }
   };
 
@@ -91,8 +91,12 @@ export const Profile = () => {
       navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      toast.error('Failed to log out');
+      toast.error(t('profile.logoutError'));
     }
+  };
+
+  const getProviderDisplayName = (provider: string) => {
+    return provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : t('profile.unknown');
   };
 
   return (
@@ -121,12 +125,12 @@ export const Profile = () => {
             <h3 className="text-lg font-medium text-gray-900">{profile.name}</h3>
             <p className="text-sm text-gray-500">{profile.email}</p>
             {user?.email_confirmed_at && (
-              <p className="text-xs text-green-600">✓ Email verified</p>
+              <p className="text-xs text-green-600">✓ {t('profile.emailVerified')}</p>
             )}
             {isOAuthUser && (
               <div className="flex items-center gap-1 mt-1">
                 <span className="text-xs text-blue-600">
-                  Signed in with {oauthProvider ? oauthProvider.charAt(0).toUpperCase() + oauthProvider.slice(1) : 'Unknown'}
+                  {t('profile.signedInWith', { provider: getProviderDisplayName(oauthProvider) })}
                 </span>
                 {oauthProvider === 'google' && (
                   <svg width="12" height="12" viewBox="0 0 24 24">
@@ -146,9 +150,9 @@ export const Profile = () => {
           {isOAuthUser && (
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-800">
-                <strong>Note:</strong> Since you signed in with {oauthProvider}, your profile information 
-                is managed by {oauthProvider ? oauthProvider.charAt(0).toUpperCase() + oauthProvider.slice(1) : 'Unknown'}.
-                Some changes may not be saved.
+                <strong>{t('profile.note')}:</strong> {t('profile.oauthNote', { 
+                  provider: getProviderDisplayName(oauthProvider) 
+                })}
               </p>
             </div>
           )}
@@ -194,7 +198,7 @@ export const Profile = () => {
               readOnly
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 text-gray-500 sm:text-sm"
             />
-            <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+            <p className="text-xs text-gray-500 mt-1">{t('profile.emailNote')}</p>
           </div>
 
           {!isOAuthUser && (
@@ -212,14 +216,14 @@ export const Profile = () => {
         {/* User Metadata Info */}
         {user && (
           <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Account Information</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">{t('profile.accountInfo')}</h4>
             <div className="space-y-1 text-sm text-gray-600">
-              <p>User ID: {user.id}</p>
-              <p>Provider: {oauthProvider || 'email'}</p>
-              <p>Created: {new Date(user.created_at).toLocaleDateString()}</p>
-              <p>Last Sign In: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : 'Never'}</p>
+              <p>{t('profile.userId')}: {user.id}</p>
+              <p>{t('profile.provider')}: {oauthProvider || 'email'}</p>
+              <p>{t('profile.created')}: {new Date(user.created_at).toLocaleDateString()}</p>
+              <p>{t('profile.lastSignIn')}: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : t('profile.never')}</p>
               {user.email_confirmed_at && (
-                <p>Email Confirmed: {new Date(user.email_confirmed_at).toLocaleDateString()}</p>
+                <p>{t('profile.emailConfirmed')}: {new Date(user.email_confirmed_at).toLocaleDateString()}</p>
               )}
             </div>
           </div>

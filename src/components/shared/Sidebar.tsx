@@ -1,4 +1,5 @@
-// src/components/Sidebar.tsx
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// src/components/shared/Sidebar.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,7 +11,8 @@ import {
   User,
   Menu,
   ChevronLeft,
-  Star
+  Star,
+  Loader2
 } from 'lucide-react';
 import type { Hive } from '@/types';
 import { useNavigate } from 'react-router-dom';
@@ -28,11 +30,24 @@ interface SidebarProps {
   onDeleteHoneycomb: (id: string) => void;
   onRenameItem: (id: string, newName: string, type: 'hive' | 'honeycomb') => void;
   onLogout: () => void;
+  loading?: boolean;
 }
 
-export const Sidebar = ({isOpen, onToggleSidebar, hives, selectedHiveId, selectedHoneycombId, onSelectItem, onCreateHive, onCreateHoneycomb, onDeleteHive, onDeleteHoneycomb, onRenameItem,
-                          // onLogout,
-                        }: SidebarProps) => {
+export const Sidebar = ({
+  isOpen, 
+  onToggleSidebar, 
+  hives, 
+  selectedHiveId, 
+  selectedHoneycombId, 
+  onSelectItem, 
+  onCreateHive, 
+  onCreateHoneycomb, 
+  onDeleteHive, 
+  onDeleteHoneycomb, 
+  onRenameItem,
+  onLogout,
+  loading = false
+}: SidebarProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -123,10 +138,11 @@ export const Sidebar = ({isOpen, onToggleSidebar, hives, selectedHiveId, selecte
           <div className="p-4 border-b border-gray-200">
             <button
                 onClick={onCreateHive}
+                disabled={loading}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium
                        text-white bg-amber-600 rounded-md hover:bg-amber-700
                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500
-                       transition-colors"
+                       transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus size={16} />
               {t('actions.createHive')}
@@ -135,7 +151,30 @@ export const Sidebar = ({isOpen, onToggleSidebar, hives, selectedHiveId, selecte
 
           {/* Hive List */}
           <div className="flex-1 overflow-y-auto p-2">
-            {[...hives]
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex flex-col items-center space-y-2">
+                  <Loader2 size={24} className="animate-spin text-amber-600" />
+                  <p className="text-sm text-gray-500">{t('messages.loading')}</p>
+                </div>
+              </div>
+            ) : hives.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-gray-400 mb-2">
+                  <Plus size={32} className="mx-auto" />
+                </div>
+                <p className="text-sm text-gray-500 mb-4">
+                  {t('messages.noHives')}
+                </p>
+                <button
+                  onClick={onCreateHive}
+                  className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+                >
+                  {t('actions.createHive')}
+                </button>
+              </div>
+            ) : (
+              [...hives]
                 .sort((a, b) => {
                   const aFav = favoriteHives.has(a.id);
                   const bFav = favoriteHives.has(b.id);
@@ -203,8 +242,9 @@ export const Sidebar = ({isOpen, onToggleSidebar, hives, selectedHiveId, selecte
                                   onCreateHoneycomb();
                                   onSelectItem(hive.id, 'hive');
                                 }}
+                                disabled={loading}
                                 className="flex items-center gap-2 px-3 py-1 text-sm text-gray-600
-                                 hover:bg-gray-100 rounded-md transition-colors w-full"
+                                 hover:bg-gray-100 rounded-md transition-colors w-full disabled:opacity-50"
                             >
                               <Plus size={14}/>
                               {t('actions.createHoneycomb')}
@@ -236,7 +276,8 @@ export const Sidebar = ({isOpen, onToggleSidebar, hives, selectedHiveId, selecte
                           </div>
                       )}
                     </div>
-                ))}
+                ))
+            )}
           </div>
 
           {/* **Pinned** Settings / Profile at bottom */}
@@ -255,15 +296,6 @@ export const Sidebar = ({isOpen, onToggleSidebar, hives, selectedHiveId, selecte
             >
               <User size={20}/> {t('navigation.profile')}
             </button>
-            {/*
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50
-                       rounded-md transition-colors mt-2"
-          >
-            <LogOut size={20}/> {t('navigation.logout')}
-          </button>
-          */}
           </div>
         </aside>
 

@@ -33,4 +33,16 @@ export interface HoneycombCanvasProps {
     setisTaskSidebarOpen: (open: boolean) => void
     onProgressUpdate: (progress: number) => void
     // Sharing mode properties
+    isSharedMode?: boolean
+    canEdit?: boolean
+    sessionId?: string
+    participantId?: string | null
+    participants?: Array<{
+        id: string
+        display_name: string
+        is_online: boolean
+        cursor_position?: { x: number; y: number }
+        selected_item_id?: string
+        color: string
+    }>
 }

@@ -1,8 +1,9 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// src/components/honeycomb/canvas/useHoneycombItemsDB.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/components/honeycomb/canvas/useSharedHoneycombItems.ts
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import type { HoneycombItem, TaskIcon, TaskPriority } from "./HoneycombTypes"
 import { axialToPixel } from "./honeycombUtils"
@@ -15,6 +16,8 @@ import {
   clearHoneycombItems,
   type HoneycombItemDB 
 } from '@/services/database'
+import { logSharingChange } from '@/services/sharing'
+import supabase from '@/utils/supabase'
 import toast from 'react-hot-toast'
 
 // Transform database item to canvas item
@@ -58,11 +61,21 @@ const transformCanvasToDBCreate = (
   category: canvasItem.category,
 })
 
-export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (progress: number) => void) => {
+export const useSharedHoneycombItems = (
+  honeycombId: string, 
+  onProgressUpdate: (progress: number) => void,
+  isSharedMode: boolean = false,
+  canEdit: boolean = true,
+  sessionId?: string,
+  participantId?: string | null
+) => {
   const [items, setItems] = useState<HoneycombItem[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { t } = useTranslation()
+
+  // Track real-time subscription
+  const realtimeChannelRef = useRef<any>(null)
 
   // Load items from database
   const loadItems = useCallback(async () => {
@@ -83,8 +96,10 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
         const transformedItems = data.map(transformDBToCanvas)
         setItems(transformedItems)
       } else {
-        // Create default main item if no items exist
-        await createDefaultMainItem()
+        // Create default main item if no items exist (only if can edit)
+        if (canEdit && !isSharedMode) {
+          await createDefaultMainItem()
+        }
       }
     } catch (error) {
       console.error('Error loading honeycomb items:', error)
@@ -92,7 +107,7 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
     } finally {
       setLoading(false)
     }
-  }, [honeycombId, t])
+  }, [honeycombId, t, canEdit, isSharedMode])
 
   // Create default main item
   const createDefaultMainItem = async () => {
@@ -128,10 +143,64 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
     }
   }
 
-  // Load items when honeycombId changes
+  // Setup real-time subscription for honeycomb items
   useEffect(() => {
+    if (!honeycombId) return
+
+    // Load initial items
     loadItems()
-  }, [loadItems])
+
+    // Setup real-time subscription
+    const channelName = `honeycomb_items:${honeycombId}`
+    
+    realtimeChannelRef.current = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'honeycomb_items',
+          filter: `honeycomb_id=eq.${honeycombId}`
+        },
+        (payload) => {
+          console.log('Real-time honeycomb item change:', payload)
+          
+          if (payload.eventType === 'INSERT') {
+            const newItem = transformDBToCanvas(payload.new as any)
+            setItems(prev => {
+              // Check if item already exists to prevent duplicates
+              if (prev.find(item => item.id === newItem.id)) {
+                return prev
+              }
+              return [...prev, newItem]
+            })
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedItem = transformDBToCanvas(payload.new as any)
+            setItems(prev => 
+              prev.map(item => item.id === updatedItem.id ? updatedItem : item)
+            )
+          } else if (payload.eventType === 'DELETE') {
+            setItems(prev => 
+              prev.filter(item => item.id !== payload.old.id)
+            )
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to honeycomb items real-time updates')
+        }
+      })
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current)
+        realtimeChannelRef.current = null
+      }
+    }
+  }, [honeycombId, loadItems])
 
   // Update progress when items change
   useEffect(() => {
@@ -143,6 +212,11 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
 
   // Create new item
   const createItem = async (newItem: Omit<HoneycombItem, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!canEdit) {
+      toast.error(t('sharing.noEditingAllowed'))
+      return null
+    }
+
     setSaving(true)
     try {
       const { data, error } = await createHoneycombItem(honeycombId, transformCanvasToDBCreate(newItem))
@@ -155,7 +229,19 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
 
       if (data) {
         const transformedItem = transformDBToCanvas(data)
-        setItems(prev => [...prev, transformedItem])
+        
+        // Log sharing change if in shared mode
+        if (isSharedMode && sessionId && participantId) {
+          await logSharingChange(
+            sessionId,
+            participantId,
+            'create',
+            transformedItem.id,
+            { item: transformedItem }
+          )
+        }
+        
+        // Item will be automatically added via real-time subscription
         return transformedItem
       }
     } catch (error) {
@@ -169,6 +255,11 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
 
   // Update existing item
   const updateItem = async (id: string, updates: Partial<Omit<HoneycombItem, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    if (!canEdit) {
+      toast.error(t('sharing.noEditingAllowed'))
+      return false
+    }
+
     setSaving(true)
     try {
       const dbUpdates: Partial<Omit<HoneycombItemDB, 'id' | 'honeycombId' | 'createdAt' | 'updatedAt'>> = {}
@@ -198,7 +289,19 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
 
       if (data) {
         const transformedItem = transformDBToCanvas(data)
-        setItems(prev => prev.map(item => item.id === id ? transformedItem : item))
+        
+        // Log sharing change if in shared mode
+        if (isSharedMode && sessionId && participantId) {
+          await logSharingChange(
+            sessionId,
+            participantId,
+            'update',
+            id,
+            { updates, item: transformedItem }
+          )
+        }
+        
+        // Item will be automatically updated via real-time subscription
         return true
       }
     } catch (error) {
@@ -212,6 +315,11 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
 
   // Delete item
   const deleteItem = async (id: string) => {
+    if (!canEdit) {
+      toast.error(t('sharing.noEditingAllowed'))
+      return false
+    }
+
     setSaving(true)
     try {
       const { error } = await deleteHoneycombItem(id)
@@ -222,7 +330,18 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
         return false
       }
 
-      setItems(prev => prev.filter(item => item.id !== id))
+      // Log sharing change if in shared mode
+      if (isSharedMode && sessionId && participantId) {
+        await logSharingChange(
+          sessionId,
+          participantId,
+          'delete',
+          id,
+          { itemId: id }
+        )
+      }
+
+      // Item will be automatically removed via real-time subscription
       return true
     } catch (error) {
       console.error('Error deleting item:', error)
@@ -235,6 +354,11 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
 
   // Bulk create items (for AI generation)
   const bulkCreateItems = async (newItems: Omit<HoneycombItem, 'id' | 'createdAt' | 'updatedAt'>[]) => {
+    if (!canEdit) {
+      toast.error(t('sharing.noEditingAllowed'))
+      return false
+    }
+
     setSaving(true)
     try {
       // First, clear existing items
@@ -252,7 +376,19 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
 
       if (data) {
         const transformedItems = data.map(transformDBToCanvas)
-        setItems(transformedItems)
+        
+        // Log sharing change if in shared mode
+        if (isSharedMode && sessionId && participantId) {
+          await logSharingChange(
+            sessionId,
+            participantId,
+            'create',
+            'bulk',
+            { items: transformedItems, count: transformedItems.length }
+          )
+        }
+        
+        // Items will be automatically updated via real-time subscription
         return true
       }
     } catch (error) {
@@ -271,6 +407,11 @@ export const useHoneycombItemsDB = (honeycombId: string, onProgressUpdate: (prog
 
   // Mark item as complete/incomplete
   const toggleItemCompletion = async (id: string) => {
+    if (!canEdit) {
+      toast.error(t('sharing.noEditingAllowed'))
+      return false
+    }
+
     const item = items.find(i => i.id === id)
     if (!item) return false
 

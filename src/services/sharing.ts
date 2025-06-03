@@ -327,15 +327,27 @@ export const getRecentChanges = async (sessionId: string, since?: Date) => {
   }
 };
 
+// Track active channels to prevent multiple subscriptions
+const activeChannels = new Map<string, any>();
+
 // Setup real-time subscriptions for sharing
 export const setupSharingRealtimeSubscription = (
   sessionId: string,
   onParticipantChange: (participant: SharingParticipant) => void,
   onChangeReceived: (change: any) => void
 ) => {
+  // Check if we already have channels for this session
+  const participantsChannelKey = `sharing_participants:${sessionId}`;
+  const changesChannelKey = `sharing_changes:${sessionId}`;
+  
+  if (activeChannels.has(participantsChannelKey) || activeChannels.has(changesChannelKey)) {
+    console.warn('Channels already exist for session:', sessionId);
+    return () => {}; // Return empty cleanup function
+  }
+
   // Subscribe to participant changes
   const participantsChannel = supabase
-    .channel(`sharing_participants:${sessionId}`)
+    .channel(participantsChannelKey)
     .on(
       'postgres_changes',
       {
@@ -348,11 +360,15 @@ export const setupSharingRealtimeSubscription = (
         onParticipantChange(payload.new as SharingParticipant);
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to participants channel for session:', sessionId);
+      }
+    });
 
   // Subscribe to sharing changes
   const changesChannel = supabase
-    .channel(`sharing_changes:${sessionId}`)
+    .channel(changesChannelKey)
     .on(
       'postgres_changes',
       {
@@ -365,11 +381,28 @@ export const setupSharingRealtimeSubscription = (
         onChangeReceived(payload.new);
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to changes channel for session:', sessionId);
+      }
+    });
+
+  // Store channels to prevent duplicates
+  activeChannels.set(participantsChannelKey, participantsChannel);
+  activeChannels.set(changesChannelKey, changesChannel);
 
   // Return cleanup function
   return () => {
-    supabase.removeChannel(participantsChannel);
-    supabase.removeChannel(changesChannel);
+    console.log('Cleaning up channels for session:', sessionId);
+    
+    if (activeChannels.has(participantsChannelKey)) {
+      supabase.removeChannel(activeChannels.get(participantsChannelKey));
+      activeChannels.delete(participantsChannelKey);
+    }
+    
+    if (activeChannels.has(changesChannelKey)) {
+      supabase.removeChannel(activeChannels.get(changesChannelKey));
+      activeChannels.delete(changesChannelKey);
+    }
   };
 };

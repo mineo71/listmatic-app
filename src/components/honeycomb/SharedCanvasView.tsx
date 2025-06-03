@@ -1,6 +1,7 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/honeycomb/SharedCanvasView.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Copy, Users, Plus, AlertCircle } from 'lucide-react';
@@ -44,6 +45,11 @@ export const SharedCanvasView = () => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
 
+  // Refs to track cleanup
+  const cleanupRef = useRef<(() => void) | null>(null);
+  const statusIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const currentParticipantRef = useRef<string | null>(null);
+
   // Load session data
   useEffect(() => {
     if (!shareCode) {
@@ -52,7 +58,32 @@ export const SharedCanvasView = () => {
     }
 
     loadSession();
+
+    // Cleanup on unmount
+    return () => {
+      cleanup();
+    };
   }, [shareCode]);
+
+  const cleanup = () => {
+    // Clear real-time subscriptions
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
+
+    // Clear status interval
+    if (statusIntervalRef.current) {
+      clearInterval(statusIntervalRef.current);
+      statusIntervalRef.current = null;
+    }
+
+    // Update participant status to offline
+    if (currentParticipantRef.current) {
+      updateParticipantStatus(currentParticipantRef.current, false);
+      currentParticipantRef.current = null;
+    }
+  };
 
   const loadSession = async () => {
     try {
@@ -66,51 +97,63 @@ export const SharedCanvasView = () => {
 
       setSession(sessionData);
       
-      // Join the session
+      // Generate display name
       const displayName = user ? 
         `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.email : 
         `Guest ${Math.floor(Math.random() * 1000)}`;
       
-      const { data: participant, error: joinError } = await joinSharingSession(
-        sessionData.id,
-        displayName || 'Anonymous User',
-        user?.id
+      // Check if this user is already a participant to avoid duplicates
+      const { data: existingParticipants } = await getSessionParticipants(sessionData.id);
+      const existingParticipant = existingParticipants?.find(p => 
+        (user && p.user_id === user.id) || 
+        (!user && p.display_name === displayName)
       );
-      
-      if (joinError || !participant) {
-        toast.error(t('sharing.errorJoiningSession'));
-        navigate('/');
-        return;
+
+      let participant;
+      if (existingParticipant) {
+        // Update existing participant to online
+        await updateParticipantStatus(existingParticipant.id, true);
+        participant = existingParticipant;
+      } else {
+        // Join as new participant
+        const { data: newParticipant, error: joinError } = await joinSharingSession(
+          sessionData.id,
+          displayName || 'Anonymous User',
+          user?.id
+        );
+        
+        if (joinError || !newParticipant) {
+          toast.error(t('sharing.errorJoiningSession'));
+          navigate('/');
+          return;
+        }
+        participant = newParticipant;
       }
 
       setParticipantId(participant.id);
+      currentParticipantRef.current = participant.id;
       setCanEdit(sessionData.permissions === 'edit' || participant.permissions === 'edit');
       
       // Load participants
       loadParticipants(sessionData.id);
       
-      // Setup real-time subscriptions
-      const cleanup = setupSharingRealtimeSubscription(
-        sessionData.id,
-        handleParticipantChange,
-        handleChangeReceived
-      );
+      // Setup real-time subscriptions (only once)
+      if (!cleanupRef.current) {
+        cleanupRef.current = setupSharingRealtimeSubscription(
+          sessionData.id,
+          handleParticipantChange,
+          handleChangeReceived
+        );
+      }
 
       // Update online status periodically
-      const statusInterval = setInterval(() => {
-        if (participant.id) {
-          updateParticipantStatus(participant.id, true);
-        }
-      }, 30000); // Every 30 seconds
-
-      // Cleanup on unmount
-      return () => {
-        cleanup();
-        clearInterval(statusInterval);
-        if (participant.id) {
-          updateParticipantStatus(participant.id, false);
-        }
-      };
+      if (!statusIntervalRef.current) {
+        statusIntervalRef.current = setInterval(() => {
+          if (currentParticipantRef.current) {
+            updateParticipantStatus(currentParticipantRef.current, true);
+          }
+        }, 30000); // Every 30 seconds
+      }
     } catch (error) {
       console.error('Error loading session:', error);
       toast.error(t('sharing.errorLoadingSession'));
@@ -140,7 +183,8 @@ export const SharedCanvasView = () => {
       if (existing) {
         return prev.map(p => p.id === participant.id ? { ...p, ...participant } : p);
       } else {
-        return [...prev, participant];
+        const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+        return [...prev, { ...participant, color: colors[prev.length % colors.length] }];
       }
     });
   };

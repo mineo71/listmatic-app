@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import QRCode from 'qrcode'
 import { createSharingSession, getActiveSession, updateSessionPermissions, endSharingSession } from '@/services/sharing'
+import { getHoneycombItems } from '@/services/database'
 
 interface SharingModalProps {
     isOpen: boolean;
@@ -24,7 +25,6 @@ export default function SharingModal({
     onClose, 
     honeycombId, 
     honeycombName,
-    onExportJson,
     onImportJson
 }: SharingModalProps) {
     const { t } = useTranslation();
@@ -150,6 +150,48 @@ export default function SharingModal({
         }
     };
 
+    // Enhanced export function that exports honeycomb data
+    const handleExportJson = async () => {
+        try {
+            setLoading(true);
+            
+            // Get honeycomb items from database
+            const { data: items, error } = await getHoneycombItems(honeycombId);
+            
+            if (error) {
+                throw error;
+            }
+
+            // Transform items to export format
+            const exportData = {
+                honeycomb: {
+                    id: honeycombId,
+                    name: honeycombName,
+                    exportedAt: new Date().toISOString(),
+                },
+                items: items || [],
+                version: '1.0'
+            };
+
+            // Create and download JSON file
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+            const exportFileDefaultName = `${honeycombName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_honeycomb.json`;
+            
+            const linkElement = document.createElement("a");
+            linkElement.setAttribute("href", dataUri);
+            linkElement.setAttribute("download", exportFileDefaultName);
+            linkElement.click();
+            
+            toast.success('Honeycomb exported successfully!');
+        } catch (error) {
+            console.error('Error exporting honeycomb:', error);
+            toast.error('Failed to export honeycomb');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
         onImportJson(event);
         // Reset the input value so the same file can be selected again
@@ -270,8 +312,9 @@ export default function SharingModal({
                                 <h3 className="text-sm font-medium text-gray-900 mb-3">{t('sharing.exportImport')}</h3>
                                 <div className="flex gap-3">
                                     <button
-                                        onClick={onExportJson}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                                        onClick={handleExportJson}
+                                        disabled={loading}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
                                     >
                                         <Download size={16} />
                                         <span className="text-sm">{t('sharing.exportJson')}</span>
@@ -333,6 +376,7 @@ export default function SharingModal({
                     <button
                         onClick={handleEndSession}
                         className="text-sm text-red-600 hover:text-red-700"
+                        disabled={loading}
                     >
                         {t('sharing.endSession')}
                     </button>

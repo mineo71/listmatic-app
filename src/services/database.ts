@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/services/database.ts
 import supabase from '@/utils/supabase';
@@ -457,7 +458,7 @@ export const clearHoneycombItems = async (honeycombId: string) => {
 };
 
 // =============================================
-// HIVE SERVICES
+// HIVE SERVICES (FIXED DELETION)
 // =============================================
 
 export const createHive = async (hive: Omit<Hive, 'id' | 'createdAt' | 'updatedAt' | 'honeycombs' | 'subHives'>) => {
@@ -524,6 +525,31 @@ export const updateHive = async (id: string, updates: Partial<Omit<Hive, 'id' | 
 
 export const deleteHive = async (id: string) => {
   try {
+    // First, delete any cloned honeycomb references
+    await supabase
+      .from('cloned_honeycombs')
+      .delete()
+      .eq('original_honeycomb_id', id);
+
+    // Get all honeycombs in this hive
+    const { data: honeycombs } = await supabase
+      .from('honeycombs')
+      .select('id')
+      .eq('hive_id', id);
+
+    // Delete cloned references for each honeycomb
+    if (honeycombs && honeycombs.length > 0) {
+      const honeycombIds = honeycombs.map(hc => hc.id);
+      
+      for (const honeycombId of honeycombIds) {
+        await supabase
+          .from('cloned_honeycombs')
+          .delete()
+          .or(`original_honeycomb_id.eq.${honeycombId},cloned_honeycomb_id.eq.${honeycombId}`);
+      }
+    }
+
+    // Now delete the hive (cascading will handle honeycombs and their items)
     const { error } = await supabase
       .from('hives')
       .delete()
@@ -585,7 +611,7 @@ export const getUserHives = async () => {
 };
 
 // =============================================
-// HONEYCOMB SERVICES
+// HONEYCOMB SERVICES (FIXED DELETION)
 // =============================================
 
 export const createHoneycomb = async (
@@ -654,6 +680,13 @@ export const updateHoneycomb = async (id: string, updates: Partial<Omit<Honeycom
 
 export const deleteHoneycomb = async (id: string) => {
   try {
+    // First, delete any cloned honeycomb references
+    await supabase
+      .from('cloned_honeycombs')
+      .delete()
+      .or(`original_honeycomb_id.eq.${id},cloned_honeycomb_id.eq.${id}`);
+
+    // Now delete the honeycomb (cascading will handle honeycomb_items)
     const { error } = await supabase
       .from('honeycombs')
       .delete()
@@ -723,6 +756,43 @@ export const getHoneycomb = async (id: string) => {
     return { data: transformedHoneycomb, error: null };
   } catch (error) {
     console.error('Error fetching honeycomb:', error);
+    return { data: null, error };
+  }
+};
+
+// =============================================
+// CLONED HONEYCOMB UTILITIES
+// =============================================
+
+export const checkIfHoneycombIsCloned = async (honeycombId: string) => {
+  try {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) return { data: false, error: null };
+
+    const { data } = await supabase
+      .from('cloned_honeycombs')
+      .select('id')
+      .eq('cloned_honeycomb_id', honeycombId)
+      .eq('user_id', user.data.user.id)
+      .single();
+
+    return { data: !!data, error: null };
+  } catch (error) {
+    return { data: false, error: null };
+  }
+};
+
+export const getOriginalHoneycombId = async (clonedHoneycombId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('cloned_honeycombs')
+      .select('original_honeycomb_id')
+      .eq('cloned_honeycomb_id', clonedHoneycombId)
+      .single();
+
+    if (error) return { data: null, error };
+    return { data: data.original_honeycomb_id, error: null };
+  } catch (error) {
     return { data: null, error };
   }
 };

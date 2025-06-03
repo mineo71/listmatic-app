@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/shared/Layout.tsx
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -11,7 +13,9 @@ import {
   updateHive, 
   updateHoneycomb, 
   deleteHive, 
-  deleteHoneycomb 
+  deleteHoneycomb,
+  checkIfHoneycombIsCloned,
+  getOriginalHoneycombId
 } from '@/services/database';
 import type { Hive, Honeycomb } from '@/types';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +27,7 @@ export const Layout = () => {
   const [modalType, setModalType] = useState<'hive' | 'honeycomb' | null>(null);
   const [selectedHiveId, setSelectedHiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [createLoading, setCreateLoading] = useState(false);
+  const [, setCreateLoading] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -93,7 +97,12 @@ export const Layout = () => {
       const { error } = await deleteHive(hiveId);
       if (error) {
         console.error('Error deleting hive:', error);
-        toast.error(t('messages.deleteError'));
+        // Check if it's a foreign key constraint error
+        if ((error as { code?: string }).code === '23503') {
+          toast.error('Cannot delete this hive as it contains honeycombs that have been shared or cloned. Please delete the shared copies first.');
+        } else {
+          toast.error(t('messages.deleteError'));
+        }
       } else {
         setHives(prevHives => prevHives.filter(hive => hive.id !== hiveId));
         toast.success(t('messages.hiveDeleted'));
@@ -109,15 +118,36 @@ export const Layout = () => {
   };
 
   const handleDeleteHoneycomb = async (honeycombId: string) => {
-    if (!window.confirm(t('confirmations.deleteHoneycomb'))) {
-      return;
-    }
-
     try {
+      // Check if this honeycomb is a clone
+      const { data: isCloned } = await checkIfHoneycombIsCloned(honeycombId);
+      
+      let confirmMessage = t('confirmations.deleteHoneycomb');
+      if (isCloned) {
+        // Get original honeycomb info
+        const { data: originalId } = await getOriginalHoneycombId(honeycombId);
+        if (originalId) {
+          confirmMessage = 'This is a cloned honeycomb. Deleting it will not affect the original. Are you sure you want to delete this copy?';
+        }
+      }
+
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+
       const { error } = await deleteHoneycomb(honeycombId);
       if (error) {
         console.error('Error deleting honeycomb:', error);
-        toast.error(t('messages.deleteError'));
+        // Check if it's a foreign key constraint error
+        if ((error as { code?: string }).code === '23503') {
+          if (isCloned) {
+            toast.error('Error deleting the cloned honeycomb. Please try again.');
+          } else {
+            toast.error('Cannot delete this honeycomb as it has been shared or cloned. Please delete the shared copies first, or contact support.');
+          }
+        } else {
+          toast.error(t('messages.deleteError'));
+        }
       } else {
         // Remove honeycomb from local state
         const updateHive = (hive: Hive): Hive => ({
@@ -127,7 +157,12 @@ export const Layout = () => {
         });
 
         setHives(hives.map(updateHive));
-        toast.success(t('messages.honeycombDeleted'));
+        
+        if (isCloned) {
+          toast.success('Cloned honeycomb deleted successfully.');
+        } else {
+          toast.success(t('messages.honeycombDeleted'));
+        }
         
         if (location.pathname === `/honeycomb/${honeycombId}`) {
           navigate('/');
@@ -300,7 +335,6 @@ export const Layout = () => {
         onClose={() => setModalType(null)}
         onSubmit={handleCreateItem}
         type={modalType || 'hive'}
-        loading={createLoading}
       />
     </div>
   );

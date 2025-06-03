@@ -15,13 +15,14 @@ export const HoneycombView = () => {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 relative">
-        <HoneycombCanvas
+        <HoneycombCanvas 
+          honeycombId="default"
           zoom={zoom}
           setZoom={setZoom}
           offset={offset}
           setOffset={setOffset}
-          isSidebarOpen={isSidebarOpen}
-          setIsSidebarOpen={setIsSidebarOpen}
+          isTaskSidebarOpen={isSidebarOpen}
+          setisTaskSidebarOpen={setIsSidebarOpen}
           onProgressUpdate={handleProgressUpdate}
         />
       </div>

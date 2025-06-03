@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/settings/Settings.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Globe,
@@ -8,8 +10,12 @@ import {
   // Volume2,
   // Shield,
   Database,
-  Trash2
+  Trash2,
+  Save,
+  Check
 } from 'lucide-react';
+import { updateUserLanguage, getUserProfile } from '@/services/database';
+import toast from 'react-hot-toast';
 
 interface SettingsSection {
   key: string;
@@ -31,6 +37,12 @@ export const Settings = () => {
     compactMode: false,
   });
 
+  // Language settings state
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+  const [savedLanguage, setSavedLanguage] = useState(i18n.language);
+  const [languageSaving, setLanguageSaving] = useState(false);
+  const [languageChanged, setLanguageChanged] = useState(false);
+
   const sections: SettingsSection[] = [
     { key: 'general',       icon: Globe,    title: t('settings.sections.general') },
     // { key: 'notifications', icon: Bell,     title: t('settings.sections.notifications') },
@@ -40,10 +52,53 @@ export const Settings = () => {
     { key: 'data',          icon: Database, title: t('settings.sections.data') },
   ];
 
-  // Change UI language
+  // Load user's saved language preference
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      const { data } = await getUserProfile();
+      if (data && data.language) {
+        setSavedLanguage(data.language);
+        setCurrentLanguage(data.language);
+        i18n.changeLanguage(data.language);
+      }
+    };
+    
+    loadUserProfile();
+  }, [i18n]);
+
+  // Check if language has changed
+  useEffect(() => {
+    setLanguageChanged(currentLanguage !== savedLanguage);
+  }, [currentLanguage, savedLanguage]);
+
+  // Change UI language immediately but don't save yet
   const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    i18n.changeLanguage(e.target.value);
-    localStorage.setItem('language', e.target.value);
+    const newLanguage = e.target.value;
+    setCurrentLanguage(newLanguage);
+    i18n.changeLanguage(newLanguage);
+    localStorage.setItem('language', newLanguage);
+  };
+
+  // Save language to database
+  const handleSaveLanguage = async () => {
+    setLanguageSaving(true);
+    
+    try {
+      const { error } = await updateUserLanguage(currentLanguage);
+      
+      if (error) {
+        throw error;
+      }
+      
+      setSavedLanguage(currentLanguage);
+      setLanguageChanged(false);
+      toast.success(t('settings.messages.languageSaved'));
+    } catch (error) {
+      console.error('Error saving language:', error);
+      toast.error(t('settings.messages.languageSaveError'));
+    } finally {
+      setLanguageSaving(false);
+    }
   };
 
   // --- Section renderers ---
@@ -51,14 +106,45 @@ export const Settings = () => {
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">{t('settings.language')}</h3>
-          <select
-              value={i18n.language}
-              onChange={handleLanguageChange}
-              className="mt-1 block w-full rounded-md border-gray-300 focus:ring-amber-500 focus:border-amber-500"
-          >
-            <option value="en">English</option>
-            <option value="uk">Українська</option>
-          </select>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <select
+                  value={currentLanguage}
+                  onChange={handleLanguageChange}
+                  className="block w-full rounded-md border-gray-300 focus:ring-amber-500 focus:border-amber-500 p-3"
+              >
+                <option value="en">English</option>
+                <option value="uk">Українська</option>
+              </select>
+            </div>
+            
+            {languageChanged && (
+              <button
+                onClick={handleSaveLanguage}
+                disabled={languageSaving}
+                className="flex items-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {languageSaving ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Save size={16} />
+                )}
+                {languageSaving ? t('settings.saving') : t('settings.save')}
+              </button>
+            )}
+            
+            {!languageChanged && savedLanguage === currentLanguage && (
+              <div className="flex items-center gap-2 text-green-600">
+                <Check size={16} />
+                <span className="text-sm">{t('settings.saved')}</span>
+              </div>
+            )}
+          </div>
+          
+          <p className="text-sm text-gray-500 mt-2">
+            {t('settings.languageDescription')}
+          </p>
         </div>
       </div>
   );

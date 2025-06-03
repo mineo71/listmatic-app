@@ -1,22 +1,61 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/shared/Layout.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-// import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { CreateItemModal } from './Modal';
-// import { initialHives } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
+import { 
+  getUserHives, 
+  createHive, 
+  createHoneycomb, 
+  updateHive, 
+  updateHoneycomb, 
+  deleteHive, 
+  deleteHoneycomb,
+  checkIfHoneycombIsCloned,
+  getOriginalHoneycombId
+} from '@/services/database';
 import type { Hive, Honeycomb } from '@/types';
+import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 
 export const Layout = () => {
   const [hives, setHives] = useState<Hive[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [modalType, setModalType] = useState<'hive' | 'honeycomb' | null>(null);
   const [selectedHiveId, setSelectedHiveId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [, setCreateLoading] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { signOut } = useAuth();
+  const { t } = useTranslation();
+
+  // Load hives when component mounts
+  useEffect(() => {
+    loadHives();
+  }, []);
+
+  const loadHives = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await getUserHives();
+      if (error) {
+        console.error('Error loading hives:', error);
+        toast.error(t('messages.loadError'));
+      } else {
+        setHives(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading hives:', error);
+      toast.error(t('messages.loadError'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelectItem = (id: string, type: 'hive' | 'honeycomb' | 'settings') => {
     if (type === 'hive') {
@@ -49,102 +88,205 @@ export const Layout = () => {
     setHives(hives.map(updateHoneycombs));
   };
 
-  const handleDeleteHive = (hiveId: string) => {
-    if (window.confirm('Are you sure you want to delete this hive?')) {
-      setHives(prevHives => prevHives.filter(hive => hive.id !== hiveId));
-      if (selectedHiveId === hiveId) {
-        setSelectedHiveId(null);
-      }
+  const handleDeleteHive = async (hiveId: string) => {
+    if (!window.confirm(t('confirmations.deleteHive'))) {
+      return;
     }
-  };
 
-  const handleDeleteHoneycomb = (honeycombId: string) => {
-    if (window.confirm('Are you sure you want to delete this honeycomb?')) {
-      const updateHive = (hive: Hive): Hive => ({
-        ...hive,
-        honeycombs: hive.honeycombs.filter(hc => hc.id !== honeycombId),
-        subHives: hive.subHives.map(updateHive)
-      });
-
-      setHives(hives.map(updateHive));
-      if (location.pathname === `/honeycomb/${honeycombId}`) {
-        navigate('/');
-      }
-    }
-  };
-
-  const handleRenameItem = (id: string, newName: string, type: 'hive' | 'honeycomb') => {
-    if (type === 'hive') {
-      setHives(prevHives =>
-        prevHives.map(hive =>
-          hive.id === id
-            ? { ...hive, name: newName, updatedAt: new Date() }
-            : hive
-        )
-      );
-    } else {
-      const updateHive = (hive: Hive): Hive => ({
-        ...hive,
-        honeycombs: hive.honeycombs.map(hc =>
-          hc.id === id
-            ? { ...hc, name: newName, updatedAt: new Date() }
-            : hc
-        ),
-        subHives: hive.subHives.map(updateHive)
-      });
-
-      setHives(hives.map(updateHive));
-    }
-  };
-
-  const handleCreateItem = (name: string) => {
-    if (modalType === 'hive') {
-      const newHive: Hive = {
-        id: Date.now().toString(),
-        name,
-        honeycombs: [],
-        subHives: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        description: '',
-        icon: 'None',
-        color: ''
-      };
-      setHives([...hives, newHive]);
-    } else if (modalType === 'honeycomb' && selectedHiveId) {
-      const newHoneycomb: Honeycomb = {
-        id: Date.now().toString(),
-        name,
-        tasks: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        description: '',
-        icon: 'None',
-        color: ''
-      };
-
-      const updateHive = (hive: Hive): Hive => {
-        if (hive.id === selectedHiveId) {
-          return {
-            ...hive,
-            honeycombs: [...hive.honeycombs, newHoneycomb],
-            updatedAt: new Date()
-          };
+    try {
+      const { error } = await deleteHive(hiveId);
+      if (error) {
+        console.error('Error deleting hive:', error);
+        // Check if it's a foreign key constraint error
+        if ((error as { code?: string }).code === '23503') {
+          toast.error('Cannot delete this hive as it contains honeycombs that have been shared or cloned. Please delete the shared copies first.');
+        } else {
+          toast.error(t('messages.deleteError'));
         }
-        return {
-          ...hive,
-          subHives: hive.subHives.map(updateHive)
-        };
-      };
-
-      setHives(hives.map(updateHive));
+      } else {
+        setHives(prevHives => prevHives.filter(hive => hive.id !== hiveId));
+        toast.success(t('messages.hiveDeleted'));
+        
+        if (selectedHiveId === hiveId) {
+          setSelectedHiveId(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting hive:', error);
+      toast.error(t('messages.deleteError'));
     }
-    setModalType(null);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleDeleteHoneycomb = async (honeycombId: string) => {
+    try {
+      // Check if this honeycomb is a clone
+      const { data: isCloned } = await checkIfHoneycombIsCloned(honeycombId);
+      
+      let confirmMessage = t('confirmations.deleteHoneycomb');
+      if (isCloned) {
+        // Get original honeycomb info
+        const { data: originalId } = await getOriginalHoneycombId(honeycombId);
+        if (originalId) {
+          confirmMessage = 'This is a cloned honeycomb. Deleting it will not affect the original. Are you sure you want to delete this copy?';
+        }
+      }
+
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+
+      const { error } = await deleteHoneycomb(honeycombId);
+      if (error) {
+        console.error('Error deleting honeycomb:', error);
+        // Check if it's a foreign key constraint error
+        if ((error as { code?: string }).code === '23503') {
+          if (isCloned) {
+            toast.error('Error deleting the cloned honeycomb. Please try again.');
+          } else {
+            toast.error('Cannot delete this honeycomb as it has been shared or cloned. Please delete the shared copies first, or contact support.');
+          }
+        } else {
+          toast.error(t('messages.deleteError'));
+        }
+      } else {
+        // Remove honeycomb from local state
+        const updateHive = (hive: Hive): Hive => ({
+          ...hive,
+          honeycombs: hive.honeycombs.filter(hc => hc.id !== honeycombId),
+          subHives: hive.subHives.map(updateHive)
+        });
+
+        setHives(hives.map(updateHive));
+        
+        if (isCloned) {
+          toast.success('Cloned honeycomb deleted successfully.');
+        } else {
+          toast.success(t('messages.honeycombDeleted'));
+        }
+        
+        if (location.pathname === `/honeycomb/${honeycombId}`) {
+          navigate('/');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting honeycomb:', error);
+      toast.error(t('messages.deleteError'));
+    }
+  };
+
+  const handleRenameItem = async (id: string, newName: string, type: 'hive' | 'honeycomb') => {
+    try {
+      if (type === 'hive') {
+        const { error } = await updateHive(id, { name: newName });
+        if (error) {
+          console.error('Error updating hive:', error);
+          toast.error(t('messages.updateError'));
+        } else {
+          setHives(prevHives =>
+            prevHives.map(hive =>
+              hive.id === id
+                ? { ...hive, name: newName, updatedAt: new Date() }
+                : hive
+            )
+          );
+          toast.success(t('messages.hiveUpdated'));
+        }
+      } else {
+        const { error } = await updateHoneycomb(id, { name: newName });
+        if (error) {
+          console.error('Error updating honeycomb:', error);
+          toast.error(t('messages.updateError'));
+        } else {
+          const updateHive = (hive: Hive): Hive => ({
+            ...hive,
+            honeycombs: hive.honeycombs.map(hc =>
+              hc.id === id
+                ? { ...hc, name: newName, updatedAt: new Date() }
+                : hc
+            ),
+            subHives: hive.subHives.map(updateHive)
+          });
+
+          setHives(hives.map(updateHive));
+          toast.success(t('messages.honeycombUpdated'));
+        }
+      }
+    } catch (error) {
+      console.error('Error renaming item:', error);
+      toast.error(t('messages.updateError'));
+    }
+  };
+
+  const handleCreateItem = async (name: string) => {
+    if (!name.trim()) return;
+
+    setCreateLoading(true);
+    
+    try {
+      if (modalType === 'hive') {
+        const { data, error } = await createHive({
+          name: name.trim(),
+          description: '',
+          icon: 'None',
+          color: '#FDE68A',
+        });
+
+        if (error) {
+          console.error('Error creating hive:', error);
+          toast.error(t('messages.createError'));
+        } else if (data) {
+          setHives(prev => [data, ...prev]);
+          toast.success(t('messages.hiveCreated'));
+        }
+      } else if (modalType === 'honeycomb' && selectedHiveId) {
+        const { data, error } = await createHoneycomb(
+          {
+            name: name.trim(),
+            description: '',
+            icon: 'None',
+            color: '#FDE68A',
+          },
+          selectedHiveId
+        );
+
+        if (error) {
+          console.error('Error creating honeycomb:', error);
+          toast.error(t('messages.createError'));
+        } else if (data) {
+          const updateHive = (hive: Hive): Hive => {
+            if (hive.id === selectedHiveId) {
+              return {
+                ...hive,
+                honeycombs: [...hive.honeycombs, data],
+                updatedAt: new Date()
+              };
+            }
+            return {
+              ...hive,
+              subHives: hive.subHives.map(updateHive)
+            };
+          };
+
+          setHives(hives.map(updateHive));
+          toast.success(t('messages.honeycombCreated'));
+        }
+      }
+    } catch (error) {
+      console.error('Error creating item:', error);
+      toast.error(t('messages.createError'));
+    } finally {
+      setCreateLoading(false);
+      setModalType(null);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
@@ -163,25 +305,28 @@ export const Layout = () => {
         onDeleteHoneycomb={handleDeleteHoneycomb}
         onRenameItem={handleRenameItem}
         onLogout={handleLogout}
+        loading={loading}
       />
 
       <div className={`fixed right-0 top-0 bottom-0 transition-all duration-300 
       ${ isSidebarOpen ? 'left-64' : 'left-0'}
       `}>
-        {/* <div className='border-gray-200 border-b'>
-          <Header 
-            allHives={hives}
-            isSidebarOpen={isSidebarOpen}
-          />
-        </div> */}
-
         <main className="h-[100%] overflow-auto">
-          <Outlet context={{ 
-            hives,
-            selectedHiveId,
-            onUpdateHoneycomb: handleUpdateHoneycomb,
-            isSidebarOpen
-          }} />
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+                <p className="text-gray-600">{t('messages.loading')}</p>
+              </div>
+            </div>
+          ) : (
+            <Outlet context={{ 
+              hives,
+              selectedHiveId,
+              onUpdateHoneycomb: handleUpdateHoneycomb,
+              isSidebarOpen
+            }} />
+          )}
         </main>
       </div>
 

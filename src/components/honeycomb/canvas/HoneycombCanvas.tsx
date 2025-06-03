@@ -10,7 +10,7 @@ import GeminiModal from "../GeminiModal"
 import toast from "react-hot-toast"
 import type { HoneycombItem, HoneycombCanvasProps, TaskIcon, TaskPriority } from "./HoneycombTypes"
 import { axialToPixel, findClosestNeighbor } from "./honeycombUtils"
-import { useHoneycombItems } from "./useHoneycombItems"
+import { useUnifiedHoneycombItems } from "./useUnifiedHoneycombItems"
 
 // Constants for canvas limits
 const CANVAS_LIMITS = {
@@ -40,6 +40,7 @@ function debounce<T extends (...args: any[]) => void>(
 }
 
 export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
+    honeycombId,
     zoom,
     setZoom,
     offset,
@@ -47,6 +48,12 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     isTaskSidebarOpen,
     setisTaskSidebarOpen,
     onProgressUpdate,
+    // Shared mode props
+    isSharedMode = false,
+    canEdit = true,
+    sessionId,
+    participantId,
+    participants = [],
   }) => {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -55,7 +62,17 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   const lastZoomRef = useRef(zoom);
   const lastTouchDistanceRef = useRef<number | null>(null);
 
-  const { items, setItems } = useHoneycombItems(onProgressUpdate)
+  // Use unified hook that handles both modes
+  const { 
+    items, 
+    loading, 
+    saving, 
+    createItem, 
+    updateItem, 
+    deleteItem, 
+    bulkCreateItems,
+    toggleItemCompletion 
+  } = useUnifiedHoneycombItems(honeycombId, onProgressUpdate, isSharedMode, canEdit, sessionId, participantId);
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -64,7 +81,6 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isModalCreating, setIsModalCreating] = useState(false)
   const [pendingHexagon, setPendingHexagon] = useState<HoneycombItem | null>(null)
-  const [idCounter, setIdCounter] = useState<number>(1)
   const [isGeminiModalOpen, setIsGeminiModalOpen] = useState(false)
 
   // Function to limit canvas panning within bounds
@@ -98,25 +114,37 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   }, [items, offset, zoom]);
 
   // Handle AI-generated honeycombs
-  const handleGeminiGenerate = useCallback((generatedItems: HoneycombItem[]) => {
-    // Reset the canvas by removing all items except the main one
-    setItems(generatedItems);
+  const handleGeminiGenerate = useCallback(async (generatedItems: HoneycombItem[]) => {
+    // In shared mode, disable AI generation if no edit permissions
+    if (isSharedMode && !canEdit) {
+      toast.error(t('sharing.noAIGeneration'));
+      return;
+    }
+
+    // Transform generated items to the format expected by the database
+    const itemsToCreate = generatedItems.map(item => ({
+      q: item.q,
+      r: item.r,
+      x: item.x,
+      y: item.y,
+      title: item.title,
+      description: item.description,
+      icon: item.icon,
+      priority: item.priority,
+      completed: false,
+      connections: item.connections,
+      color: item.color,
+      category: item.category,
+      isMain: item.isMain,
+      deadline: item.deadline,
+    }))
     
-    // Update the ID counter to be larger than any ID in the generated items
-    const maxId = Math.max(...generatedItems.map(item => {
-      const numericId = parseInt(item.id.replace(/\D/g, ''));
-      return isNaN(numericId) ? 0 : numericId;
-    }));
-    setIdCounter(maxId + 1);
+    const success = await bulkCreateItems(itemsToCreate)
     
-    // Recalculate progress
-    const totalItems = generatedItems.filter(item => !item.isMain).length;
-    const completedItems = generatedItems.filter(item => !item.isMain && item.completed).length;
-    const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
-    onProgressUpdate(progress);
-    
-    toast.success(t('ai.successMessage'));
-  }, [setItems, onProgressUpdate, t]);
+    if (success) {
+      toast.success(t('ai.successMessage'))
+    }
+  }, [bulkCreateItems, t, isSharedMode, canEdit])
 
   // Fixed zoomAtPoint function for zooming at mouse position
   const zoomAtPoint = useCallback((newZoom: number, clientX: number, clientY: number) => {
@@ -286,8 +314,8 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         }));
 
         lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-      } else if (isCreating && containerRef.current && !isEditModalOpen) {
-        // Ghost hexagon positioning for creation mode
+      } else if (isCreating && containerRef.current && !isEditModalOpen && canEdit) {
+        // Ghost hexagon positioning for creation mode (only if can edit)
         const rect = containerRef.current.getBoundingClientRect();
         const mouseX = (e.clientX - rect.left) / zoom - offset.x / zoom;
         const mouseY = (e.clientY - rect.top) / zoom - offset.y / zoom;
@@ -296,7 +324,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         setGhostHex(closestNeighbor);
       }
     },
-    [isCreating, zoom, offset, items, isEditModalOpen, setOffset, limitOffsetToBounds]
+    [isCreating, zoom, offset, items, isEditModalOpen, setOffset, limitOffsetToBounds, canEdit]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -308,17 +336,13 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   }, []);
 
   // Create new hexagon
-  const createNewHexagon = useCallback(() => {
-    if (!ghostHex || !containerRef.current) return;
+  const createNewHexagon = useCallback(async () => {
+    if (!ghostHex || !containerRef.current || !canEdit) return;
   
     const pixel = axialToPixel(ghostHex.q, ghostHex.r);
   
-    // Create new ID
-    const newId = (idCounter + 1).toString();
-  
     // Create new hexagon
-    const newItem: HoneycombItem = {
-      id: newId,
+    const newItem: Omit<HoneycombItem, 'id' | 'createdAt' | 'updatedAt'> = {
       q: ghostHex.q,
       r: ghostHex.r,
       x: pixel.x,
@@ -330,59 +354,47 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
       completed: false,
       connections: [ghostHex.parentId],
       color: "#FDE68A",
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
   
-    // Increment counter
-    setIdCounter(idCounter + 1);
-  
-    // Save new hexagon
-    setPendingHexagon(newItem);
-    setEditingItem(newItem);
-    setIsEditModalOpen(true);
-    setIsModalCreating(true);
+    // Save new hexagon to database
+    const createdItem = await createItem(newItem)
+    
+    if (createdItem) {
+      // Update parent's connections
+      const parentItem = items.find(item => item.id === ghostHex.parentId)
+      if (parentItem) {
+        await updateItem(parentItem.id, {
+          connections: [...parentItem.connections, createdItem.id]
+        })
+      }
+      
+      // Open edit modal for the new item
+      setPendingHexagon(createdItem);
+      setEditingItem(createdItem);
+      setIsEditModalOpen(true);
+      setIsModalCreating(true);
+    }
+    
     setIsCreating(false);
     setGhostHex(null);
-  }, [ghostHex, containerRef, idCounter, t]);
+  }, [ghostHex, containerRef, t, createItem, updateItem, items, canEdit]);
 
   // Ghost hexagon click handler
   const handleGhostClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isEditModalOpen) {
+    if (!isEditModalOpen && canEdit) {
       createNewHexagon();
     }
-  }, [createNewHexagon, isEditModalOpen]);
+  }, [createNewHexagon, isEditModalOpen, canEdit]);
 
   // Mark task as complete
-  const handleMarkComplete = useCallback((id: string) => {
-    const item = items.find((i) => i.id === id);
-
-    // If this is the main item, check if all others are completed
-    if (item?.isMain) {
-      const otherItems = items.filter((i) => !i.isMain);
-      const allOthersCompleted = otherItems.every((i) => i.completed);
-
-      if (!allOthersCompleted) {
-        toast.error(t("messages.completeOtherTasks"));
-        return;
-      }
-
-      setItems((prev) => prev.map((item) => 
-        item.id === id ? { ...item, completed: !item.completed } : item
-      ));
-
-      if (!item.completed) {
-        toast.success(t("messages.taskCompleted"));
-      }
+  const handleMarkComplete = useCallback(async (id: string) => {
+    if (!canEdit) {
+      toast.error(t('sharing.noEditingAllowed'));
       return;
     }
-
-    // Regular mark complete for other items
-    setItems((prev) => prev.map((item) => 
-      item.id === id ? { ...item, completed: !item.completed } : item
-    ));
-  }, [items, setItems, t]);
+    await toggleItemCompletion(id)
+  }, [toggleItemCompletion, canEdit, t]);
 
   // Edit modal handlers
   const handleModalClose = useCallback(() => {
@@ -392,7 +404,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     setPendingHexagon(null);
   }, []);
 
-  const handleEditSubmit = useCallback((data: {
+  const handleEditSubmit = useCallback(async (data: {
     title: string;
     color: string;
     icon: TaskIcon;
@@ -400,34 +412,25 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     priority: TaskPriority;
     deadline?: Date;
   }) => {
+    if (!canEdit) {
+      toast.error(t('sharing.noEditingAllowed'));
+      return;
+    }
+
     // Handle new hexagon
-    if (editingItem && pendingHexagon) {
-      const hexagonToAdd = {
-        ...pendingHexagon,
+    if (editingItem && pendingHexagon && isModalCreating) {
+      await updateItem(editingItem.id, {
         title: data.title,
         color: data.color,
         icon: data.icon,
         description: data.description,
         priority: data.priority,
         deadline: data.deadline,
-      };
-
-      setItems((prev) => [
-        // Update parent's connections
-        ...prev.map((item) =>
-          hexagonToAdd.connections.includes(item.id)
-            ? { ...item, connections: [...item.connections, hexagonToAdd.id] }
-            : item
-        ),
-        // Add new hexagon
-        hexagonToAdd,
-      ]);
+      })
     }
     // Handle existing hexagon
     else if (editingItem) {
-      setItems((prev) => prev.map((item) => 
-        item.id === editingItem.id ? { ...item, ...data } : item
-      ));
+      await updateItem(editingItem.id, data)
     }
 
     // Close modal
@@ -435,25 +438,35 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     setEditingItem(null);
     setIsModalCreating(false);
     setPendingHexagon(null);
-  }, [editingItem, pendingHexagon, setItems]);
+  }, [editingItem, pendingHexagon, isModalCreating, updateItem, canEdit, t]);
 
   // Delete hexagon
-  const handleDeleteItem = useCallback(() => {
-    if (editingItem && !editingItem.isMain) {
-      // Remove connections to deleted hexagon
-      setItems((prev) =>
-        prev.map((item) => ({
-          ...item,
-          connections: item.connections.filter((connId) => connId !== editingItem.id),
-        }))
-      );
+  const handleDeleteItem = useCallback(async () => {
+    if (!canEdit) {
+      toast.error(t('sharing.noEditingAllowed'));
+      return;
+    }
 
-      // Remove the hexagon
-      setItems((prev) => prev.filter((item) => item.id !== editingItem.id));
+    if (editingItem && !editingItem.isMain) {
+      // Remove connections to deleted hexagon from other items
+      const itemsToUpdate = items.filter(item => 
+        item.connections.includes(editingItem.id)
+      )
+      
+      // Update all items that reference this hexagon
+      for (const item of itemsToUpdate) {
+        await updateItem(item.id, {
+          connections: item.connections.filter(connId => connId !== editingItem.id)
+        })
+      }
+
+      // Delete the hexagon itself
+      await deleteItem(editingItem.id)
+      
       setIsEditModalOpen(false);
       setEditingItem(null);
     }
-  }, [editingItem, setItems]);
+  }, [editingItem, items, updateItem, deleteItem, canEdit, t]);
 
   // Edit from sidebar
   const handleSidebarEditClick = useCallback((id: string) => {
@@ -477,17 +490,19 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
       
       setSelectedItemId(id);
 
-      // Open edit modal
-      setEditingItem({
-        ...item,
-        isMain: item.id === "main",
-      });
-      
-      setIsEditModalOpen(true);
+      // Open edit modal only if can edit
+      if (canEdit) {
+        setEditingItem({
+          ...item,
+          isMain: item.id === "main",
+        });
+        
+        setIsEditModalOpen(true);
+      }
     }
-  }, [isCreating, items, zoom, isTaskSidebarOpen, setOffset]);
+  }, [isCreating, items, zoom, isTaskSidebarOpen, setOffset, canEdit]);
 
-  // Export/Import functions
+  // Export/Import functions - simplified since we use database
   const exportToJson = useCallback((items: HoneycombItem[]) => {
     const dataStr = JSON.stringify(items, null, 2);
     const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
@@ -498,16 +513,43 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     linkElement.click();
   }, []);
 
-  const importFromJson = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const importFromJson = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canEdit) {
+      toast.error(t('sharing.noEditingAllowed'));
+      return;
+    }
+
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const content = e.target?.result;
         if (typeof content === "string") {
           try {
             const importedItems = JSON.parse(content) as HoneycombItem[];
-            setItems(importedItems);
+            
+            // Transform imported items to the format expected by bulkCreateItems
+            const itemsToCreate = importedItems.map(item => ({
+              q: item.q,
+              r: item.r,
+              x: item.x,
+              y: item.y,
+              title: item.title,
+              description: item.description,
+              icon: item.icon,
+              priority: item.priority,
+              completed: false, // Reset completion status
+              connections: item.connections,
+              color: item.color,
+              category: item.category,
+              isMain: item.isMain,
+              deadline: item.deadline,
+            }))
+            
+            const success = await bulkCreateItems(itemsToCreate)
+            if (success) {
+              toast.success(t("messages.importSuccess"))
+            }
           } catch (error) {
             console.error("Error parsing JSON:", error);
             toast.error(t("messages.invalidJsonFile"));
@@ -516,7 +558,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
       };
       reader.readAsText(file);
     }
-  }, [setItems, t]);
+  }, [bulkCreateItems, t, canEdit]);
 
   // Initialize canvas
   useEffect(() => {
@@ -537,7 +579,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
 
   // Generate ghost hexagon when creating
   const ghostHexagon = useMemo(() => {
-    if (isCreating && ghostHex) {
+    if (isCreating && ghostHex && canEdit) {
       const { x, y } = axialToPixel(ghostHex.q, ghostHex.r);
       return (
         <HoneycombHexagon
@@ -555,7 +597,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
       );
     }
     return null;
-  }, [isCreating, ghostHex, handleGhostClick]);
+  }, [isCreating, ghostHex, handleGhostClick, canEdit]);
 
   return (
     <div
@@ -569,6 +611,36 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Loading overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-50">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+            <p className="text-gray-600">{t('messages.loading')}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Saving indicator */}
+      {saving && (
+        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md px-4 py-2 z-40">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm text-gray-600">{t('actions.saving')}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Real-time indicator for shared mode */}
+      {isSharedMode && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm z-40">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Real-time sync active</span>
+          </div>
+        </div>
+      )}
+
       {/* Background grid that scales with zoom */}
       <div
         className="absolute w-[10000px] h-[10000px]"
@@ -587,37 +659,41 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         }}
       />
 
-      {/* Control buttons */}
-      <div className="absolute top-4 left-4 z-10 flex">
-        <button
-          onClick={() => setIsCreating(!isCreating)}
-          className={`flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all ${
-            isCreating ? "bg-amber-500 text-white" : "bg-white hover:bg-gray-50"
-          }`}
-        >
-          {isCreating ? <X size={22} /> : <Plus size={22} />}
-          <span className="font-xl">{isCreating ? t("actions.done") : t("actions.addHexagon")}</span>
-        </button>
+      {/* Control buttons - only show if not in shared mode or if can edit */}
+      {(!isSharedMode || canEdit) && (
+        <div className="absolute top-4 left-4 z-10 flex">
+          <button
+            onClick={() => setIsCreating(!isCreating)}
+            className={`flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all ${
+              isCreating ? "bg-amber-500 text-white" : "bg-white hover:bg-gray-50"
+            }`}
+          >
+            {isCreating ? <X size={22} /> : <Plus size={22} />}
+            <span className="font-xl">{isCreating ? t("actions.done") : t("actions.addHexagon")}</span>
+          </button>
 
-        <button 
-          onClick={() => setIsGeminiModalOpen(true)}
-          className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2"
-        >
-          <Wand2 size={22} />
-        </button>
+          {!isSharedMode && (
+            <button 
+              onClick={() => setIsGeminiModalOpen(true)}
+              className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2"
+            >
+              <Wand2 size={22} />
+            </button>
+          )}
 
-        <button
-          onClick={() => exportToJson(items)}
-          className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2"
-        >
-          <Download size={22} />
-        </button>
+          <button
+            onClick={() => exportToJson(items)}
+            className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2"
+          >
+            <Download size={22} />
+          </button>
 
-        <label className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2 cursor-pointer">
-          <input type="file" accept=".json" onChange={importFromJson} style={{ display: "none" }} />
-          <Upload size={22} />
-        </label>
-      </div>
+          <label className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2 cursor-pointer">
+            <input type="file" accept=".json" onChange={importFromJson} style={{ display: "none" }} />
+            <Upload size={22} />
+          </label>
+        </div>
+      )}
 
       {/* Canvas content - modified transformation for proper zooming */}
       <div
@@ -708,35 +784,67 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         onCompleteTask={handleMarkComplete}
       />
 
-      {/* Edit modal */}
-      <HoneycombEditModal
-        isOpen={isEditModalOpen}
-        onClose={handleModalClose}
-        onSubmit={handleEditSubmit}
-        onDelete={handleDeleteItem}
-        initialData={
-          editingItem
-            ? {
-                id: editingItem.id,
-                title: editingItem.title,
-                color: editingItem.color,
-                icon: editingItem.icon,
-                description: editingItem.description,
-                priority: editingItem.priority,
-                deadline: editingItem.deadline,
-                isMain: editingItem.isMain,
-              }
-            : undefined
-        }
-        isCreating={isModalCreating}
-      />
+      {/* Edit modal - only show if can edit */}
+      {canEdit && (
+        <HoneycombEditModal
+          isOpen={isEditModalOpen}
+          onClose={handleModalClose}
+          onSubmit={handleEditSubmit}
+          onDelete={handleDeleteItem}
+          initialData={
+            editingItem
+              ? {
+                  id: editingItem.id,
+                  title: editingItem.title,
+                  color: editingItem.color,
+                  icon: editingItem.icon,
+                  description: editingItem.description,
+                  priority: editingItem.priority,
+                  deadline: editingItem.deadline,
+                  isMain: editingItem.isMain,
+                }
+              : undefined
+          }
+          isCreating={isModalCreating}
+        />
+      )}
 
-      {/* Gemini AI Modal */}
-      <GeminiModal
-        isOpen={isGeminiModalOpen}
-        onClose={() => setIsGeminiModalOpen(false)}
-        onGenerate={handleGeminiGenerate}
-      />
+      {/* Gemini AI Modal - only show if not in shared mode */}
+      {!isSharedMode && (
+        <GeminiModal
+          isOpen={isGeminiModalOpen}
+          onClose={() => setIsGeminiModalOpen(false)}
+          onGenerate={handleGeminiGenerate}
+        />
+      )}
+
+      {/* Participant cursors for shared mode */}
+      {isSharedMode && participants.map(participant => {
+        if (!participant.cursor_position || participant.id === participantId) return null;
+        
+        return (
+          <div
+            key={participant.id}
+            className="absolute pointer-events-none z-30"
+            style={{
+              left: participant.cursor_position.x,
+              top: participant.cursor_position.y,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div 
+              className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
+              style={{ backgroundColor: participant.color }}
+            />
+            <div 
+              className="mt-1 px-2 py-1 rounded text-xs text-white shadow-lg whitespace-nowrap"
+              style={{ backgroundColor: participant.color }}
+            >
+              {participant.display_name}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };

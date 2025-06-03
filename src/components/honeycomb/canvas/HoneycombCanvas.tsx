@@ -12,14 +12,19 @@ import type { HoneycombItem, HoneycombCanvasProps, TaskIcon, TaskPriority } from
 import { axialToPixel, findClosestNeighbor } from "./honeycombUtils"
 import { useUnifiedHoneycombItems } from "./useUnifiedHoneycombItems"
 
+// Enhanced interface with new callbacks
+interface EnhancedHoneycombCanvasProps extends HoneycombCanvasProps {
+  onItemSelection?: (itemId: string | null) => void;
+}
+
 // Constants for canvas limits
 const CANVAS_LIMITS = {
   minX: -2000,
   maxX: 2000,
   minY: -2000,
   maxY: 2000,
-  minZoom: 0.9, // 0.9x of default zoom
-  maxZoom: 3,   // 3x of default zoom
+  minZoom: 0.9,
+  maxZoom: 3,
 };
 
 // Typed debounce function
@@ -39,7 +44,7 @@ function debounce<T extends (...args: any[]) => void>(
   };
 }
 
-export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
+export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     honeycombId,
     zoom,
     setZoom,
@@ -54,6 +59,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     sessionId,
     participantId,
     participants = [],
+    onItemSelection,
   }) => {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -83,6 +89,12 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   const [pendingHexagon, setPendingHexagon] = useState<HoneycombItem | null>(null)
   const [isGeminiModalOpen, setIsGeminiModalOpen] = useState(false)
 
+  // Enhanced item selection handler
+  const handleItemSelection = useCallback((itemId: string | null) => {
+    setSelectedItemId(itemId);
+    onItemSelection?.(itemId);
+  }, [onItemSelection]);
+
   // Function to limit canvas panning within bounds
   const limitOffsetToBounds = useCallback((newOffset: { x: number; y: number }) => {
     return {
@@ -100,7 +112,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     const viewHeight = rect.height;
     
     // Calculate the bounds of the visible area in canvas coordinates
-    const visibleLeft = -offset.x / zoom - 100;  // Add margin for partially visible items
+    const visibleLeft = -offset.x / zoom - 100;
     const visibleTop = -offset.y / zoom - 100;
     const visibleRight = visibleLeft + viewWidth / zoom + 200;
     const visibleBottom = visibleTop + viewHeight / zoom + 200;
@@ -115,13 +127,11 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
 
   // Handle AI-generated honeycombs
   const handleGeminiGenerate = useCallback(async (generatedItems: HoneycombItem[]) => {
-    // In shared mode, disable AI generation if no edit permissions
     if (isSharedMode && !canEdit) {
       toast.error(t('sharing.noAIGeneration'));
       return;
     }
 
-    // Transform generated items to the format expected by the database
     const itemsToCreate = generatedItems.map(item => ({
       q: item.q,
       r: item.r,
@@ -150,29 +160,21 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   const zoomAtPoint = useCallback((newZoom: number, clientX: number, clientY: number) => {
     if (!containerRef.current) return;
     
-    // Clamp zoom value between min and max limits
     newZoom = Math.max(CANVAS_LIMITS.minZoom, Math.min(CANVAS_LIMITS.maxZoom, newZoom));
     
-    // Get container bounds
     const rect = containerRef.current.getBoundingClientRect();
-    
-    // Calculate mouse position relative to container
     const mouseX = clientX - rect.left;
     const mouseY = clientY - rect.top;
     
-    // Convert point under mouse to world space before zoom
     const worldX = (mouseX - offset.x) / zoom;
     const worldY = (mouseY - offset.y) / zoom;
     
-    // Update zoom
     lastZoomRef.current = newZoom;
     setZoom(newZoom);
     
-    // Calculate new offset to keep mouse position fixed over same world point
     const newOffsetX = mouseX - worldX * newZoom;
     const newOffsetY = mouseY - worldY * newZoom;
     
-    // Apply new offset with bounds checking
     setOffset(limitOffsetToBounds({
       x: newOffsetX,
       y: newOffsetY
@@ -182,24 +184,18 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   // Modified wheel event handler for smoother zooming
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-    
-    // Calculate zoom factor: positive deltaY means zoom out, negative means zoom in
     const zoomFactor = e.deltaY > 0 ? 0.8 : 1.25;
     const newZoom = lastZoomRef.current * zoomFactor;
-    
-    // Zoom at the mouse position
     zoomAtPoint(newZoom, e.clientX, e.clientY);
   }, [zoomAtPoint]);
 
-  // Setup wheel event listener with proper type handling
+  // Setup wheel event listener
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     
-    // Create a properly typed debounced wheel handler
     const debouncedWheel = debounce((e: WheelEvent) => handleWheel(e), 5);
     
-    // Add the wheel event listener
     const wheelHandler = (e: WheelEvent) => {
       e.preventDefault();
       debouncedWheel(e);
@@ -207,22 +203,20 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     
     container.addEventListener('wheel', wheelHandler, { passive: false });
     
-    // Clean up
     return () => {
       container.removeEventListener('wheel', wheelHandler);
     };
   }, [handleWheel]);
 
+  // Handle window resize
   useEffect(() => {
     const handleResize = debounce(() => {
       if (!containerRef.current) return;
       
-      // Update grid size 
       const rect = containerRef.current.getBoundingClientRect();
       const viewportWidth = rect.width;
       const viewportHeight = rect.height;
       
-      // Adjust center if needed
       if (offset.x === 0 && offset.y === 0) {
         setOffset({
           x: viewportWidth / 2,
@@ -255,26 +249,20 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     e.preventDefault();
     
     if (e.touches.length === 2 && lastTouchDistanceRef.current !== null) {
-      // Calculate pinch distance
       const distance = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
       
-      // Calculate zoom delta
       const delta = distance / lastTouchDistanceRef.current;
       const newZoom = lastZoomRef.current * delta;
       
-      // Find pinch midpoint
       const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
       
-      // Apply zoom
       zoomAtPoint(newZoom, midX, midY);
-      
       lastTouchDistanceRef.current = distance;
     } else if (e.touches.length === 1 && isDraggingRef.current) {
-      // Handle single touch drag
       const touch = e.touches[0];
       const dx = touch.clientX - lastMousePosRef.current.x;
       const dy = touch.clientY - lastMousePosRef.current.y;
@@ -304,7 +292,6 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (isDraggingRef.current) {
-        // Pan the canvas
         const dx = e.clientX - lastMousePosRef.current.x;
         const dy = e.clientY - lastMousePosRef.current.y;
 
@@ -315,7 +302,6 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
 
         lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       } else if (isCreating && containerRef.current && !isEditModalOpen && canEdit) {
-        // Ghost hexagon positioning for creation mode (only if can edit)
         const rect = containerRef.current.getBoundingClientRect();
         const mouseX = (e.clientX - rect.left) / zoom - offset.x / zoom;
         const mouseY = (e.clientY - rect.top) / zoom - offset.y / zoom;
@@ -341,7 +327,6 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   
     const pixel = axialToPixel(ghostHex.q, ghostHex.r);
   
-    // Create new hexagon
     const newItem: Omit<HoneycombItem, 'id' | 'createdAt' | 'updatedAt'> = {
       q: ghostHex.q,
       r: ghostHex.r,
@@ -356,11 +341,9 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
       color: "#FDE68A",
     };
   
-    // Save new hexagon to database
     const createdItem = await createItem(newItem)
     
     if (createdItem) {
-      // Update parent's connections
       const parentItem = items.find(item => item.id === ghostHex.parentId)
       if (parentItem) {
         await updateItem(parentItem.id, {
@@ -368,7 +351,6 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         })
       }
       
-      // Open edit modal for the new item
       setPendingHexagon(createdItem);
       setEditingItem(createdItem);
       setIsEditModalOpen(true);
@@ -417,7 +399,6 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
       return;
     }
 
-    // Handle new hexagon
     if (editingItem && pendingHexagon && isModalCreating) {
       await updateItem(editingItem.id, {
         title: data.title,
@@ -427,13 +408,10 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         priority: data.priority,
         deadline: data.deadline,
       })
-    }
-    // Handle existing hexagon
-    else if (editingItem) {
+    } else if (editingItem) {
       await updateItem(editingItem.id, data)
     }
 
-    // Close modal
     setIsEditModalOpen(false);
     setEditingItem(null);
     setIsModalCreating(false);
@@ -448,19 +426,16 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     }
 
     if (editingItem && !editingItem.isMain) {
-      // Remove connections to deleted hexagon from other items
       const itemsToUpdate = items.filter(item => 
         item.connections.includes(editingItem.id)
       )
       
-      // Update all items that reference this hexagon
       for (const item of itemsToUpdate) {
         await updateItem(item.id, {
           connections: item.connections.filter(connId => connId !== editingItem.id)
         })
       }
 
-      // Delete the hexagon itself
       await deleteItem(editingItem.id)
       
       setIsEditModalOpen(false);
@@ -474,13 +449,11 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     
     const item = items.find((i) => i.id === id);
     if (item && containerRef.current) {
-      // Center the selected hexagon
       const pixel = axialToPixel(item.q, item.r);
       const rect = containerRef.current.getBoundingClientRect();
       
-      // Calculate center position accounting for sidebar
       const centerX = isTaskSidebarOpen 
-        ? (rect.width / 2 - 160) / zoom  // Offset for sidebar
+        ? (rect.width / 2 - 160) / zoom
         : rect.width / 2 / zoom;
       
       setOffset({
@@ -488,9 +461,8 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         y: rect.height / 2 / zoom - pixel.y,
       });
       
-      setSelectedItemId(id);
+      handleItemSelection(id);
 
-      // Open edit modal only if can edit
       if (canEdit) {
         setEditingItem({
           ...item,
@@ -500,9 +472,9 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         setIsEditModalOpen(true);
       }
     }
-  }, [isCreating, items, zoom, isTaskSidebarOpen, setOffset, canEdit]);
+  }, [isCreating, items, zoom, isTaskSidebarOpen, setOffset, canEdit, handleItemSelection]);
 
-  // Export/Import functions - simplified since we use database
+  // Export/Import functions
   const exportToJson = useCallback((items: HoneycombItem[]) => {
     const dataStr = JSON.stringify(items, null, 2);
     const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
@@ -528,7 +500,6 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
           try {
             const importedItems = JSON.parse(content) as HoneycombItem[];
             
-            // Transform imported items to the format expected by bulkCreateItems
             const itemsToCreate = importedItems.map(item => ({
               q: item.q,
               r: item.r,
@@ -538,7 +509,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
               description: item.description,
               icon: item.icon,
               priority: item.priority,
-              completed: false, // Reset completion status
+              completed: false,
               connections: item.connections,
               color: item.color,
               category: item.category,
@@ -573,7 +544,6 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
 
   // Connect to header zoom buttons
   useEffect(() => {
-    // When zoom changes from outside (like header buttons), update lastZoomRef
     lastZoomRef.current = zoom;
   }, [zoom]);
 
@@ -637,6 +607,11 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             <span>Real-time sync active</span>
+            {participants.length > 0 && (
+              <span className="ml-2 bg-green-200 px-2 py-0.5 rounded text-xs">
+                {participants.length} online
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -659,7 +634,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         }}
       />
 
-      {/* Control buttons - only show if not in shared mode or if can edit */}
+      {/* Control buttons */}
       {(!isSharedMode || canEdit) && (
         <div className="absolute top-4 left-4 z-10 flex">
           <button
@@ -695,7 +670,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         </div>
       )}
 
-      {/* Canvas content - modified transformation for proper zooming */}
+      {/* Canvas content */}
       <div
         className="absolute inset-0 will-change-transform"
         style={{
@@ -709,36 +684,64 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
             transform: `translate(${offset.x / zoom}px, ${offset.y / zoom}px)`,
           }}
         >
-          {/* Render only visible hexagons for performance */}
+          {/* Render visible hexagons */}
           {visibleItems.map((item) => {
             const { x, y } = axialToPixel(item.q, item.r);
+            
+            // Check if this item is selected by any participant
+            const selectedByParticipant = participants.find(p => p.selected_item_id === item.id);
+            
             return (
-              <HoneycombHexagon
-                key={item.id}
-                id={item.id}
-                x={x}
-                y={y}
-                title={item.title}
-                icon={item.icon}
-                description={item.description}
-                isSelected={selectedItemId === item.id}
-                color={item.color}
-                isCreating={isCreating}
-                isCompleted={item.completed}
-                connectedHexagons={items
-                  .filter((other) => item.connections.includes(other.id))
-                  .map((other) => {
-                    const pos = axialToPixel(other.q, other.r);
-                    return {
-                      id: other.id,
-                      x: pos.x,
-                      y: pos.y,
-                    };
-                  })}
-                onClick={() => !isCreating && setSelectedItemId(item.id)}
-                onMarkComplete={() => !isCreating && handleMarkComplete(item.id)}
-                onEdit={() => !isCreating && handleSidebarEditClick(item.id)}
-              />
+              <div key={item.id} className="relative">
+                <HoneycombHexagon
+                  id={item.id}
+                  x={x}
+                  y={y}
+                  title={item.title}
+                  icon={item.icon}
+                  description={item.description}
+                  isSelected={selectedItemId === item.id}
+                  color={item.color}
+                  isCreating={isCreating}
+                  isCompleted={item.completed}
+                  connectedHexagons={items
+                    .filter((other) => item.connections.includes(other.id))
+                    .map((other) => {
+                      const pos = axialToPixel(other.q, other.r);
+                      return {
+                        id: other.id,
+                        x: pos.x,
+                        y: pos.y,
+                      };
+                    })}
+                  onClick={() => !isCreating && handleItemSelection(item.id)}
+                  onMarkComplete={() => !isCreating && handleMarkComplete(item.id)}
+                  onEdit={() => !isCreating && handleSidebarEditClick(item.id)}
+                />
+                
+                {/* Show participant selection indicator */}
+                {selectedByParticipant && selectedByParticipant.id !== participantId && (
+                  <div
+                    className="absolute top-0 left-0 w-full h-full pointer-events-none z-30"
+                    style={{
+                      transform: `translate(${x - 60}px, ${y - 60}px)`,
+                      border: `3px solid ${selectedByParticipant.color}`,
+                      borderRadius: '50%',
+                      width: '120px',
+                      height: '120px',
+                      opacity: 0.6,
+                      animation: 'pulse 2s infinite'
+                    }}
+                  >
+                    <div
+                      className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs px-2 py-1 rounded text-white"
+                      style={{ backgroundColor: selectedByParticipant.color }}
+                    >
+                      {selectedByParticipant.display_name}
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
 
@@ -763,13 +766,12 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         selectedItemId={selectedItemId}
         onItemClick={(id) => {
           if (isCreating) return;
-          setSelectedItemId(id);
+          handleItemSelection(id);
           const item = items.find((i) => i.id === id);
           if (item && containerRef.current) {
             const pos = axialToPixel(item.q, item.r);
             const rect = containerRef.current.getBoundingClientRect();
             
-            // Adjust center position for sidebar
             const centerX = isTaskSidebarOpen 
               ? (rect.width / 2 - 160) / zoom
               : rect.width / 2 / zoom;
@@ -784,7 +786,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         onCompleteTask={handleMarkComplete}
       />
 
-      {/* Edit modal - only show if can edit */}
+      {/* Edit modal */}
       {canEdit && (
         <HoneycombEditModal
           isOpen={isEditModalOpen}
@@ -809,7 +811,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         />
       )}
 
-      {/* Gemini AI Modal - only show if not in shared mode */}
+      {/* Gemini AI Modal */}
       {!isSharedMode && (
         <GeminiModal
           isOpen={isGeminiModalOpen}
@@ -825,7 +827,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
         return (
           <div
             key={participant.id}
-            className="absolute pointer-events-none z-30"
+            className="absolute pointer-events-none z-30 transition-all duration-200"
             style={{
               left: participant.cursor_position.x,
               top: participant.cursor_position.y,
@@ -845,6 +847,14 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
           </div>
         );
       })}
+
+      {/* CSS for animations */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
     </div>
   );
 };

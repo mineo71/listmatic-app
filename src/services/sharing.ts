@@ -30,6 +30,88 @@ export interface SharingParticipant {
   last_seen_at: Date;
 }
 
+// Connection management
+class ConnectionManager {
+  private static instance: ConnectionManager;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 1000; // Start with 1 second
+  private connectionState: 'connected' | 'disconnected' | 'reconnecting' = 'disconnected';
+  private listeners: Array<(state: string) => void> = [];
+
+  static getInstance(): ConnectionManager {
+    if (!ConnectionManager.instance) {
+      ConnectionManager.instance = new ConnectionManager();
+    }
+    return ConnectionManager.instance;
+  }
+
+  addListener(callback: (state: string) => void) {
+    this.listeners.push(callback);
+  }
+
+  removeListener(callback: (state: string) => void) {
+    this.listeners = this.listeners.filter(l => l !== callback);
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(listener => listener(this.connectionState));
+  }
+
+  setConnectionState(state: 'connected' | 'disconnected' | 'reconnecting') {
+    if (this.connectionState !== state) {
+      this.connectionState = state;
+      this.notifyListeners();
+      
+      if (state === 'connected') {
+        this.reconnectAttempts = 0;
+        this.reconnectDelay = 1000;
+      }
+    }
+  }
+
+  getConnectionState() {
+    return this.connectionState;
+  }
+
+  async attemptReconnection(reconnectFunction: () => Promise<void>): Promise<boolean> {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log('Max reconnection attempts reached');
+      this.setConnectionState('disconnected');
+      return false;
+    }
+
+    this.setConnectionState('reconnecting');
+    this.reconnectAttempts++;
+
+    try {
+      console.log(`Reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+      await new Promise(resolve => setTimeout(resolve, this.reconnectDelay));
+      
+      await reconnectFunction();
+      this.setConnectionState('connected');
+      return true;
+    } catch (error) {
+      console.error(`Reconnection attempt ${this.reconnectAttempts} failed:`, error);
+      
+      // Exponential backoff with jitter
+      this.reconnectDelay = Math.min(this.reconnectDelay * 2 + Math.random() * 1000, 30000);
+      
+      // Try again
+      return this.attemptReconnection(reconnectFunction);
+    }
+  }
+
+  reset() {
+    this.reconnectAttempts = 0;
+    this.reconnectDelay = 1000;
+    this.setConnectionState('disconnected');
+  }
+}
+
+// Get connection manager instance
+const connectionManager = ConnectionManager.getInstance();
+
 // Create a new sharing session
 export const createSharingSession = async (
   honeycombId: string,
@@ -63,7 +145,7 @@ export const getActiveSession = async (honeycombId: string) => {
       .eq('is_active', true)
       .single();
 
-    if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows returned"
+    if (error && error.code !== 'PGRST116') throw error;
     return { data, error: null };
   } catch (error) {
     console.error('Error getting active session:', error);
@@ -98,14 +180,14 @@ export const getSessionByCode = async (shareCode: string) => {
   }
 };
 
-// Join a sharing session
+// Join a sharing session with duplicate prevention
 export const joinSharingSession = async (
   sessionId: string,
   displayName: string,
   userId?: string
 ) => {
   try {
-    // For anonymous users, create a unique ID based on session and time
+    // For anonymous users, create a unique ID
     const anonymousId = userId ? null : `anon_${sessionId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const { data, error } = await supabase
@@ -115,7 +197,7 @@ export const joinSharingSession = async (
         user_id: userId,
         anonymous_id: anonymousId,
         display_name: displayName,
-        permissions: 'view', // Default permission for new participants
+        permissions: 'view',
         is_online: true
       }])
       .select()
@@ -195,40 +277,51 @@ export const getSessionParticipants = async (sessionId: string) => {
   }
 };
 
-// Update participant status
+// Update participant status with throttling
+let statusUpdateTimeout: NodeJS.Timeout | null = null;
+
 export const updateParticipantStatus = async (
   participantId: string,
   isOnline: boolean,
   cursorPosition?: { x: number; y: number },
   selectedItemId?: string
 ) => {
-  try {
-    const updateData: any = {
-      is_online: isOnline,
-      last_seen_at: new Date().toISOString()
-    };
-
-    if (cursorPosition) {
-      updateData.cursor_position = cursorPosition;
-    }
-
-    if (selectedItemId !== undefined) {
-      updateData.selected_item_id = selectedItemId;
-    }
-
-    const { data, error } = await supabase
-      .from('sharing_participants')
-      .update(updateData)
-      .eq('id', participantId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return { data, error: null };
-  } catch (error) {
-    console.error('Error updating participant status:', error);
-    return { data: null, error };
+  // Clear previous timeout to throttle updates
+  if (statusUpdateTimeout) {
+    clearTimeout(statusUpdateTimeout);
   }
+
+  statusUpdateTimeout = setTimeout(async () => {
+    try {
+      const updateData: any = {
+        is_online: isOnline,
+        last_seen_at: new Date().toISOString()
+      };
+
+      if (cursorPosition) {
+        updateData.cursor_position = cursorPosition;
+      }
+
+      if (selectedItemId !== undefined) {
+        updateData.selected_item_id = selectedItemId;
+      }
+
+      const { data, error } = await supabase
+        .from('sharing_participants')
+        .update(updateData)
+        .eq('id', participantId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating participant status:', error);
+      return { data: null, error };
+    }
+  }, 100); // Throttle to maximum 10 updates per second
+
+  return Promise.resolve({ data: null, error: null });
 };
 
 // End sharing session
@@ -328,7 +421,7 @@ export const getRecentChanges = async (sessionId: string, since?: Date) => {
   }
 };
 
-// Clean up offline participants (remove participants offline for more than 1 hour)
+// Clean up offline participants
 export const cleanupOfflineParticipants = async (sessionId: string) => {
   try {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -351,71 +444,135 @@ export const cleanupOfflineParticipants = async (sessionId: string) => {
 // Track active channels to prevent multiple subscriptions
 const activeChannels = new Map<string, any>();
 
-// Setup real-time subscriptions for sharing
+// Enhanced real-time subscription setup with reconnection logic
 export const setupSharingRealtimeSubscription = (
   sessionId: string,
   onParticipantChange: (participant: SharingParticipant) => void,
-  onChangeReceived: (change: any) => void
+  onChangeReceived: (change: any) => void,
+  onConnectionStateChange?: (state: string) => void
 ) => {
-  // Check if we already have channels for this session
   const participantsChannelKey = `sharing_participants:${sessionId}`;
   const changesChannelKey = `sharing_changes:${sessionId}`;
   
-  if (activeChannels.has(participantsChannelKey) || activeChannels.has(changesChannelKey)) {
-    console.warn('Channels already exist for session:', sessionId);
-    return () => {}; // Return empty cleanup function
+  // Add connection state listener if provided
+  if (onConnectionStateChange) {
+    connectionManager.addListener(onConnectionStateChange);
   }
 
-  // Subscribe to participant changes
-  const participantsChannel = supabase
-    .channel(participantsChannelKey)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'sharing_participants',
-        filter: `session_id=eq.${sessionId}`
-      },
-      (payload) => {
-        onParticipantChange(payload.new as SharingParticipant);
-      }
-    )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('Subscribed to participants channel for session:', sessionId);
-      }
-    });
+  const setupSubscriptions = () => {
+    // Clean up existing channels first
+    if (activeChannels.has(participantsChannelKey)) {
+      supabase.removeChannel(activeChannels.get(participantsChannelKey));
+      activeChannels.delete(participantsChannelKey);
+    }
+    if (activeChannels.has(changesChannelKey)) {
+      supabase.removeChannel(activeChannels.get(changesChannelKey));
+      activeChannels.delete(changesChannelKey);
+    }
 
-  // Subscribe to sharing changes
-  const changesChannel = supabase
-    .channel(changesChannelKey)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'sharing_changes',
-        filter: `session_id=eq.${sessionId}`
-      },
-      (payload) => {
-        onChangeReceived(payload.new);
-      }
-    )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('Subscribed to changes channel for session:', sessionId);
-      }
-    });
+    console.log('Setting up real-time subscriptions for session:', sessionId);
 
-  // Store channels to prevent duplicates
-  activeChannels.set(participantsChannelKey, participantsChannel);
-  activeChannels.set(changesChannelKey, changesChannel);
+    // Subscribe to participant changes
+    const participantsChannel = supabase
+      .channel(participantsChannelKey)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sharing_participants',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload) => {
+          console.log('Participant change received:', payload);
+          onParticipantChange(payload.new as SharingParticipant);
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('Participants channel status:', status, err);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to participants channel');
+          connectionManager.setConnectionState('connected');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Participants channel error:', err);
+          connectionManager.setConnectionState('disconnected');
+          
+          // Attempt reconnection
+          setTimeout(() => {
+            connectionManager.attemptReconnection(() => Promise.resolve(setupSubscriptions()));
+          }, 2000);
+        }
+      });
+
+    // Subscribe to sharing changes
+    const changesChannel = supabase
+      .channel(changesChannelKey)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'sharing_changes',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload) => {
+          console.log('Sharing change received:', payload);
+          onChangeReceived(payload.new);
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('Changes channel status:', status, err);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to changes channel');
+          connectionManager.setConnectionState('connected');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Changes channel error:', err);
+          connectionManager.setConnectionState('disconnected');
+          
+          // Attempt reconnection
+          setTimeout(() => {
+            connectionManager.attemptReconnection(() => Promise.resolve(setupSubscriptions()));
+          }, 2000);
+        }
+      });
+
+    // Store channels
+    activeChannels.set(participantsChannelKey, participantsChannel);
+    activeChannels.set(changesChannelKey, changesChannel);
+  };
+
+  // Initial setup
+  setupSubscriptions();
+
+  // Monitor network connectivity
+  const handleOnline = () => {
+    console.log('Network came back online, reconnecting...');
+    connectionManager.reset();
+    setupSubscriptions();
+  };
+
+  const handleOffline = () => {
+    console.log('Network went offline');
+    connectionManager.setConnectionState('disconnected');
+  };
+
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
 
   // Return cleanup function
   return () => {
-    console.log('Cleaning up channels for session:', sessionId);
+    console.log('Cleaning up real-time subscriptions for session:', sessionId);
     
+    // Remove network listeners
+    window.removeEventListener('online', handleOnline);
+    window.removeEventListener('offline', handleOffline);
+    
+    // Remove connection state listener
+    if (onConnectionStateChange) {
+      connectionManager.removeListener(onConnectionStateChange);
+    }
+    
+    // Clean up channels
     if (activeChannels.has(participantsChannelKey)) {
       supabase.removeChannel(activeChannels.get(participantsChannelKey));
       activeChannels.delete(participantsChannelKey);
@@ -425,5 +582,21 @@ export const setupSharingRealtimeSubscription = (
       supabase.removeChannel(activeChannels.get(changesChannelKey));
       activeChannels.delete(changesChannelKey);
     }
+
+    // Reset connection manager
+    connectionManager.reset();
   };
 };
+
+// Health check function
+export const checkConnectionHealth = async (): Promise<boolean> => {
+  try {
+    const { error } = await supabase.from('sharing_sessions').select('id').limit(1);
+    return !error;
+  } catch {
+    return false;
+  }
+};
+
+// Export connection manager for external use
+export { connectionManager };

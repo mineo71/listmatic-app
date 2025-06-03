@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/honeycomb/SharedCanvasView.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Copy, Users, Plus, AlertCircle } from 'lucide-react';
+import { Copy, Users, Plus, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { HoneycombCanvas } from './canvas/HoneycombCanvas';
 import { 
@@ -39,16 +39,20 @@ export const SharedCanvasView = () => {
   const [showParticipants, setShowParticipants] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'reconnecting'>('disconnected');
   
   // Canvas state
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
-  // Refs to track cleanup
+  // Refs to track cleanup and mouse position
   const cleanupRef = useRef<(() => void) | null>(null);
   const statusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentParticipantRef = useRef<string | null>(null);
+  const mousePositionRef = useRef({ x: 0, y: 0 });
+  const cursorUpdateThrottleRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load session data
   useEffect(() => {
@@ -78,11 +82,19 @@ export const SharedCanvasView = () => {
       statusIntervalRef.current = null;
     }
 
+    // Clear cursor throttle
+    if (cursorUpdateThrottleRef.current) {
+      clearTimeout(cursorUpdateThrottleRef.current);
+      cursorUpdateThrottleRef.current = null;
+    }
+
     // Update participant status to offline
     if (currentParticipantRef.current) {
       updateParticipantStatus(currentParticipantRef.current, false);
       currentParticipantRef.current = null;
     }
+
+    setConnectionStatus('disconnected');
   };
 
   const loadSession = async () => {
@@ -102,15 +114,13 @@ export const SharedCanvasView = () => {
         `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.email : 
         `Guest ${Math.floor(Math.random() * 1000)}`;
       
-      // Check if this user is already a participant to avoid duplicates
+      // Check for existing participant
       const { data: existingParticipants } = await getSessionParticipants(sessionData.id);
       let existingParticipant = null;
       
       if (user) {
-        // For authenticated users, check by user_id
         existingParticipant = existingParticipants?.find(p => p.user_id === user.id);
       } else {
-        // For anonymous users, check by display_name and recent join time (within last 5 minutes)
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         existingParticipant = existingParticipants?.find(p => 
           !p.user_id && 
@@ -121,12 +131,9 @@ export const SharedCanvasView = () => {
 
       let participant;
       if (existingParticipant) {
-        // Update existing participant to online
         await updateParticipantStatus(existingParticipant.id, true);
         participant = existingParticipant;
-        console.log('Using existing participant:', participant.id);
       } else {
-        // Join as new participant
         const { data: newParticipant, error: joinError } = await joinSharingSession(
           sessionData.id,
           displayName || 'Anonymous User',
@@ -139,7 +146,6 @@ export const SharedCanvasView = () => {
           return;
         }
         participant = newParticipant;
-        console.log('Created new participant:', participant.id);
       }
 
       setParticipantId(participant.id);
@@ -149,23 +155,22 @@ export const SharedCanvasView = () => {
       // Load participants
       loadParticipants(sessionData.id);
       
-      // Setup real-time subscriptions (only once)
-      if (!cleanupRef.current) {
-        cleanupRef.current = setupSharingRealtimeSubscription(
-          sessionData.id,
-          handleParticipantChange,
-          handleChangeReceived
-        );
-      }
+      // Setup real-time subscriptions
+      setupRealtimeSubscriptions(sessionData.id);
 
       // Update online status periodically
-      if (!statusIntervalRef.current) {
-        statusIntervalRef.current = setInterval(() => {
-          if (currentParticipantRef.current) {
-            updateParticipantStatus(currentParticipantRef.current, true);
-          }
-        }, 30000); // Every 30 seconds
-      }
+      statusIntervalRef.current = setInterval(() => {
+        if (currentParticipantRef.current) {
+          updateParticipantStatus(
+            currentParticipantRef.current, 
+            true,
+            mousePositionRef.current,
+            selectedItemId
+          );
+        }
+      }, 15000); // Every 15 seconds
+
+      setConnectionStatus('connected');
     } catch (error) {
       console.error('Error loading session:', error);
       toast.error(t('sharing.errorLoadingSession'));
@@ -176,13 +181,11 @@ export const SharedCanvasView = () => {
   };
 
   const loadParticipants = async (sessionId: string) => {
-    // Clean up old offline participants first
     await cleanupOfflineParticipants(sessionId);
     
     const { data, error } = await getSessionParticipants(sessionId);
     
     if (!error && data) {
-      // Assign colors to participants
       const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
       const participantsWithColors = data.map((p, index) => ({
         ...p,
@@ -192,23 +195,126 @@ export const SharedCanvasView = () => {
     }
   };
 
-  const handleParticipantChange = (participant: any) => {
-    setParticipants(prev => {
-      const existing = prev.find(p => p.id === participant.id);
-      if (existing) {
-        return prev.map(p => p.id === participant.id ? { ...p, ...participant } : p);
-      } else {
-        const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
-        return [...prev, { ...participant, color: colors[prev.length % colors.length] }];
-      }
-    });
+  const setupRealtimeSubscriptions = (sessionId: string) => {
+    if (cleanupRef.current) {
+      cleanupRef.current();
+    }
+
+    try {
+      cleanupRef.current = setupSharingRealtimeSubscription(
+        sessionId,
+        handleParticipantChange,
+        handleChangeReceived
+      );
+      
+      setConnectionStatus('connected');
+    } catch (error) {
+      console.error('Error setting up real-time subscriptions:', error);
+      setConnectionStatus('disconnected');
+      
+      // Retry connection after 5 seconds
+      setTimeout(() => {
+        if (session) {
+          setupRealtimeSubscriptions(sessionId);
+        }
+      }, 5000);
+    }
   };
 
-  const handleChangeReceived = (change: any) => {
-    // This would be handled by the canvas component
-    // to update the honeycomb items in real-time
-    console.log('Change received:', change);
-  };
+  const handleParticipantChange = useCallback((participant: any) => {
+    setParticipants(prev => {
+      const existing = prev.find(p => p.id === participant.id);
+      const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+      
+      if (existing) {
+        return prev.map(p => 
+          p.id === participant.id 
+            ? { ...p, ...participant }
+            : p
+        );
+      } else {
+        return [...prev, { 
+          ...participant, 
+          color: colors[prev.length % colors.length] 
+        }];
+      }
+    });
+  }, []);
+
+  const handleChangeReceived = useCallback((change: any) => {
+    console.log('Real-time change received:', change);
+    
+    // Show notification for changes made by others
+    if (change.participant_id !== currentParticipantRef.current) {
+      const participant = participants.find(p => p.id === change.participant_id);
+      const participantName = participant?.display_name || 'Someone';
+      
+      switch (change.change_type) {
+        case 'create':
+          if (change.item_id === 'bulk') {
+            toast.success(`${participantName} generated new honeycomb structure`, {
+              icon: '✨'
+            });
+          } else {
+            toast.success(`${participantName} added a new hexagon`, {
+              icon: '➕'
+            });
+          }
+          break;
+        case 'update':
+          toast.success(`${participantName} updated a hexagon`, {
+            icon: '✏️'
+          });
+          break;
+        case 'delete':
+          toast.success(`${participantName} removed a hexagon`, {
+            icon: '🗑️'
+          });
+          break;
+      }
+    }
+  }, [participants]);
+
+  // Handle mouse movement for cursor tracking
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    mousePositionRef.current = { x: e.clientX, y: e.clientY };
+    
+    // Throttle cursor position updates
+    if (cursorUpdateThrottleRef.current) {
+      clearTimeout(cursorUpdateThrottleRef.current);
+    }
+    
+    cursorUpdateThrottleRef.current = setTimeout(() => {
+      if (currentParticipantRef.current) {
+        updateParticipantStatus(
+          currentParticipantRef.current,
+          true,
+          mousePositionRef.current,
+          selectedItemId || undefined
+        );
+      }
+    }, 200); // Update cursor every 200ms when moving
+  }, [selectedItemId]);
+
+  // Setup mouse tracking
+  useEffect(() => {
+    document.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [handleMouseMove]);
+
+  // Update selection when selectedItemId changes
+  useEffect(() => {
+    if (currentParticipantRef.current && selectedItemId !== null) {
+      updateParticipantStatus(
+        currentParticipantRef.current,
+        true,
+        mousePositionRef.current,
+        selectedItemId
+      );
+    }
+  }, [selectedItemId]);
 
   const handleAddToFiles = async () => {
     if (!session || !user) {
@@ -242,9 +348,13 @@ export const SharedCanvasView = () => {
   };
 
   const handleProgressUpdate = (progress: number) => {
-    // Progress updates in shared mode
     console.log('Progress:', progress);
   };
+
+  // Custom item selection handler that updates selection state
+  const handleItemSelection = useCallback((itemId: string | null) => {
+    setSelectedItemId(itemId);
+  }, []);
 
   if (loading) {
     return (
@@ -270,40 +380,86 @@ export const SharedCanvasView = () => {
             <h1 className="text-xl font-semibold text-gray-900">
               {session.honeycombs?.name || 'Shared Canvas'}
             </h1>
-            <div className="flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm">
-              <AlertCircle size={16} />
-              <span>{t('sharing.sharedView')}</span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm">
+                <AlertCircle size={16} />
+                <span>{t('sharing.sharedView')}</span>
+              </div>
+              
+              {/* Connection Status */}
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
+                connectionStatus === 'connected' 
+                  ? 'bg-green-100 text-green-800' 
+                  : connectionStatus === 'reconnecting'
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {connectionStatus === 'connected' ? (
+                  <>
+                    <Wifi size={16} />
+                    <span>Live</span>
+                  </>
+                ) : connectionStatus === 'reconnecting' ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
+                    <span>Connecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff size={16} />
+                    <span>Offline</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             {/* Participants */}
-            <button
-              onClick={() => setShowParticipants(!showParticipants)}
-              className="relative flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-            >
-              <Users size={16} />
-              <span className="text-sm">{participants.length}</span>
+            <div className="relative">
+              <button
+                onClick={() => setShowParticipants(!showParticipants)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                <Users size={16} />
+                <span className="text-sm">{participants.filter(p => p.is_online).length}</span>
+              </button>
+              
               {showParticipants && (
-                <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                  <div className="p-3">
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">{t('sharing.activeParticipants')}</h3>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {participants.map(p => (
-                        <div key={p.id} className="flex items-center gap-2 py-1">
-                          <div 
-                            className="w-2 h-2 rounded-full" 
-                            style={{ backgroundColor: p.color }}
-                          />
-                          <span className="text-sm text-gray-700">{p.display_name}</span>
-                          <div className={`ml-auto w-2 h-2 rounded-full ${p.is_online ? 'bg-green-500' : 'bg-gray-400'}`} />
-                        </div>
-                      ))}
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowParticipants(false)} 
+                  />
+                  <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="p-3">
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">
+                        {t('sharing.activeParticipants')} ({participants.filter(p => p.is_online).length})
+                      </h3>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {participants.filter(p => p.is_online).map(p => (
+                          <div key={p.id} className="flex items-center gap-2 py-1">
+                            <div 
+                              className="w-3 h-3 rounded-full border border-white" 
+                              style={{ backgroundColor: p.color }}
+                            />
+                            <span className="text-sm text-gray-700 flex-1">
+                              {p.display_name}
+                              {p.id === currentParticipantRef.current && (
+                                <span className="text-xs text-gray-500 ml-1">(You)</span>
+                              )}
+                            </span>
+                            {p.selected_item_id && (
+                              <div className="w-2 h-2 rounded-full bg-blue-500" title="Viewing item" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </>
               )}
-            </button>
+            </div>
 
             {/* Copy Link */}
             <button
@@ -359,7 +515,8 @@ export const SharedCanvasView = () => {
           canEdit={canEdit}
           sessionId={session.id}
           participantId={participantId}
-          participants={participants}
+          participants={participants.filter(p => p.is_online)}
+          onItemSelection={handleItemSelection}
         />
       </div>
 

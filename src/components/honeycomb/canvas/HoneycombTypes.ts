@@ -32,4 +32,5 @@ export interface HoneycombCanvasProps {
     isTaskSidebarOpen: boolean
     setisTaskSidebarOpen: (open: boolean) => void
     onProgressUpdate: (progress: number) => void
+    // Sharing mode properties
 }

@@ -195,7 +195,14 @@ export const HoneycombViewWrapper = () => {
               onProgressUpdate={handleProgressUpdate}
           />
         </div>
-        <SharingModal isOpen={isSharingModalOpen} onClose={closeSharingModal}/>
+        <SharingModal 
+          isOpen={isSharingModalOpen} 
+          onClose={closeSharingModal}
+          honeycombId={honeycomb.id}
+          honeycombName={honeycomb.name}
+          onExportJson={() => {}}
+          onImportJson={() => {}}
+        />
 
         <MobileControlsMenu
             zoom={zoom}

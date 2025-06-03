@@ -303,7 +303,7 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
 
       <div className="fixed inset-0 flex items-center justify-center z-[101] p-2 sm:p-4">
         <div
-          className="bg-white rounded-lg w-full max-w-4xl h-[75vh] sm:h-[45vh] relative shadow-xl flex flex-col sm:flex-row overflow-hidden"
+          className="bg-white rounded-lg w-full max-w-4xl h-[75vh] sm:h-[55vh] relative shadow-xl flex flex-col sm:flex-row overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
           {/* History Sidebar - Hidden on mobile, shows on desktop */}
@@ -414,7 +414,7 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
             <div className="sm:hidden border-b border-gray-200 bg-gray-50">
               <div className="p-3">
                 <h3 className="text-sm font-medium text-gray-900 mb-2">{t('ai.recentRequests')}</h3>
-                <div className="max-h-24 overflow-y-auto">
+                <div className="max-h-32 overflow-y-auto">
                   {historyLoading ? (
                     <div className="flex items-center justify-center py-2">
                       <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
@@ -462,7 +462,7 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
                     <textarea
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value.slice(0, MAX_CHARS))}
-                      className="w-full h-32 sm:h-40 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none
+                      className="w-full h-36 sm:h-48 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none
                         focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-shadow
                         resize-none text-sm"
                       placeholder={t('ai.promptPlaceholder')}

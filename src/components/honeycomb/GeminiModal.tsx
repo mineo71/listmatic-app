@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Info } from 'lucide-react';
+import { X, Clock, AlertCircle, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GoogleGenAI } from "@google/genai";
 import type { HoneycombItem, TaskPriority } from './canvas/HoneycombTypes';
+import { 
+  getRecentAIRequests, 
+  createAIRequest, 
+  canMakeAIRequest,
+  type AIRequest 
+} from '@/services/database';
 
 interface GeminiModalProps {
   isOpen: boolean;
   onClose: () => void;
   onGenerate: (items: HoneycombItem[]) => void;
-}
-
-interface Category {
-  name: string;
-  color: string;
 }
 
 // Expanded set of icons for better task visualization
@@ -62,77 +63,69 @@ const AVAILABLE_ICONS = [
     
 // Misc
 'Bell', 'Bookmark', 'Archive', 'Tag', 'Zap', 'Plus'
-  ];
-
-// Predefined colors for categories
-const DEFAULT_COLORS = [
-  "#A7F3D0", // Green - Shopping/Personal
-  "#93C5FD", // Blue - Work/Business
-  "#FDE68A", // Yellow - Main goal
-  "#FCA5A5", // Red - Urgent
-  "#DDD6FE", // Purple - Learning
-  "#C4B5FD", // Light Purple - Creative
-  "#F9A8D4", // Pink - Social
-  "#FBBF24", // Orange - Home
-  "#6EE7B7", // Teal - Health
-  "#BFDBFE"  // Light Blue - Travel
-];
-
-// Main goal is handled separately and always included
-const MAIN_GOAL_CATEGORY = { name: "Main Goal", color: "#FDE68A" };
-
-// User-editable categories (Main Goal is handled separately)
-const DEFAULT_CATEGORIES: Category[] = [
-  { name: "Work", color: "#93C5FD" }, 
-  { name: "Personal", color: "#A7F3D0" },
-  { name: "Urgent", color: "#FCA5A5" },
-  { name: "Learning", color: "#DDD6FE" }
 ];
 
 const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }) => {
   const { t } = useTranslation();
   const [prompt, setPrompt] = useState('');
-  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showCategoryEditor, setShowCategoryEditor] = useState(false);
-  const [tempCategory, setTempCategory] = useState<Category>({ name: "", color: DEFAULT_COLORS[0] });
+  
+  // AI request tracking state
+  const [dailyRequestInfo, setDailyRequestInfo] = useState({
+    canMake: true,
+    remaining: 3,
+    used: 0,
+    limit: 3
+  });
+  const [recentRequests, setRecentRequests] = useState<AIRequest[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  
   const MAX_CHARS = 500;
 
   useEffect(() => {
     if (isOpen) {
       setPrompt('');
       setError(null);
-      setCategories(DEFAULT_CATEGORIES);
+      loadDailyRequestInfo();
+      loadRecentRequests();
     }
   }, [isOpen]);
 
-  const handleAddCategory = () => {
-    if (!tempCategory.name.trim()) return;
-    
-    setCategories([...categories, tempCategory]);
-    setTempCategory({ name: "", color: DEFAULT_COLORS[Math.floor(Math.random() * DEFAULT_COLORS.length)] });
-  };
-
-  const handleRemoveCategory = (index: number) => {
-    setCategories(categories.filter((_, i) => i !== index));
-  };
-
-  const prepareCategoriesForPrompt = () => {
-    // Always include the Main Goal category
-    const allCategories = [MAIN_GOAL_CATEGORY, ...categories];
-    
-    if (allCategories.length <= 1) {
-      // If no user categories, let AI decide
-      return `"${MAIN_GOAL_CATEGORY.name}": "${MAIN_GOAL_CATEGORY.color}"`;
+  const loadDailyRequestInfo = async () => {
+    try {
+      const { data, error } = await canMakeAIRequest();
+      if (!error && data) {
+        setDailyRequestInfo(data);
+      }
+    } catch (error) {
+      console.error('Error loading daily request info:', error);
     }
-    
-    return allCategories.map(cat => `"${cat.name}": "${cat.color}"`).join(", ");
+  };
+
+  const loadRecentRequests = async () => {
+    setHistoryLoading(true);
+    try {
+      const { data, error } = await getRecentAIRequests(5);
+      if (!error && data) {
+        setRecentRequests(data);
+      }
+    } catch (error) {
+      console.error('Error loading recent requests:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) return;
+    
+    // Check if user can make AI request
+    if (!dailyRequestInfo.canMake) {
+      setError(`You have reached your daily limit of ${dailyRequestInfo.limit} AI requests. Try again tomorrow.`);
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
@@ -145,15 +138,9 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
 
       // Initialize the Google GenAI client
       const genAI = new GoogleGenAI({ apiKey });
-
-      // Create a categories map for the prompt
-      const categoriesMap = `{${prepareCategoriesForPrompt()}}`;
       const iconsList = AVAILABLE_ICONS.join(", ");
 
-      // Check if we only have the Main Goal category
-      const aiDecideCategories = categories.length === 0;
-
-      // Prepare an enhanced prompt with categories
+      // Prepare an enhanced prompt
       const fullPrompt = `
         Generate a honeycomb structure for a task planning app based on this description:
         "${prompt}"
@@ -168,22 +155,14 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
         - priority: string - "low", "medium", or "high"
         - completed: boolean - always false initially
         - connections: string[] - array of IDs this node connects to
-        - color: string - hex color code matching its category
-        - category: string - which category the task belongs to
+        - color: string - hex color code (choose appropriate colors)
         - isMain: boolean - true only for the main/central node
 
-        The first item should have id "main", be the central node (q:0, r:0) with isMain:true, and category "Main Goal".
+        The first item should have id "main", be the central node (q:0, r:0) with isMain:true.
         
-        ${aiDecideCategories 
-          ? `Create appropriate categories based on the task description and assign them suitable colors. Include the Main Goal category with color "${MAIN_GOAL_CATEGORY.color}".` 
-          : `Organize tasks into these categories with their assigned colors: ${categoriesMap}`
-        }
-        
-        Make sure each task's color matches its category's color.
-        
-        A well-structured honeycomb should have logical connections between nodes.
-        Include 5-15 nodes total${aiDecideCategories ? '.' : ', with at least one task from each category.'} 
-        Position nodes logically - tasks in the same category should be near each other if possible.
+        Create a well-structured honeycomb with logical connections between nodes.
+        Include 5-15 nodes total. Position nodes logically around the main goal.
+        Use varied colors to distinguish different types of tasks or phases.
 
         Only respond with the valid JSON array, nothing else.
       `;
@@ -209,10 +188,45 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
       // Process the items
       const processedItems = processHoneycombItems(parsedItems);
       
+      // Save the AI request to database
+      try {
+        await createAIRequest({
+          prompt: prompt.trim(),
+          categories: [], // No categories anymore
+          generatedItems: processedItems,
+          status: 'completed'
+        });
+        
+        // Refresh the daily request info and history
+        await loadDailyRequestInfo();
+        await loadRecentRequests();
+      } catch (dbError) {
+        console.error('Error saving AI request to database:', dbError);
+        // Don't fail the entire request if database save fails
+      }
+      
       onGenerate(processedItems);
       onClose();
     } catch (err) {
       console.error('Error generating honeycomb:', err);
+      
+      // Save failed request to database
+      try {
+        await createAIRequest({
+          prompt: prompt.trim(),
+          categories: [],
+          generatedItems: [],
+          status: 'failed',
+          errorMessage: err instanceof Error ? err.message : 'Unknown error'
+        });
+        
+        // Refresh the daily request info and history
+        await loadDailyRequestInfo();
+        await loadRecentRequests();
+      } catch (dbError) {
+        console.error('Error saving failed AI request to database:', dbError);
+      }
+      
       setError(err instanceof Error ? err.message : 'Failed to generate honeycomb structure');
     } finally {
       setIsLoading(false);
@@ -259,215 +273,242 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
     });
   }
 
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays}d ago`;
+  };
+
+  const applyHistoryPrompt = (request: AIRequest) => {
+    setPrompt(request.prompt);
+  };
+
   if (!isOpen) return null;
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-[100]" onClick={onClose} />
+      {/* Background overlay with no click-through */}
+      <div 
+        className="fixed inset-0 bg-black/50 z-[100]" 
+        style={{ pointerEvents: 'all' }}
+      />
 
-      <div className="fixed inset-0 flex items-center justify-center z-[101]">
+      <div className="fixed inset-0 flex items-center justify-center z-[101] p-2 sm:p-4">
         <div
-          className="bg-white rounded-lg w-full max-w-lg p-6 relative shadow-xl mx-4 max-h-[90vh] overflow-y-auto"
+          className="bg-white rounded-lg w-full max-w-4xl h-[75vh] sm:h-[45vh] relative shadow-xl flex flex-col sm:flex-row overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-            disabled={isLoading}
-          >
-            <X size={24} />
-          </button>
-
-          <h2 className="text-xl font-semibold mb-4">
-            {t('modals.aiGenerate')}
-          </h2>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Prompt input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('ai.promptLabel')}
-              </label>
-              <div className="relative">
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value.slice(0, MAX_CHARS))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none
-                    focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-shadow
-                    resize-y min-h-[120px] max-h-[300px]"
-                  placeholder={t('ai.promptPlaceholder')}
-                  disabled={isLoading}
-                  autoFocus
-                />
-                <div className="absolute bottom-2 right-2 text-xs text-gray-500">
-                  {prompt.length}/{MAX_CHARS}
-                </div>
-              </div>
+          {/* History Sidebar - Hidden on mobile, shows on desktop */}
+          <div className="hidden sm:flex w-72 bg-gray-50 border-r border-gray-200 flex-col">
+            <div className="p-3 border-b border-gray-200">
+              <h3 className="text-base font-medium text-gray-900">{t('ai.recentRequests')}</h3>
+              <p className="text-xs text-gray-500 mt-1">Click any request to reuse it</p>
             </div>
-
-            {/* Categories section */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  {t('ai.categories')}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowCategoryEditor(!showCategoryEditor)}
-                  className="text-sm text-amber-600 hover:text-amber-700"
-                >
-                  {showCategoryEditor ? t('ai.hideCategoryEditor') : t('ai.showCategoryEditor')}
-                </button>
-              </div>
-
-              {/* Main Goal category - always shown, not editable */}
-              <div className="mb-2">
-                <div 
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm"
-                  style={{ backgroundColor: `${MAIN_GOAL_CATEGORY.color}30` }}
-                >
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: MAIN_GOAL_CATEGORY.color }}
-                  />
-                  <span>{MAIN_GOAL_CATEGORY.name}</span>
-                  <div className="w-4 h-4 flex items-center justify-center rounded-full bg-amber-100">
-                    <Info size={10} className="text-amber-700" />
-                  </div>
+            
+            <div className="flex-1 overflow-y-auto p-3">
+              {historyLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
                 </div>
-                <div className="text-xs text-gray-500 mt-1 ml-2">
-                  {t('ai.mainGoalInfo')}
+              ) : recentRequests.length === 0 ? (
+                <div className="text-center py-6">
+                  <div className="text-gray-400 mb-2">
+                    <Clock size={24} className="mx-auto" />
+                  </div>
+                  <p className="text-xs text-gray-500">{t('ai.noPreviousRequests')}</p>
                 </div>
-              </div>
-
-              {/* User-defined categories list */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {categories.map((category, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm"
-                    style={{ backgroundColor: `${category.color}30` }}
-                  >
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: category.color }}
-                    />
-                    <span>{category.name}</span>
-                    {showCategoryEditor && (
-                      <button 
-                        type="button"
-                        onClick={() => handleRemoveCategory(index)}
-                        className="p-0.5 rounded-full hover:bg-white/50"
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-
-                {categories.length === 0 && (
-                  <div className="text-sm text-gray-500 italic">
-                    {t('ai.noCategories')}
-                  </div>
-                )}
-              </div>
-
-              {/* Category editor */}
-              {showCategoryEditor && (
-                <div className="mt-3 p-4 bg-gray-50 rounded-md">
-                  <div className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={tempCategory.name}
-                      onChange={(e) => setTempCategory({ ...tempCategory, name: e.target.value })}
-                      placeholder={t('ai.categoryName')}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none
-                        focus:ring-1 focus:ring-amber-500 focus:border-transparent"
-                    />
-                    <div className="relative">
-                      <input
-                        type="color"
-                        value={tempCategory.color}
-                        onChange={(e) => setTempCategory({ ...tempCategory, color: e.target.value })}
-                        className="sr-only"
-                        id="category-color"
-                      />
-                      <label
-                        htmlFor="category-color"
-                        className="flex items-center justify-center w-10 h-10 border border-gray-300 rounded-md cursor-pointer"
-                        style={{ backgroundColor: tempCategory.color }}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleAddCategory}
-                      disabled={!tempCategory.name.trim()}
-                      className="px-3 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              ) : (
+                <div className="space-y-2">
+                  {recentRequests.map((request) => (
+                    <div
+                      key={request.id}
+                      className="p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer transition-all duration-200 hover:shadow-sm"
+                      onClick={() => applyHistoryPrompt(request)}
+                      title={t('ai.useThisPrompt')}
                     >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-
-                  {/* Preset colors */}
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {DEFAULT_COLORS.map((color, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        className={`w-6 h-6 rounded-full transition-transform ${
-                          tempCategory.color === color ? 'ring-2 ring-offset-2 ring-amber-500 scale-110' : ''
-                        }`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setTempCategory({ ...tempCategory, color })}
-                      />
-                    ))}
-                  </div>
+                      <div className="flex items-start justify-between mb-1">
+                        <span className={`px-1.5 py-0.5 text-xs rounded ${
+                          request.status === 'completed' ? 'bg-green-100 text-green-700' :
+                          request.status === 'failed' ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {request.status}
+                        </span>
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <Clock size={10} />
+                          {formatTimeAgo(request.createdAt)}
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-gray-900 font-medium leading-relaxed">
+                        {request.prompt.slice(0, 80)}{request.prompt.length > 80 ? '...' : ''}
+                      </p>
+                      
+                      {request.honeycombName && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Used in: {request.honeycombName}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
+          </div>
 
-            {error && (
-              <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
-                {error}
-              </div>
-            )}
-
-            <div className="flex justify-end pt-4">
-              <div className="flex gap-2">
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                    {t('modals.aiGenerate')}
+                  </h2>
+                  {/* Mobile history info */}
+                  <p className="text-xs text-gray-500 mt-1 sm:hidden">
+                    Create AI-powered honeycomb structures
+                  </p>
+                </div>
                 <button
-                  type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md
-                    hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2
-                    focus:ring-amber-500 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
                   disabled={isLoading}
                 >
-                  {t('actions.cancel')}
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={isLoading || !prompt.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md
-                    hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2
-                    focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed
-                    transition-colors flex items-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      {t('ai.generating')}
-                    </>
-                  ) : (
-                    t('ai.generate')
-                  )}
+                  <X size={20} className="sm:w-6 sm:h-6" />
                 </button>
               </div>
+
+              {/* Daily limit info */}
+              <div className="mt-3 p-2.5 sm:p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center gap-2 text-blue-800">
+                  <Info size={14} className="flex-shrink-0" />
+                  <span className="text-xs sm:text-sm font-medium">
+                    {t('ai.dailyLimit')}: {dailyRequestInfo.used}/{dailyRequestInfo.limit}
+                  </span>
+                </div>
+                {dailyRequestInfo.remaining > 0 ? (
+                  <p className="text-xs text-blue-600 mt-1">
+                    {t('ai.requestsRemaining', { count: dailyRequestInfo.remaining })}
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-2 mt-1">
+                    <AlertCircle size={12} className="text-red-500 flex-shrink-0" />
+                    <p className="text-xs text-red-600">
+                      {t('ai.limitReached')}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </form>
+
+            {/* Mobile History Section */}
+            <div className="sm:hidden border-b border-gray-200 bg-gray-50">
+              <div className="p-3">
+                <h3 className="text-sm font-medium text-gray-900 mb-2">{t('ai.recentRequests')}</h3>
+                <div className="max-h-24 overflow-y-auto">
+                  {historyLoading ? (
+                    <div className="flex items-center justify-center py-2">
+                      <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                    </div>
+                  ) : recentRequests.length === 0 ? (
+                    <p className="text-xs text-gray-500 text-center py-2">{t('ai.noPreviousRequests')}</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {recentRequests.slice(0, 2).map((request) => (
+                        <div
+                          key={request.id}
+                          className="p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer transition-colors"
+                          onClick={() => applyHistoryPrompt(request)}
+                        >
+                          <p className="text-xs text-gray-900 font-medium">
+                            {request.prompt.slice(0, 60)}{request.prompt.length > 60 ? '...' : ''}
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className={`px-1.5 py-0.5 text-xs rounded ${
+                              request.status === 'completed' ? 'bg-green-100 text-green-700' :
+                              request.status === 'failed' ? 'bg-red-100 text-red-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {request.status}
+                            </span>
+                            <span className="text-xs text-gray-500">{formatTimeAgo(request.createdAt)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Form */}
+            <div className="flex-1 p-4 sm:p-5 overflow-y-auto min-h-0">
+              <form onSubmit={handleSubmit} className="h-full flex flex-col">
+                {/* Prompt input */}
+                <div className="flex-shrink-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('ai.promptLabel')}
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value.slice(0, MAX_CHARS))}
+                      className="w-full h-32 sm:h-40 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none
+                        focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-shadow
+                        resize-none text-sm"
+                      placeholder={t('ai.promptPlaceholder')}
+                      disabled={isLoading}
+                      autoFocus
+                    />
+                    <div className="absolute bottom-2 right-2 text-xs text-gray-500 bg-white/90 px-1.5 py-0.5 rounded">
+                      {prompt.length}/{MAX_CHARS}
+                    </div>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="mt-3 p-2.5 bg-red-50 text-red-700 rounded-md text-xs sm:text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {/* Submit button */}
+                <div className="mt-4 sm:mt-6 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isLoading || !prompt.trim() || !dailyRequestInfo.canMake}
+                    className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-medium text-white bg-amber-600 rounded-md
+                      hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2
+                      focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed
+                      transition-colors flex items-center gap-2"
+                  >
+                    {isLoading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {t('ai.generating')}
+                      </>
+                    ) : !dailyRequestInfo.canMake ? (
+                      t('ai.limitReachedButton')
+                    ) : (
+                      t('ai.generate')
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
     </>

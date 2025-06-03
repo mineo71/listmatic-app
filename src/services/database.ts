@@ -61,6 +61,136 @@ export const getUserProfile = async () => {
   }
 };
 
+
+
+// =============================================
+// AI REQUEST SERVICES
+// =============================================
+
+export interface AIRequest {
+  id: string;
+  prompt: string;
+  categories: { name: string; color: string }[];
+  honeycombId?: string;
+  honeycombName?: string;
+  status: 'pending' | 'completed' | 'failed';
+  createdAt: Date;
+}
+
+export const getDailyAIRequestCount = async () => {
+  try {
+    const { data, error } = await supabase.rpc('get_daily_ai_request_count');
+    
+    if (error) throw error;
+    return { data: data || 0, error: null };
+  } catch (error) {
+    console.error('Error getting daily AI request count:', error);
+    return { data: 0, error };
+  }
+};
+
+export const getRecentAIRequests = async (limit = 5) => {
+  try {
+    const { data, error } = await supabase.rpc('get_recent_ai_requests', { 
+      limit_count: limit 
+    });
+    
+    if (error) throw error;
+    
+    const transformedRequests: AIRequest[] = (data || []).map((request: any) => ({
+      id: request.id,
+      prompt: request.prompt,
+      categories: request.categories || [],
+      honeycombId: request.honeycomb_id,
+      honeycombName: request.honeycomb_name,
+      status: request.status,
+      createdAt: new Date(request.created_at),
+    }));
+    
+    return { data: transformedRequests, error: null };
+  } catch (error) {
+    console.error('Error getting recent AI requests:', error);
+    return { data: [], error };
+  }
+};
+
+export const createAIRequest = async (requestData: {
+  prompt: string;
+  categories: { name: string; color: string }[];
+  generatedItems: any[];
+  honeycombId?: string;
+  status?: 'pending' | 'completed' | 'failed';
+  errorMessage?: string;
+}) => {
+  try {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('ai_requests')
+      .insert([{
+        user_id: user.data.user.id,
+        prompt: requestData.prompt,
+        categories: requestData.categories,
+        generated_items: requestData.generatedItems,
+        honeycomb_id: requestData.honeycombId,
+        status: requestData.status || 'completed',
+        error_message: requestData.errorMessage,
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    const transformedRequest: AIRequest = {
+      id: data.id,
+      prompt: data.prompt,
+      categories: data.categories || [],
+      honeycombId: data.honeycomb_id,
+      status: data.status,
+      createdAt: new Date(data.created_at),
+    };
+
+    return { data: transformedRequest, error: null };
+  } catch (error) {
+    console.error('Error creating AI request:', error);
+    return { data: null, error };
+  }
+};
+
+export const canMakeAIRequest = async () => {
+  try {
+    const { data: count, error } = await getDailyAIRequestCount();
+    
+    if (error) throw error;
+    
+    const dailyLimit = 3;
+    const canMake = count < dailyLimit;
+    const remaining = Math.max(0, dailyLimit - count);
+    
+    return { 
+      data: { 
+        canMake, 
+        remaining, 
+        used: count, 
+        limit: dailyLimit 
+      }, 
+      error: null 
+    };
+  } catch (error) {
+    console.error('Error checking AI request limit:', error);
+    return { 
+      data: { 
+        canMake: false, 
+        remaining: 0, 
+        used: 0, 
+        limit: 3 
+      }, 
+      error 
+    };
+  }
+};
+
 // =============================================
 // HIVE SERVICES
 // =============================================

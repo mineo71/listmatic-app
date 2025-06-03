@@ -22,7 +22,7 @@ export const HoneycombViewWrapper = () => {
   const { isSidebarOpen } = useOutletContext<ContextType>();
 
   // View state
-  const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(true);
+  const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [progress, setProgress] = useState(0);
@@ -185,6 +185,7 @@ export const HoneycombViewWrapper = () => {
         >
           <HoneycombCanvas
               key={honeycomb.id}
+              honeycombId={honeycomb.id}
               zoom={zoom}
               setZoom={setZoom}
               offset={offset}
@@ -194,7 +195,6 @@ export const HoneycombViewWrapper = () => {
               onProgressUpdate={handleProgressUpdate}
           />
         </div>
-
         <SharingModal isOpen={isSharingModalOpen} onClose={closeSharingModal}/>
 
         <MobileControlsMenu

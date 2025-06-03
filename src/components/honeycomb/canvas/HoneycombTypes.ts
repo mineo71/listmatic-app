@@ -24,6 +24,7 @@ export interface HoneycombItem {
 }
 
 export interface HoneycombCanvasProps {
+    honeycombId: string
     zoom: number
     setZoom: (zoom: number | ((prev: number) => number)) => void
     offset: { x: number; y: number }

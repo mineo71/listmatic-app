@@ -10,7 +10,7 @@ import GeminiModal from "../GeminiModal"
 import toast from "react-hot-toast"
 import type { HoneycombItem, HoneycombCanvasProps, TaskIcon, TaskPriority } from "./HoneycombTypes"
 import { axialToPixel, findClosestNeighbor } from "./honeycombUtils"
-import { useHoneycombItems } from "./useHoneycombItems"
+import { useHoneycombItemsDB } from "./useHoneycombItemsDB"
 
 // Constants for canvas limits
 const CANVAS_LIMITS = {
@@ -40,6 +40,7 @@ function debounce<T extends (...args: any[]) => void>(
 }
 
 export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
+    honeycombId,
     zoom,
     setZoom,
     offset,
@@ -55,7 +56,17 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   const lastZoomRef = useRef(zoom);
   const lastTouchDistanceRef = useRef<number | null>(null);
 
-  const { items, setItems } = useHoneycombItems(onProgressUpdate)
+  // Use database-integrated hook instead of local hook
+  const { 
+    items, 
+    loading, 
+    saving, 
+    createItem, 
+    updateItem, 
+    deleteItem, 
+    bulkCreateItems,
+    toggleItemCompletion 
+  } = useHoneycombItemsDB(honeycombId, onProgressUpdate)
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -64,7 +75,6 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isModalCreating, setIsModalCreating] = useState(false)
   const [pendingHexagon, setPendingHexagon] = useState<HoneycombItem | null>(null)
-  const [idCounter, setIdCounter] = useState<number>(1)
   const [isGeminiModalOpen, setIsGeminiModalOpen] = useState(false)
 
   // Function to limit canvas panning within bounds
@@ -98,25 +108,31 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   }, [items, offset, zoom]);
 
   // Handle AI-generated honeycombs
-  const handleGeminiGenerate = useCallback((generatedItems: HoneycombItem[]) => {
-    // Reset the canvas by removing all items except the main one
-    setItems(generatedItems);
+  const handleGeminiGenerate = useCallback(async (generatedItems: HoneycombItem[]) => {
+    // Transform generated items to the format expected by the database
+    const itemsToCreate = generatedItems.map(item => ({
+      q: item.q,
+      r: item.r,
+      x: item.x,
+      y: item.y,
+      title: item.title,
+      description: item.description,
+      icon: item.icon,
+      priority: item.priority,
+      completed: false,
+      connections: item.connections,
+      color: item.color,
+      category: item.category,
+      isMain: item.isMain,
+      deadline: item.deadline,
+    }))
     
-    // Update the ID counter to be larger than any ID in the generated items
-    const maxId = Math.max(...generatedItems.map(item => {
-      const numericId = parseInt(item.id.replace(/\D/g, ''));
-      return isNaN(numericId) ? 0 : numericId;
-    }));
-    setIdCounter(maxId + 1);
+    const success = await bulkCreateItems(itemsToCreate)
     
-    // Recalculate progress
-    const totalItems = generatedItems.filter(item => !item.isMain).length;
-    const completedItems = generatedItems.filter(item => !item.isMain && item.completed).length;
-    const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
-    onProgressUpdate(progress);
-    
-    toast.success(t('ai.successMessage'));
-  }, [setItems, onProgressUpdate, t]);
+    if (success) {
+      toast.success(t('ai.successMessage'))
+    }
+  }, [bulkCreateItems, t])
 
   // Fixed zoomAtPoint function for zooming at mouse position
   const zoomAtPoint = useCallback((newZoom: number, clientX: number, clientY: number) => {
@@ -308,17 +324,13 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   }, []);
 
   // Create new hexagon
-  const createNewHexagon = useCallback(() => {
+  const createNewHexagon = useCallback(async () => {
     if (!ghostHex || !containerRef.current) return;
   
     const pixel = axialToPixel(ghostHex.q, ghostHex.r);
   
-    // Create new ID
-    const newId = (idCounter + 1).toString();
-  
     // Create new hexagon
-    const newItem: HoneycombItem = {
-      id: newId,
+    const newItem: Omit<HoneycombItem, 'id' | 'createdAt' | 'updatedAt'> = {
       q: ghostHex.q,
       r: ghostHex.r,
       x: pixel.x,
@@ -330,21 +342,30 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
       completed: false,
       connections: [ghostHex.parentId],
       color: "#FDE68A",
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
   
-    // Increment counter
-    setIdCounter(idCounter + 1);
-  
-    // Save new hexagon
-    setPendingHexagon(newItem);
-    setEditingItem(newItem);
-    setIsEditModalOpen(true);
-    setIsModalCreating(true);
+    // Save new hexagon to database
+    const createdItem = await createItem(newItem)
+    
+    if (createdItem) {
+      // Update parent's connections
+      const parentItem = items.find(item => item.id === ghostHex.parentId)
+      if (parentItem) {
+        await updateItem(parentItem.id, {
+          connections: [...parentItem.connections, createdItem.id]
+        })
+      }
+      
+      // Open edit modal for the new item
+      setPendingHexagon(createdItem);
+      setEditingItem(createdItem);
+      setIsEditModalOpen(true);
+      setIsModalCreating(true);
+    }
+    
     setIsCreating(false);
     setGhostHex(null);
-  }, [ghostHex, containerRef, idCounter, t]);
+  }, [ghostHex, containerRef, t, createItem, updateItem, items]);
 
   // Ghost hexagon click handler
   const handleGhostClick = useCallback((e: React.MouseEvent) => {
@@ -355,34 +376,9 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
   }, [createNewHexagon, isEditModalOpen]);
 
   // Mark task as complete
-  const handleMarkComplete = useCallback((id: string) => {
-    const item = items.find((i) => i.id === id);
-
-    // If this is the main item, check if all others are completed
-    if (item?.isMain) {
-      const otherItems = items.filter((i) => !i.isMain);
-      const allOthersCompleted = otherItems.every((i) => i.completed);
-
-      if (!allOthersCompleted) {
-        toast.error(t("messages.completeOtherTasks"));
-        return;
-      }
-
-      setItems((prev) => prev.map((item) => 
-        item.id === id ? { ...item, completed: !item.completed } : item
-      ));
-
-      if (!item.completed) {
-        toast.success(t("messages.taskCompleted"));
-      }
-      return;
-    }
-
-    // Regular mark complete for other items
-    setItems((prev) => prev.map((item) => 
-      item.id === id ? { ...item, completed: !item.completed } : item
-    ));
-  }, [items, setItems, t]);
+  const handleMarkComplete = useCallback(async (id: string) => {
+    await toggleItemCompletion(id)
+  }, [toggleItemCompletion]);
 
   // Edit modal handlers
   const handleModalClose = useCallback(() => {
@@ -392,7 +388,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     setPendingHexagon(null);
   }, []);
 
-  const handleEditSubmit = useCallback((data: {
+  const handleEditSubmit = useCallback(async (data: {
     title: string;
     color: string;
     icon: TaskIcon;
@@ -401,33 +397,19 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     deadline?: Date;
   }) => {
     // Handle new hexagon
-    if (editingItem && pendingHexagon) {
-      const hexagonToAdd = {
-        ...pendingHexagon,
+    if (editingItem && pendingHexagon && isModalCreating) {
+      await updateItem(editingItem.id, {
         title: data.title,
         color: data.color,
         icon: data.icon,
         description: data.description,
         priority: data.priority,
         deadline: data.deadline,
-      };
-
-      setItems((prev) => [
-        // Update parent's connections
-        ...prev.map((item) =>
-          hexagonToAdd.connections.includes(item.id)
-            ? { ...item, connections: [...item.connections, hexagonToAdd.id] }
-            : item
-        ),
-        // Add new hexagon
-        hexagonToAdd,
-      ]);
+      })
     }
     // Handle existing hexagon
     else if (editingItem) {
-      setItems((prev) => prev.map((item) => 
-        item.id === editingItem.id ? { ...item, ...data } : item
-      ));
+      await updateItem(editingItem.id, data)
     }
 
     // Close modal
@@ -435,25 +417,30 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     setEditingItem(null);
     setIsModalCreating(false);
     setPendingHexagon(null);
-  }, [editingItem, pendingHexagon, setItems]);
+  }, [editingItem, pendingHexagon, isModalCreating, updateItem]);
 
   // Delete hexagon
-  const handleDeleteItem = useCallback(() => {
+  const handleDeleteItem = useCallback(async () => {
     if (editingItem && !editingItem.isMain) {
-      // Remove connections to deleted hexagon
-      setItems((prev) =>
-        prev.map((item) => ({
-          ...item,
-          connections: item.connections.filter((connId) => connId !== editingItem.id),
-        }))
-      );
+      // Remove connections to deleted hexagon from other items
+      const itemsToUpdate = items.filter(item => 
+        item.connections.includes(editingItem.id)
+      )
+      
+      // Update all items that reference this hexagon
+      for (const item of itemsToUpdate) {
+        await updateItem(item.id, {
+          connections: item.connections.filter(connId => connId !== editingItem.id)
+        })
+      }
 
-      // Remove the hexagon
-      setItems((prev) => prev.filter((item) => item.id !== editingItem.id));
+      // Delete the hexagon itself
+      await deleteItem(editingItem.id)
+      
       setIsEditModalOpen(false);
       setEditingItem(null);
     }
-  }, [editingItem, setItems]);
+  }, [editingItem, items, updateItem, deleteItem]);
 
   // Edit from sidebar
   const handleSidebarEditClick = useCallback((id: string) => {
@@ -487,7 +474,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     }
   }, [isCreating, items, zoom, isTaskSidebarOpen, setOffset]);
 
-  // Export/Import functions
+  // Export/Import functions - simplified since we use database
   const exportToJson = useCallback((items: HoneycombItem[]) => {
     const dataStr = JSON.stringify(items, null, 2);
     const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
@@ -498,16 +485,38 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
     linkElement.click();
   }, []);
 
-  const importFromJson = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const importFromJson = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const content = e.target?.result;
         if (typeof content === "string") {
           try {
             const importedItems = JSON.parse(content) as HoneycombItem[];
-            setItems(importedItems);
+            
+            // Transform imported items to the format expected by bulkCreateItems
+            const itemsToCreate = importedItems.map(item => ({
+              q: item.q,
+              r: item.r,
+              x: item.x,
+              y: item.y,
+              title: item.title,
+              description: item.description,
+              icon: item.icon,
+              priority: item.priority,
+              completed: false, // Reset completion status
+              connections: item.connections,
+              color: item.color,
+              category: item.category,
+              isMain: item.isMain,
+              deadline: item.deadline,
+            }))
+            
+            const success = await bulkCreateItems(itemsToCreate)
+            if (success) {
+              toast.success(t("messages.importSuccess"))
+            }
           } catch (error) {
             console.error("Error parsing JSON:", error);
             toast.error(t("messages.invalidJsonFile"));
@@ -516,7 +525,7 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
       };
       reader.readAsText(file);
     }
-  }, [setItems, t]);
+  }, [bulkCreateItems, t]);
 
   // Initialize canvas
   useEffect(() => {
@@ -569,6 +578,26 @@ export const HoneycombCanvas: React.FC<HoneycombCanvasProps> = ({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Loading overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-50">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+            <p className="text-gray-600">{t('messages.loading')}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Saving indicator */}
+      {saving && (
+        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md px-4 py-2 z-40">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm text-gray-600">{t('actions.saving')}</span>
+          </div>
+        </div>
+      )}
+
       {/* Background grid that scales with zoom */}
       <div
         className="absolute w-[10000px] h-[10000px]"

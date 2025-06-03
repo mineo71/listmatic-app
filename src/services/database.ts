@@ -61,8 +61,6 @@ export const getUserProfile = async () => {
   }
 };
 
-
-
 // =============================================
 // AI REQUEST SERVICES
 // =============================================
@@ -188,6 +186,273 @@ export const canMakeAIRequest = async () => {
       }, 
       error 
     };
+  }
+};
+
+// =============================================
+// HONEYCOMB ITEMS SERVICES
+// =============================================
+
+export interface HoneycombItemDB {
+  id: string;
+  honeycombId: string;
+  title: string;
+  description: string;
+  icon: string;
+  priority: 'low' | 'medium' | 'high';
+  color: string;
+  completed: boolean;
+  isMain: boolean;
+  q: number;
+  r: number;
+  x: number;
+  y: number;
+  connections: string[];
+  deadline?: Date;
+  category?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const getHoneycombItems = async (honeycombId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('honeycomb_items')
+      .select('*')
+      .eq('honeycomb_id', honeycombId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    const transformedItems: HoneycombItemDB[] = (data || []).map((item: any) => ({
+      id: item.id,
+      honeycombId: item.honeycomb_id,
+      title: item.title,
+      description: item.description || '',
+      icon: item.icon,
+      priority: item.priority,
+      color: item.color,
+      completed: item.completed,
+      isMain: item.is_main,
+      q: item.q,
+      r: item.r,
+      x: item.x,
+      y: item.y,
+      connections: item.connections || [],
+      deadline: item.deadline ? new Date(item.deadline) : undefined,
+      category: item.category,
+      createdAt: new Date(item.created_at),
+      updatedAt: new Date(item.updated_at),
+    }));
+
+    return { data: transformedItems, error: null };
+  } catch (error) {
+    console.error('Error getting honeycomb items:', error);
+    return { data: [], error };
+  }
+};
+
+export const createHoneycombItem = async (
+  honeycombId: string,
+  item: Omit<HoneycombItemDB, 'id' | 'honeycombId' | 'createdAt' | 'updatedAt'>
+) => {
+  try {
+    const { data, error } = await supabase
+      .from('honeycomb_items')
+      .insert([{
+        honeycomb_id: honeycombId,
+        title: item.title,
+        description: item.description,
+        icon: item.icon,
+        priority: item.priority,
+        color: item.color,
+        completed: item.completed,
+        is_main: item.isMain,
+        q: item.q,
+        r: item.r,
+        x: item.x,
+        y: item.y,
+        connections: item.connections,
+        deadline: item.deadline?.toISOString(),
+        category: item.category,
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const transformedItem: HoneycombItemDB = {
+      id: data.id,
+      honeycombId: data.honeycomb_id,
+      title: data.title,
+      description: data.description || '',
+      icon: data.icon,
+      priority: data.priority,
+      color: data.color,
+      completed: data.completed,
+      isMain: data.is_main,
+      q: data.q,
+      r: data.r,
+      x: data.x,
+      y: data.y,
+      connections: data.connections || [],
+      deadline: data.deadline ? new Date(data.deadline) : undefined,
+      category: data.category,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+    };
+
+    return { data: transformedItem, error: null };
+  } catch (error) {
+    console.error('Error creating honeycomb item:', error);
+    return { data: null, error };
+  }
+};
+
+export const updateHoneycombItem = async (
+  id: string,
+  updates: Partial<Omit<HoneycombItemDB, 'id' | 'honeycombId' | 'createdAt' | 'updatedAt'>>
+) => {
+  try {
+    const updateData: any = {};
+    
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.icon !== undefined) updateData.icon = updates.icon;
+    if (updates.priority !== undefined) updateData.priority = updates.priority;
+    if (updates.color !== undefined) updateData.color = updates.color;
+    if (updates.completed !== undefined) updateData.completed = updates.completed;
+    if (updates.isMain !== undefined) updateData.is_main = updates.isMain;
+    if (updates.q !== undefined) updateData.q = updates.q;
+    if (updates.r !== undefined) updateData.r = updates.r;
+    if (updates.x !== undefined) updateData.x = updates.x;
+    if (updates.y !== undefined) updateData.y = updates.y;
+    if (updates.connections !== undefined) updateData.connections = updates.connections;
+    if (updates.deadline !== undefined) updateData.deadline = updates.deadline?.toISOString();
+    if (updates.category !== undefined) updateData.category = updates.category;
+
+    const { data, error } = await supabase
+      .from('honeycomb_items')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const transformedItem: HoneycombItemDB = {
+      id: data.id,
+      honeycombId: data.honeycomb_id,
+      title: data.title,
+      description: data.description || '',
+      icon: data.icon,
+      priority: data.priority,
+      color: data.color,
+      completed: data.completed,
+      isMain: data.is_main,
+      q: data.q,
+      r: data.r,
+      x: data.x,
+      y: data.y,
+      connections: data.connections || [],
+      deadline: data.deadline ? new Date(data.deadline) : undefined,
+      category: data.category,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+    };
+
+    return { data: transformedItem, error: null };
+  } catch (error) {
+    console.error('Error updating honeycomb item:', error);
+    return { data: null, error };
+  }
+};
+
+export const deleteHoneycombItem = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from('honeycomb_items')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error('Error deleting honeycomb item:', error);
+    return { error };
+  }
+};
+
+export const bulkCreateHoneycombItems = async (
+  honeycombId: string,
+  items: Omit<HoneycombItemDB, 'id' | 'honeycombId' | 'createdAt' | 'updatedAt'>[]
+) => {
+  try {
+    const insertData = items.map(item => ({
+      honeycomb_id: honeycombId,
+      title: item.title,
+      description: item.description,
+      icon: item.icon,
+      priority: item.priority,
+      color: item.color,
+      completed: item.completed,
+      is_main: item.isMain,
+      q: item.q,
+      r: item.r,
+      x: item.x,
+      y: item.y,
+      connections: item.connections,
+      deadline: item.deadline?.toISOString(),
+      category: item.category,
+    }));
+
+    const { data, error } = await supabase
+      .from('honeycomb_items')
+      .insert(insertData)
+      .select();
+
+    if (error) throw error;
+
+    const transformedItems: HoneycombItemDB[] = (data || []).map((item: any) => ({
+      id: item.id,
+      honeycombId: item.honeycomb_id,
+      title: item.title,
+      description: item.description || '',
+      icon: item.icon,
+      priority: item.priority,
+      color: item.color,
+      completed: item.completed,
+      isMain: item.is_main,
+      q: item.q,
+      r: item.r,
+      x: item.x,
+      y: item.y,
+      connections: item.connections || [],
+      deadline: item.deadline ? new Date(item.deadline) : undefined,
+      category: item.category,
+      createdAt: new Date(item.created_at),
+      updatedAt: new Date(item.updated_at),
+    }));
+
+    return { data: transformedItems, error: null };
+  } catch (error) {
+    console.error('Error bulk creating honeycomb items:', error);
+    return { data: [], error };
+  }
+};
+
+export const clearHoneycombItems = async (honeycombId: string) => {
+  try {
+    const { error } = await supabase
+      .from('honeycomb_items')
+      .delete()
+      .eq('honeycomb_id', honeycombId);
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error('Error clearing honeycomb items:', error);
+    return { error };
   }
 };
 

@@ -105,7 +105,8 @@ export const joinSharingSession = async (
   userId?: string
 ) => {
   try {
-    const anonymousId = userId ? null : `anon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // For anonymous users, create a unique ID based on session and time
+    const anonymousId = userId ? null : `anon_${sessionId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const { data, error } = await supabase
       .from('sharing_participants')
@@ -324,6 +325,26 @@ export const getRecentChanges = async (sessionId: string, since?: Date) => {
   } catch (error) {
     console.error('Error getting recent changes:', error);
     return { data: [], error };
+  }
+};
+
+// Clean up offline participants (remove participants offline for more than 1 hour)
+export const cleanupOfflineParticipants = async (sessionId: string) => {
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    
+    const { error } = await supabase
+      .from('sharing_participants')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('is_online', false)
+      .lt('last_seen_at', oneHourAgo.toISOString());
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error('Error cleaning up offline participants:', error);
+    return { error };
   }
 };
 

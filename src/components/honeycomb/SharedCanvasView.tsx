@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/honeycomb/SharedCanvasView.tsx
 import { useState, useEffect, useRef } from 'react';
@@ -13,7 +12,8 @@ import {
   cloneHoneycombForUser,
   setupSharingRealtimeSubscription,
   updateParticipantStatus,
-  getSessionParticipants
+  getSessionParticipants,
+  cleanupOfflineParticipants
 } from '@/services/sharing';
 import { useAuth } from '@/context/AuthContext';
 
@@ -104,16 +104,27 @@ export const SharedCanvasView = () => {
       
       // Check if this user is already a participant to avoid duplicates
       const { data: existingParticipants } = await getSessionParticipants(sessionData.id);
-      const existingParticipant = existingParticipants?.find(p => 
-        (user && p.user_id === user.id) || 
-        (!user && p.display_name === displayName)
-      );
+      let existingParticipant = null;
+      
+      if (user) {
+        // For authenticated users, check by user_id
+        existingParticipant = existingParticipants?.find(p => p.user_id === user.id);
+      } else {
+        // For anonymous users, check by display_name and recent join time (within last 5 minutes)
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        existingParticipant = existingParticipants?.find(p => 
+          !p.user_id && 
+          p.display_name === displayName && 
+          new Date(p.joined_at) > fiveMinutesAgo
+        );
+      }
 
       let participant;
       if (existingParticipant) {
         // Update existing participant to online
         await updateParticipantStatus(existingParticipant.id, true);
         participant = existingParticipant;
+        console.log('Using existing participant:', participant.id);
       } else {
         // Join as new participant
         const { data: newParticipant, error: joinError } = await joinSharingSession(
@@ -128,6 +139,7 @@ export const SharedCanvasView = () => {
           return;
         }
         participant = newParticipant;
+        console.log('Created new participant:', participant.id);
       }
 
       setParticipantId(participant.id);
@@ -164,6 +176,9 @@ export const SharedCanvasView = () => {
   };
 
   const loadParticipants = async (sessionId: string) => {
+    // Clean up old offline participants first
+    await cleanupOfflineParticipants(sessionId);
+    
     const { data, error } = await getSessionParticipants(sessionId);
     
     if (!error && data) {

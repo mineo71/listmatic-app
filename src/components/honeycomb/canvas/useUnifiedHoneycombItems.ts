@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/honeycomb/canvas/useUnifiedHoneycombItems.ts
 "use client"
@@ -143,66 +142,74 @@ export const useUnifiedHoneycombItems = (
     }
   }
 
-  // Setup real-time subscription for honeycomb items (only if real-time is needed)
+  // Setup real-time subscription for honeycomb items
   useEffect(() => {
     if (!honeycombId) return
 
     // Load initial items
     loadItems()
 
-    // Setup real-time subscription only if in shared mode or if specifically requested
-    if (isSharedMode || process.env.NODE_ENV === 'development') {
-      const channelName = `honeycomb_items:${honeycombId}`
-      
-      realtimeChannelRef.current = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'honeycomb_items',
-            filter: `honeycomb_id=eq.${honeycombId}`
-          },
-          (payload) => {
-            console.log('Real-time honeycomb item change:', payload)
-            
-            if (payload.eventType === 'INSERT') {
-              const newItem = transformDBToCanvas(payload.new as any)
-              setItems(prev => {
-                // Check if item already exists to prevent duplicates
-                if (prev.find(item => item.id === newItem.id)) {
-                  return prev
-                }
-                return [...prev, newItem]
-              })
-            } else if (payload.eventType === 'UPDATE') {
-              const updatedItem = transformDBToCanvas(payload.new as any)
-              setItems(prev => 
-                prev.map(item => item.id === updatedItem.id ? updatedItem : item)
-              )
-            } else if (payload.eventType === 'DELETE') {
-              setItems(prev => 
-                prev.filter(item => item.id !== payload.old.id)
-              )
-            }
+    // Always setup real-time subscription for better UX
+    const channelName = `honeycomb_items_${honeycombId}_${Date.now()}`
+    
+    console.log('Setting up real-time subscription for:', channelName)
+    
+    realtimeChannelRef.current = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'honeycomb_items',
+          filter: `honeycomb_id=eq.${honeycombId}`
+        },
+        (payload) => {
+          console.log('Real-time honeycomb item change:', payload)
+          
+          if (payload.eventType === 'INSERT') {
+            const newItem = transformDBToCanvas(payload.new as any)
+            setItems(prev => {
+              // Check if item already exists to prevent duplicates
+              if (prev.find(item => item.id === newItem.id)) {
+                console.log('Item already exists, skipping:', newItem.id)
+                return prev
+              }
+              console.log('Adding new item:', newItem.id)
+              return [...prev, newItem]
+            })
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedItem = transformDBToCanvas(payload.new as any)
+            console.log('Updating item:', updatedItem.id)
+            setItems(prev => 
+              prev.map(item => item.id === updatedItem.id ? updatedItem : item)
+            )
+          } else if (payload.eventType === 'DELETE') {
+            console.log('Deleting item:', payload.old.id)
+            setItems(prev => 
+              prev.filter(item => item.id !== payload.old.id)
+            )
           }
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('Subscribed to honeycomb items real-time updates')
-          }
-        })
-    }
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('Subscription status:', status, err)
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to honeycomb items real-time updates')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Subscription error:', err)
+        }
+      })
 
     // Cleanup subscription on unmount
     return () => {
+      console.log('Cleaning up real-time subscription')
       if (realtimeChannelRef.current) {
         supabase.removeChannel(realtimeChannelRef.current)
         realtimeChannelRef.current = null
       }
     }
-  }, [honeycombId, loadItems, isSharedMode])
+  }, [honeycombId, loadItems])
 
   // Update progress when items change
   useEffect(() => {
@@ -243,10 +250,8 @@ export const useUnifiedHoneycombItems = (
           )
         }
         
-        // If no real-time subscription, update items manually
-        if (!isSharedMode) {
-          setItems(prev => [...prev, transformedItem])
-        }
+        // Always update items manually for immediate feedback
+        setItems(prev => [...prev, transformedItem])
         
         return transformedItem
       }
@@ -307,10 +312,8 @@ export const useUnifiedHoneycombItems = (
           )
         }
         
-        // If no real-time subscription, update items manually
-        if (!isSharedMode) {
-          setItems(prev => prev.map(item => item.id === id ? transformedItem : item))
-        }
+        // Always update items manually for immediate feedback
+        setItems(prev => prev.map(item => item.id === id ? transformedItem : item))
         
         return true
       }
@@ -351,10 +354,8 @@ export const useUnifiedHoneycombItems = (
         )
       }
 
-      // If no real-time subscription, update items manually
-      if (!isSharedMode) {
-        setItems(prev => prev.filter(item => item.id !== id))
-      }
+      // Always update items manually for immediate feedback
+      setItems(prev => prev.filter(item => item.id !== id))
 
       return true
     } catch (error) {
@@ -402,10 +403,8 @@ export const useUnifiedHoneycombItems = (
           )
         }
         
-        // If no real-time subscription, update items manually
-        if (!isSharedMode) {
-          setItems(transformedItems)
-        }
+        // Always update items manually for immediate feedback
+        setItems(transformedItems)
         
         return true
       }

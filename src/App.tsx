@@ -15,6 +15,7 @@ import { config } from '@/config';
 import './i18n/config';
 import './index.css';
 import { Toaster } from 'react-hot-toast';
+import { SharedCanvasView } from './components/honeycomb/SharedCanvasView';
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ function App() {
                 <Route path="/login" element={<LoginForm />} />
                 <Route path="/register" element={<RegisterForm />} />
                 <Route path="/forgot-password" element={<ForgotPasswordForm />} />
+                <Route path="/share/:shareCode" element={<SharedCanvasView />} />
               </>
             )}
 

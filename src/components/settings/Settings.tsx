@@ -55,7 +55,7 @@ export const Settings = () => {
   // Load user's saved language preference
   useEffect(() => {
     const loadUserProfile = async () => {
-      const { data, error } = await getUserProfile();
+      const { data } = await getUserProfile();
       if (data && data.language) {
         setSavedLanguage(data.language);
         setCurrentLanguage(data.language);

@@ -130,7 +130,7 @@ export const Profile = () => {
             {isOAuthUser && (
               <div className="flex items-center gap-1 mt-1">
                 <span className="text-xs text-blue-600">
-                  {t('profile.signedInWith', { provider: getProviderDisplayName(oauthProvider) })}
+                  {t('profile.signedInWith', { provider: getProviderDisplayName(oauthProvider || '') })}
                 </span>
                 {oauthProvider === 'google' && (
                   <svg width="12" height="12" viewBox="0 0 24 24">
@@ -151,7 +151,7 @@ export const Profile = () => {
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-800">
                 <strong>{t('profile.note')}:</strong> {t('profile.oauthNote', { 
-                  provider: getProviderDisplayName(oauthProvider) 
+                  provider: getProviderDisplayName(oauthProvider || '')
                 })}
               </p>
             </div>

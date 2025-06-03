@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Types for our structure
-import type { HoneycombItem, TaskIcon } from "../components/honeycomb/canvas/HoneycombTypes";
+import type { HoneycombItem } from "../components/honeycomb/canvas/HoneycombTypes";
 
 export async function generateHoneycombWithAI(prompt: string): Promise<HoneycombItem[]> {
   try {
@@ -12,7 +12,6 @@ export async function generateHoneycombWithAI(prompt: string): Promise<Honeycomb
     }
 
     const genAI = new GoogleGenAI({ apiKey });
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
     // Prepare a well-structured prompt
     const fullPrompt = `
@@ -40,15 +39,13 @@ export async function generateHoneycombWithAI(prompt: string): Promise<Honeycomb
     `;
 
     // Make the API call
-    const result = await model.generateContent({
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.0-flash-lite",
       contents: [{ role: "user", parts: [{ text: fullPrompt }] }]
     });
-
-    // Extract and parse the JSON response
-    const responseText = result.response.text();
     
     // Clean up the response - remove any markdown code blocks or extra text
-    const jsonString = responseText.replace(/```json|```/g, '').trim();
+    const jsonString = result.text?.replace(/```json|```/g, '').trim() ?? '';
     
     // Parse the JSON
     const parsedItems = JSON.parse(jsonString) as HoneycombItem[];

@@ -45,7 +45,6 @@ export const Sidebar = ({
   onDeleteHive, 
   onDeleteHoneycomb, 
   onRenameItem,
-  onLogout,
   loading = false
 }: SidebarProps) => {
   const { t } = useTranslation();

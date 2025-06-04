@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { Plus, Wand2, X } from "lucide-react"
-import { Download } from "lucide-react"
-import { Upload } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { HoneycombHexagon } from "../hexagon/HoneycombHexagon"
 import { HoneycombEditModal } from "../HoneycombEditModal"
@@ -470,63 +468,6 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     }
   }, [isCreating, items, zoom, isTaskSidebarOpen, setOffset, canEdit, handleItemSelection]);
 
-  // Export/Import functions
-  const exportToJson = useCallback((items: HoneycombItem[]) => {
-    const dataStr = JSON.stringify(items, null, 2);
-    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
-    const exportFileDefaultName = "honeycomb-data.json";
-    const linkElement = document.createElement("a");
-    linkElement.setAttribute("href", dataUri);
-    linkElement.setAttribute("download", exportFileDefaultName);
-    linkElement.click();
-  }, []);
-
-  const importFromJson = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!canEdit) {
-      toast.error(t('sharing.noEditingAllowed'));
-      return;
-    }
-
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const content = e.target?.result;
-        if (typeof content === "string") {
-          try {
-            const importedItems = JSON.parse(content) as HoneycombItem[];
-            
-            const itemsToCreate = importedItems.map(item => ({
-              q: item.q,
-              r: item.r,
-              x: item.x,
-              y: item.y,
-              title: item.title,
-              description: item.description,
-              icon: item.icon,
-              priority: item.priority,
-              completed: false,
-              connections: item.connections,
-              color: item.color,
-              category: item.category,
-              isMain: item.isMain,
-              deadline: item.deadline,
-            }))
-            
-            const success = await bulkCreateItems(itemsToCreate)
-            if (success) {
-              toast.success(t("messages.importSuccess"))
-            }
-          } catch (error) {
-            console.error("Error parsing JSON:", error);
-            toast.error(t("messages.invalidJsonFile"));
-          }
-        }
-      };
-      reader.readAsText(file);
-    }
-  }, [bulkCreateItems, t, canEdit]);
-
   // Initialize canvas
   useEffect(() => {
     if (containerRef.current) {
@@ -651,18 +592,6 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
               <Wand2 size={22} />
             </button>
           )}
-
-          <button
-            onClick={() => exportToJson(items)}
-            className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2"
-          >
-            <Download size={22} />
-          </button>
-
-          <label className="flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all bg-white hover:bg-gray-50 ml-2 cursor-pointer">
-            <input type="file" accept=".json" onChange={importFromJson} style={{ display: "none" }} />
-            <Upload size={22} />
-          </label>
         </div>
       )}
 

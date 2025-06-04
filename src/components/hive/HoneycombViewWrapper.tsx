@@ -6,8 +6,6 @@ import type { Hive, Honeycomb } from '@/types';
 import { HoneycombCanvas } from '../honeycomb/canvas/HoneycombCanvas.tsx';
 import SharingModal from '../honeycomb/SharingModal';
 import MobileControlsMenu from '../honeycomb/MobileControlsMenu';
-import { getHoneycombItems } from '@/services/database';
-import toast from 'react-hot-toast';
 
 type ContextType = {
   hives: Hive[];
@@ -110,55 +108,6 @@ export const HoneycombViewWrapper = () => {
     setIsSharingModalOpen(false);
   };
 
-  // Enhanced export function for sharing modal
-  const handleExportJson = async () => {
-    try {
-      // Get honeycomb items from database
-      const { data: items, error } = await getHoneycombItems(honeycomb.id);
-      
-      if (error) {
-        throw error;
-      }
-
-      // Transform items to export format
-      const exportData = {
-        honeycomb: {
-          id: honeycomb.id,
-          name: honeycomb.name,
-          description: honeycomb.description,
-          exportedAt: new Date().toISOString(),
-        },
-        items: items || [],
-        version: '1.0'
-      };
-
-      // Create and download JSON file
-      const dataStr = JSON.stringify(exportData, null, 2);
-      const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
-      const exportFileDefaultName = `${honeycomb.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_honeycomb.json`;
-      
-      const linkElement = document.createElement("a");
-      linkElement.setAttribute("href", dataUri);
-      linkElement.setAttribute("download", exportFileDefaultName);
-      linkElement.click();
-      
-      toast.success('Honeycomb exported successfully!');
-    } catch (error) {
-      console.error('Error exporting honeycomb:', error);
-      toast.error('Failed to export honeycomb');
-    }
-  };
-
-  // Import handler - placeholder for now
-  const handleImportJson = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('Import triggered:', event.target.files);
-    // This would be handled by the canvas component
-    // For now, just reset the input
-    if (event.target) {
-      event.target.value = '';
-    }
-  };
-
   return (
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header with controls */}
@@ -251,8 +200,6 @@ export const HoneycombViewWrapper = () => {
           onClose={closeSharingModal}
           honeycombId={honeycomb.id}
           honeycombName={honeycomb.name}
-          onExportJson={handleExportJson}
-          onImportJson={handleImportJson}
         />
 
         <MobileControlsMenu

@@ -1,22 +1,18 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/honeycomb/SharingModal.tsx
-import React, { useState, useEffect, useRef } from 'react'
-import { Copy, Users, ChevronDown, Download, Upload, Eye, Edit, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Copy, Users, ChevronDown, Eye, Edit, X } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import QRCode from 'qrcode'
 import { createSharingSession, getActiveSession, updateSessionPermissions, endSharingSession } from '@/services/sharing'
-import { getHoneycombItems } from '@/services/database'
 
 interface SharingModalProps {
     isOpen: boolean;
     onClose: () => void;
     honeycombId: string;
     honeycombName: string;
-    onExportJson: () => void;
-    onImportJson: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 type PermissionLevel = 'view' | 'edit';
@@ -26,11 +22,10 @@ export default function SharingModal({
     onClose, 
     honeycombId, 
     honeycombName,
-    onImportJson
 }: SharingModalProps) {
     const { t } = useTranslation();
     const [shareUrl, setShareUrl] = useState('');
-    const [shareCode, setShareCode] = useState('');
+    const [, setShareCode] = useState('');
     const [qrCodeUrl, setQrCodeUrl] = useState('');
     const [permissions, setPermissions] = useState<PermissionLevel>('view');
     const [showPermissionDropdown, setShowPermissionDropdown] = useState(false);
@@ -38,7 +33,6 @@ export default function SharingModal({
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [participants] = useState<any[]>([]);
     const [showParticipants, setShowParticipants] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (isOpen && honeycombId) {
@@ -151,56 +145,6 @@ export default function SharingModal({
         }
     };
 
-    // Enhanced export function that exports honeycomb data
-    const handleExportJson = async () => {
-        try {
-            setLoading(true);
-            
-            // Get honeycomb items from database
-            const { data: items, error } = await getHoneycombItems(honeycombId);
-            
-            if (error) {
-                throw error;
-            }
-
-            // Transform items to export format
-            const exportData = {
-                honeycomb: {
-                    id: honeycombId,
-                    name: honeycombName,
-                    exportedAt: new Date().toISOString(),
-                },
-                items: items || [],
-                version: '1.0'
-            };
-
-            // Create and download JSON file
-            const dataStr = JSON.stringify(exportData, null, 2);
-            const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
-            const exportFileDefaultName = `${honeycombName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_honeycomb.json`;
-            
-            const linkElement = document.createElement("a");
-            linkElement.setAttribute("href", dataUri);
-            linkElement.setAttribute("download", exportFileDefaultName);
-            linkElement.click();
-            
-            toast.success('Honeycomb exported successfully!');
-        } catch (error) {
-            console.error('Error exporting honeycomb:', error);
-            toast.error('Failed to export honeycomb');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-        onImportJson(event);
-        // Reset the input value so the same file can be selected again
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-
     if (!isOpen) return null;
 
     return (
@@ -308,32 +252,6 @@ export default function SharingModal({
                                 </div>
                             </div>
 
-                            {/* Export/Import Section */}
-                            <div className="border-t border-gray-200 pt-6">
-                                <h3 className="text-sm font-medium text-gray-900 mb-3">{t('sharing.exportImport')}</h3>
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={handleExportJson}
-                                        disabled={loading}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-                                    >
-                                        <Download size={16} />
-                                        <span className="text-sm">{t('sharing.exportJson')}</span>
-                                    </button>
-                                    <label className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
-                                        <Upload size={16} />
-                                        <span className="text-sm">{t('sharing.importJson')}</span>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept=".json"
-                                            onChange={handleFileImport}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                </div>
-                            </div>
-
                             {/* Active Participants */}
                             {participants.length > 0 && (
                                 <div className="border-t border-gray-200 pt-6">
@@ -363,11 +281,6 @@ export default function SharingModal({
                                     )}
                                 </div>
                             )}
-
-                            {/* Share Code */}
-                            <div className="text-center text-sm text-gray-500">
-                                {t('sharing.shareCode')}: <span className="font-mono font-bold">{shareCode}</span>
-                            </div>
                         </div>
                     )}
                 </div>

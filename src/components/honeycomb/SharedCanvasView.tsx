@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/honeycomb/SharedCanvasView.tsx
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -10,12 +11,13 @@ import {
   getSessionByCode, 
   joinSharingSession, 
   cloneHoneycombForUser,
-  setupSharingRealtimeSubscription,
+  // setupSharingRealtimeSubscription,
   updateParticipantStatus,
   getSessionParticipants,
   cleanupOfflineParticipants
 } from '@/services/sharing';
 import { useAuth } from '@/context/AuthContext';
+import supabase from '@/utils/supabase';
 
 interface Participant {
   id: string;
@@ -195,31 +197,82 @@ export const SharedCanvasView = () => {
     }
   };
 
-  const setupRealtimeSubscriptions = (sessionId: string) => {
-    if (cleanupRef.current) {
-      cleanupRef.current();
-    }
+// Key changes for SharedCanvasView.tsx real-time setup
 
-    try {
-      cleanupRef.current = setupSharingRealtimeSubscription(
-        sessionId,
-        handleParticipantChange,
-        handleChangeReceived
-      );
-      
-      setConnectionStatus('connected');
-    } catch (error) {
-      console.error('Error setting up real-time subscriptions:', error);
-      setConnectionStatus('disconnected');
-      
-      // Retry connection after 5 seconds
-      setTimeout(() => {
-        if (session) {
-          setupRealtimeSubscriptions(sessionId);
+// Replace the setupRealtimeSubscriptions function with this:
+const setupRealtimeSubscriptions = (sessionId: string) => {
+  console.log('Setting up realtime subscriptions for session:', sessionId);
+  
+  // Clean up any existing subscription
+  if (cleanupRef.current) {
+    cleanupRef.current();
+    cleanupRef.current = null;
+  }
+
+  try {
+    // Create a single channel for sharing events
+    const channel = supabase
+      .channel(`sharing_${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sharing_participants',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload) => {
+          console.log('Participant change:', payload);
+          if (payload.new) {
+            handleParticipantChange(payload.new);
+          }
         }
-      }, 5000);
-    }
-  };
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'sharing_changes',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload) => {
+          console.log('Sharing change:', payload);
+          if (payload.new) {
+            handleChangeReceived(payload.new);
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('Sharing subscription status:', status, err);
+        
+        if (status === 'SUBSCRIBED') {
+          setConnectionStatus('connected');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED' || status === 'SUBSCRIBING') {
+          setConnectionStatus('disconnected');
+        } else {
+          console.error('Subscription error:', status, err);
+        }
+      });
+
+    // Store cleanup function
+    cleanupRef.current = () => {
+      console.log('Cleaning up sharing subscriptions');
+      supabase.removeChannel(channel);
+    };
+    
+  } catch (error) {
+    console.error('Error setting up real-time subscriptions:', error);
+    setConnectionStatus('disconnected');
+    
+    // Retry after delay
+    setTimeout(() => {
+      if (session) {
+        setupRealtimeSubscriptions(sessionId);
+      }
+    }, 5000);
+  }
+};
 
   const handleParticipantChange = useCallback((participant: any) => {
     setParticipants(prev => {

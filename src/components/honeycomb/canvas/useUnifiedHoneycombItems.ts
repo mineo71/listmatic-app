@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/honeycomb/canvas/useUnifiedHoneycombItems.ts
 "use client"
@@ -73,8 +74,10 @@ export const useUnifiedHoneycombItems = (
   const [saving, setSaving] = useState(false)
   const { t } = useTranslation()
 
-  // Track real-time subscription
-  const realtimeChannelRef = useRef<any>(null)
+  // Track subscription state
+  const channelRef = useRef<any>(null)
+  const isSubscribedRef = useRef(false)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load items from database
   const loadItems = useCallback(async () => {
@@ -91,11 +94,10 @@ export const useUnifiedHoneycombItems = (
       }
 
       if (data && data.length > 0) {
-        // Transform and set items from database
         const transformedItems = data.map(transformDBToCanvas)
         setItems(transformedItems)
       } else {
-        // Create default main item if no items exist (only if can edit and not in shared mode)
+        // Create default main item if no items exist
         if (canEdit && !isSharedMode) {
           await createDefaultMainItem()
         }
@@ -142,20 +144,35 @@ export const useUnifiedHoneycombItems = (
     }
   }
 
-  // Setup real-time subscription for honeycomb items
-  useEffect(() => {
-    if (!honeycombId) return
+  // Setup subscription with retry logic
+  const setupSubscription = useCallback(() => {
+    if (!honeycombId || isSubscribedRef.current) {
+      return
+    }
 
-    // Load initial items
-    loadItems()
+    console.log('Setting up honeycomb subscription for:', honeycombId)
 
-    // Always setup real-time subscription for better UX
-    const channelName = `honeycomb_items_${honeycombId}_${Date.now()}`
-    
-    console.log('Setting up real-time subscription for:', channelName)
-    
-    realtimeChannelRef.current = supabase
-      .channel(channelName)
+    // Clear any existing reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
+
+    // Remove existing channel if any
+    if (channelRef.current) {
+      console.log('Removing existing channel')
+      supabase.removeChannel(channelRef.current)
+      channelRef.current = null
+      isSubscribedRef.current = false
+    }
+
+    // Create new channel
+    const channel = supabase
+      .channel(`honeycomb_${honeycombId}`, {
+        config: {
+          presence: { key: honeycombId },
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -165,27 +182,21 @@ export const useUnifiedHoneycombItems = (
           filter: `honeycomb_id=eq.${honeycombId}`
         },
         (payload) => {
-          console.log('Real-time honeycomb item change:', payload)
+          console.log('Honeycomb item change:', payload.eventType, payload)
           
-          if (payload.eventType === 'INSERT') {
+          if (payload.eventType === 'INSERT' && payload.new) {
             const newItem = transformDBToCanvas(payload.new as any)
             setItems(prev => {
-              // Check if item already exists to prevent duplicates
-              if (prev.find(item => item.id === newItem.id)) {
-                console.log('Item already exists, skipping:', newItem.id)
-                return prev
-              }
-              console.log('Adding new item:', newItem.id)
+              const exists = prev.some(item => item.id === newItem.id)
+              if (exists) return prev
               return [...prev, newItem]
             })
-          } else if (payload.eventType === 'UPDATE') {
+          } else if (payload.eventType === 'UPDATE' && payload.new) {
             const updatedItem = transformDBToCanvas(payload.new as any)
-            console.log('Updating item:', updatedItem.id)
             setItems(prev => 
               prev.map(item => item.id === updatedItem.id ? updatedItem : item)
             )
-          } else if (payload.eventType === 'DELETE') {
-            console.log('Deleting item:', payload.old.id)
+          } else if (payload.eventType === 'DELETE' && payload.old) {
             setItems(prev => 
               prev.filter(item => item.id !== payload.old.id)
             )
@@ -194,22 +205,54 @@ export const useUnifiedHoneycombItems = (
       )
       .subscribe((status, err) => {
         console.log('Subscription status:', status, err)
+        
         if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to honeycomb items real-time updates')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('Subscription error:', err)
+          console.log('Successfully subscribed to honeycomb items')
+          isSubscribedRef.current = true
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.error('Subscription error, will retry in 3 seconds:', status)
+          isSubscribedRef.current = false
+          
+          // Retry subscription after delay
+          reconnectTimeoutRef.current = setTimeout(() => {
+            console.log('Retrying subscription...')
+            setupSubscription()
+          }, 3000)
         }
       })
 
-    // Cleanup subscription on unmount
+    channelRef.current = channel
+  }, [honeycombId])
+
+  // Effect to manage subscription lifecycle
+  useEffect(() => {
+    if (!honeycombId) return
+
+    // Load items first
+    loadItems()
+
+    // Setup subscription after a small delay to ensure items are loaded
+    const setupTimeout = setTimeout(() => {
+      setupSubscription()
+    }, 100)
+
+    // Cleanup function
     return () => {
-      console.log('Cleaning up real-time subscription')
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current)
-        realtimeChannelRef.current = null
+      clearTimeout(setupTimeout)
+      
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+
+      if (channelRef.current) {
+        console.log('Cleaning up honeycomb subscription')
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+        isSubscribedRef.current = false
       }
     }
-  }, [honeycombId, loadItems])
+  }, [honeycombId, loadItems, setupSubscription])
 
   // Update progress when items change
   useEffect(() => {
@@ -249,9 +292,6 @@ export const useUnifiedHoneycombItems = (
             { item: transformedItem }
           )
         }
-        
-        // Always update items manually for immediate feedback
-        setItems(prev => [...prev, transformedItem])
         
         return transformedItem
       }
@@ -299,8 +339,6 @@ export const useUnifiedHoneycombItems = (
       }
 
       if (data) {
-        const transformedItem = transformDBToCanvas(data)
-        
         // Log sharing change if in shared mode
         if (isSharedMode && sessionId && participantId) {
           await logSharingChange(
@@ -308,12 +346,9 @@ export const useUnifiedHoneycombItems = (
             participantId,
             'update',
             id,
-            { updates, item: transformedItem }
+            { updates, item: transformDBToCanvas(data) }
           )
         }
-        
-        // Always update items manually for immediate feedback
-        setItems(prev => prev.map(item => item.id === id ? transformedItem : item))
         
         return true
       }
@@ -354,9 +389,6 @@ export const useUnifiedHoneycombItems = (
         )
       }
 
-      // Always update items manually for immediate feedback
-      setItems(prev => prev.filter(item => item.id !== id))
-
       return true
     } catch (error) {
       console.error('Error deleting item:', error)
@@ -376,10 +408,8 @@ export const useUnifiedHoneycombItems = (
 
     setSaving(true)
     try {
-      // First, clear existing items
       await clearHoneycombItems(honeycombId)
       
-      // Then create new items
       const dbItems = newItems.map(transformCanvasToDBCreate)
       const { data, error } = await bulkCreateHoneycombItems(honeycombId, dbItems)
       
@@ -390,8 +420,6 @@ export const useUnifiedHoneycombItems = (
       }
 
       if (data) {
-        const transformedItems = data.map(transformDBToCanvas)
-        
         // Log sharing change if in shared mode
         if (isSharedMode && sessionId && participantId) {
           await logSharingChange(
@@ -399,12 +427,9 @@ export const useUnifiedHoneycombItems = (
             participantId,
             'create',
             'bulk',
-            { items: transformedItems, count: transformedItems.length }
+            { items: data.map(transformDBToCanvas), count: data.length }
           )
         }
-        
-        // Always update items manually for immediate feedback
-        setItems(transformedItems)
         
         return true
       }
@@ -432,7 +457,6 @@ export const useUnifiedHoneycombItems = (
     const item = items.find(i => i.id === id)
     if (!item) return false
 
-    // If this is the main item, check if all others are completed
     if (item.isMain) {
       const otherItems = items.filter((i) => !i.isMain)
       const allOthersCompleted = otherItems.every((i) => i.completed)

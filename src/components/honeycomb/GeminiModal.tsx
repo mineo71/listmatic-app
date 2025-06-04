@@ -146,15 +146,15 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
         "${prompt}"
         
         The structure should be a valid JSON array where each item represents a task node with the following properties:
-        - id: string - unique identifier
+        - id: string - any unique identifier (can be simple like "main", "task1", "task2", etc.)
         - q, r: number - axial coordinates for hexagon grid positioning
-        - x, y: number - calculated pixel positions (will be recalculated)
+        - x, y: number - set to 0 (will be recalculated)
         - title: string - short title of the task (max 15 chars)
         - description: string - longer description
         - icon: string - one of: ${iconsList}
         - priority: string - "low", "medium", or "high"
         - completed: boolean - always false initially
-        - connections: string[] - array of IDs this node connects to
+        - connections: string[] - array of IDs this node connects to (use the same IDs you created)
         - color: string - hex color code (choose appropriate colors)
         - isMain: boolean - true only for the main/central node
 
@@ -163,6 +163,7 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
         Create a well-structured honeycomb with logical connections between nodes.
         Include 5-15 nodes total. Position nodes logically around the main goal.
         Use varied colors to distinguish different types of tasks or phases.
+        Make sure the connections array contains valid IDs that exist in your generated items.
 
         Only respond with the valid JSON array, nothing else.
       `;
@@ -233,10 +234,35 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
     }
   };
 
+  // Helper function to generate UUID v4
+  function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   // Helper function to process and validate the generated items
   function processHoneycombItems(items: HoneycombItem[]): HoneycombItem[] {
+    // Create a mapping of old IDs to new UUIDs
+    const idMapping = new Map<string, string>();
+    
+    // First pass: generate new UUIDs for all items
+    items.forEach(item => {
+      idMapping.set(item.id, generateUUID());
+    });
+    
     // Ensure all items have required properties
     return items.map((item, index) => {
+      // Get the new UUID for this item
+      const newId = idMapping.get(item.id) || generateUUID();
+      
+      // Update connections to use new UUIDs
+      const updatedConnections = item.connections
+        .map(connId => idMapping.get(connId))
+        .filter(id => id !== undefined) as string[];
+      
       // Make sure the main item is properly set
       if (index === 0 && !item.isMain) {
         item.isMain = true;
@@ -248,11 +274,6 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
       const x = item.q * 90; // Using simple calculation for demo
       const y = (item.r * 52) + (item.q * 26); // Approximate hexagon geometry
       
-      // Ensure connections exist
-      if (!item.connections) {
-        item.connections = [];
-      }
-      
       // Ensure priority is valid
       if (!item.priority || !['low', 'medium', 'high'].includes(item.priority)) {
         item.priority = 'medium';
@@ -263,8 +284,10 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
       
       return {
         ...item,
+        id: newId, // Use the new UUID
         x,
         y,
+        connections: updatedConnections, // Use updated connections
         completed: false,
         priority: item.priority as TaskPriority,
         createdAt: now,

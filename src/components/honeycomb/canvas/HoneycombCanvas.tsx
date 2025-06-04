@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { Plus, Wand2, X } from "lucide-react"
 import { Download } from "lucide-react"
@@ -125,28 +126,23 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     });
   }, [items, offset, zoom]);
 
-  // Handle AI-generated honeycombs
+  // Handle AI-generated honeycombs with proper ID handling
   const handleGeminiGenerate = useCallback(async (generatedItems: HoneycombItem[]) => {
     if (isSharedMode && !canEdit) {
       toast.error(t('sharing.noAIGeneration'));
       return;
     }
 
-    const itemsToCreate = generatedItems.map(item => ({
-      q: item.q,
-      r: item.r,
-      x: item.x,
-      y: item.y,
-      title: item.title,
-      description: item.description,
-      icon: item.icon,
-      priority: item.priority,
-      completed: false,
-      connections: item.connections,
-      color: item.color,
-      category: item.category,
-      isMain: item.isMain,
-      deadline: item.deadline,
+    // Extract only the fields we need for creation, explicitly excluding id
+    // This ensures we don't pass the AI-generated IDs to the database
+    const itemsToCreate = generatedItems.map(({ 
+      id, // destructure id to exclude it
+      createdAt, // exclude these as well
+      updatedAt,
+      ...rest 
+    }) => ({
+      ...rest,
+      completed: false, // ensure completed is always false initially
     }))
     
     const success = await bulkCreateItems(itemsToCreate)

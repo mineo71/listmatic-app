@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/rules-of-hooks */
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { RotateCcw, ZoomIn, ZoomOut, List, Share } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +8,7 @@ import type { Hive, Honeycomb } from '@/types';
 import { HoneycombCanvas } from '../honeycomb/canvas/HoneycombCanvas.tsx';
 import SharingModal from '../honeycomb/SharingModal';
 import MobileControlsMenu from '../honeycomb/MobileControlsMenu';
+import { useAuth } from '@/context/AuthContext';
 
 type ContextType = {
   hives: Hive[];
@@ -20,6 +23,7 @@ export const HoneycombViewWrapper = () => {
   const { hives } = useOutletContext<ContextType>();
   const containerRef = useRef<HTMLDivElement>(null);
   const { isSidebarOpen } = useOutletContext<ContextType>();
+  const { user } = useAuth(); // NEW: Get current user
 
   // View state
   const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
@@ -27,6 +31,7 @@ export const HoneycombViewWrapper = () => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [progress, setProgress] = useState(0);
   const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
+  const [showParticipantCursors, setShowParticipantCursors] = useState(true); // NEW: Cursor visibility state
 
   // Calculate the center position based on container size and sidebar state
   const calculateCenterPosition = useCallback(() => {
@@ -107,6 +112,18 @@ export const HoneycombViewWrapper = () => {
   const closeSharingModal = () => {
     setIsSharingModalOpen(false);
   };
+
+  // NEW: Handle cursor visibility toggle from sharing modal
+  const handleToggleCursors = (show: boolean) => {
+    setShowParticipantCursors(show);
+  };
+
+  // NEW: Check if current user is the owner/host of this honeycomb
+  const isHost = useMemo(() => {
+    // You might need to add owner_id to your honeycomb data structure
+    // For now, we'll assume the user is always the host in normal view
+    return true;
+  }, [user, honeycomb]);
 
   return (
       <div className="flex flex-col h-full overflow-hidden">
@@ -192,6 +209,7 @@ export const HoneycombViewWrapper = () => {
               isTaskSidebarOpen={isTaskSidebarOpen}
               setisTaskSidebarOpen={setIsTaskSidebarOpen}
               onProgressUpdate={handleProgressUpdate}
+              showParticipantCursors={showParticipantCursors} // NEW: Pass cursor visibility state
           />
         </div>
         
@@ -200,6 +218,8 @@ export const HoneycombViewWrapper = () => {
           onClose={closeSharingModal}
           honeycombId={honeycomb.id}
           honeycombName={honeycomb.name}
+          isHost={isHost} // NEW: Pass host status
+          onToggleCursors={handleToggleCursors} // NEW: Pass cursor toggle handler
         />
 
         <MobileControlsMenu

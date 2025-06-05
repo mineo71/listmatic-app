@@ -14,6 +14,7 @@ import { useUnifiedHoneycombItems } from "./useUnifiedHoneycombItems"
 // Enhanced interface with new callbacks
 interface EnhancedHoneycombCanvasProps extends HoneycombCanvasProps {
   onItemSelection?: (itemId: string | null) => void;
+  showParticipantCursors?: boolean; // NEW: Control cursor visibility
 }
 
 // Constants for canvas limits
@@ -59,6 +60,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     participantId,
     participants = [],
     onItemSelection,
+    showParticipantCursors = true, // NEW: Default to show cursors
   }) => {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -300,8 +302,13 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
         const mouseX = (e.clientX - rect.left) / zoom - offset.x / zoom;
         const mouseY = (e.clientY - rect.top) / zoom - offset.y / zoom;
 
-        const closestNeighbor = findClosestNeighbor(mouseX, mouseY, items);
-        setGhostHex(closestNeighbor);
+        if (items.length > 0) {
+          const closestNeighbor = findClosestNeighbor(mouseX, mouseY, items);
+          setGhostHex(closestNeighbor);
+        } else {
+          // NEW: If no items exist, allow creating the first hexagon at center
+          setGhostHex({ q: 0, r: 0, parentId: 'center' });
+        }
       }
     },
     [isCreating, zoom, offset, items, isEditModalOpen, setOffset, limitOffsetToBounds, canEdit]
@@ -315,7 +322,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     isDraggingRef.current = false;
   }, []);
 
-  // Create new hexagon
+  // Create new hexagon - ENHANCED to handle first hexagon creation
   const createNewHexagon = useCallback(async () => {
     if (!ghostHex || !containerRef.current || !canEdit) return;
   
@@ -326,23 +333,27 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
       r: ghostHex.r,
       x: pixel.x,
       y: pixel.y,
-      title: t("hexagon.new_honeycomb"),
+      title: items.length === 0 ? t("hexagon.main_goal") : t("hexagon.new_honeycomb"),
       description: "",
-      icon: "None" as TaskIcon, 
-      priority: "medium",
+      icon: items.length === 0 ? "Star" as TaskIcon : "None" as TaskIcon,
+      priority: items.length === 0 ? "high" : "medium",
       completed: false,
-      connections: [ghostHex.parentId],
+      connections: ghostHex.parentId === 'center' ? [] : [ghostHex.parentId],
       color: "#FDE68A",
+      isMain: items.length === 0, // NEW: First hexagon is main
     };
   
     const createdItem = await createItem(newItem)
     
     if (createdItem) {
-      const parentItem = items.find(item => item.id === ghostHex.parentId)
-      if (parentItem) {
-        await updateItem(parentItem.id, {
-          connections: [...parentItem.connections, createdItem.id]
-        })
+      // Only update parent connections if it's not the first hexagon
+      if (ghostHex.parentId !== 'center') {
+        const parentItem = items.find(item => item.id === ghostHex.parentId)
+        if (parentItem) {
+          await updateItem(parentItem.id, {
+            connections: [...parentItem.connections, createdItem.id]
+          })
+        }
       }
       
       setPendingHexagon(createdItem);
@@ -354,6 +365,26 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     setIsCreating(false);
     setGhostHex(null);
   }, [ghostHex, containerRef, t, createItem, updateItem, items, canEdit]);
+
+  // Enhanced canvas click handler to support center creation
+  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+    if (!isCreating || !canEdit) return;
+    
+    // If no items exist and user clicks, create first hexagon at center
+    if (items.length === 0 && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) / zoom - offset.x / zoom;
+      const clickY = (e.clientY - rect.top) / zoom - offset.y / zoom;
+      
+      // Set ghost hex to center position
+      setGhostHex({ q: 0, r: 0, parentId: 'center' });
+      
+      // Create immediately
+      setTimeout(() => {
+        createNewHexagon();
+      }, 50);
+    }
+  }, [isCreating, canEdit, items.length, zoom, offset, createNewHexagon]);
 
   // Ghost hexagon click handler
   const handleGhostClick = useCallback((e: React.MouseEvent) => {
@@ -517,6 +548,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onClick={handleCanvasClick} // NEW: Handle canvas clicks for first hexagon
     >
       {/* Loading overlay */}
       {loading && (
@@ -592,6 +624,20 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
               <Wand2 size={22} />
             </button>
           )}
+        </div>
+      )}
+
+      {/* NEW: Empty state message when no items exist */}
+      {items.length === 0 && !loading && isCreating && canEdit && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-center p-8 bg-white/90 rounded-lg shadow-lg backdrop-blur-sm">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {t('canvas.createFirstHexagon')}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {t('canvas.clickAnywhereToStart')}
+            </p>
+          </div>
         </div>
       )}
 
@@ -745,8 +791,8 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
         />
       )}
 
-      {/* Participant cursors for shared mode */}
-      {isSharedMode && participants.map(participant => {
+      {/* Participant cursors for shared mode - NOW CONTROLLABLE */}
+      {isSharedMode && showParticipantCursors && participants.map(participant => {
         if (!participant.cursor_position || participant.id === participantId) return null;
         
         return (

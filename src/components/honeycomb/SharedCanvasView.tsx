@@ -11,7 +11,6 @@ import {
   getSessionByCode, 
   joinSharingSession, 
   cloneHoneycombForUser,
-  // setupSharingRealtimeSubscription,
   updateParticipantStatus,
   getSessionParticipants,
   cleanupOfflineParticipants
@@ -197,82 +196,80 @@ export const SharedCanvasView = () => {
     }
   };
 
-// Key changes for SharedCanvasView.tsx real-time setup
-
-// Replace the setupRealtimeSubscriptions function with this:
-const setupRealtimeSubscriptions = (sessionId: string) => {
-  console.log('Setting up realtime subscriptions for session:', sessionId);
-  
-  // Clean up any existing subscription
-  if (cleanupRef.current) {
-    cleanupRef.current();
-    cleanupRef.current = null;
-  }
-
-  try {
-    // Create a single channel for sharing events
-    const channel = supabase
-      .channel(`sharing_${sessionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sharing_participants',
-          filter: `session_id=eq.${sessionId}`
-        },
-        (payload) => {
-          console.log('Participant change:', payload);
-          if (payload.new) {
-            handleParticipantChange(payload.new);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'sharing_changes',
-          filter: `session_id=eq.${sessionId}`
-        },
-        (payload) => {
-          console.log('Sharing change:', payload);
-          if (payload.new) {
-            handleChangeReceived(payload.new);
-          }
-        }
-      )
-      .subscribe((status, err) => {
-        console.log('Sharing subscription status:', status, err);
-        
-        if (status === 'SUBSCRIBED') {
-          setConnectionStatus('connected');
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED' || status === 'SUBSCRIBING') {
-          setConnectionStatus('disconnected');
-        } else {
-          console.error('Subscription error:', status, err);
-        }
-      });
-
-    // Store cleanup function
-    cleanupRef.current = () => {
-      console.log('Cleaning up sharing subscriptions');
-      supabase.removeChannel(channel);
-    };
+  // Setup real-time subscriptions
+  const setupRealtimeSubscriptions = (sessionId: string) => {
+    console.log('Setting up realtime subscriptions for session:', sessionId);
     
-  } catch (error) {
-    console.error('Error setting up real-time subscriptions:', error);
-    setConnectionStatus('disconnected');
-    
-    // Retry after delay
-    setTimeout(() => {
-      if (session) {
-        setupRealtimeSubscriptions(sessionId);
-      }
-    }, 5000);
-  }
-};
+    // Clean up any existing subscription
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
+
+    try {
+      // Create a single channel for sharing events
+      const channel = supabase
+        .channel(`sharing_${sessionId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'sharing_participants',
+            filter: `session_id=eq.${sessionId}`
+          },
+          (payload) => {
+            console.log('Participant change:', payload);
+            if (payload.new) {
+              handleParticipantChange(payload.new);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'sharing_changes',
+            filter: `session_id=eq.${sessionId}`
+          },
+          (payload) => {
+            console.log('Sharing change:', payload);
+            if (payload.new) {
+              handleChangeReceived(payload.new);
+            }
+          }
+        )
+        .subscribe((status, err) => {
+          console.log('Sharing subscription status:', status, err);
+          
+          if (status === 'SUBSCRIBED') {
+            setConnectionStatus('connected');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED' || status === 'SUBSCRIBING') {
+            setConnectionStatus('disconnected');
+          } else {
+            console.error('Subscription error:', status, err);
+          }
+        });
+
+      // Store cleanup function
+      cleanupRef.current = () => {
+        console.log('Cleaning up sharing subscriptions');
+        supabase.removeChannel(channel);
+      };
+      
+    } catch (error) {
+      console.error('Error setting up real-time subscriptions:', error);
+      setConnectionStatus('disconnected');
+      
+      // Retry after delay
+      setTimeout(() => {
+        if (session) {
+          setupRealtimeSubscriptions(sessionId);
+        }
+      }, 5000);
+    }
+  };
 
   const handleParticipantChange = useCallback((participant: any) => {
     setParticipants(prev => {
@@ -570,6 +567,7 @@ const setupRealtimeSubscriptions = (sessionId: string) => {
           participantId={participantId}
           participants={participants.filter(p => p.is_online)}
           onItemSelection={handleItemSelection}
+          showParticipantCursors={true} // Always show cursors in shared view (guests can't control this)
         />
       </div>
 

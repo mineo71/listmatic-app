@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -42,6 +43,51 @@ const PRESET_COLORS = [
 ];
 
 const PRIORITIES = ['low', 'medium', 'high'];
+
+// Helper function to validate and normalize color values
+const validateColor = (color: string | undefined | null): string => {
+  if (!color || typeof color !== 'string') {
+    return PRESET_COLORS[0]; // Default to first preset color
+  }
+  
+  // Remove any whitespace
+  const trimmedColor = color.trim();
+  
+  // Check if it's a valid hex color (with or without #)
+  const hexRegex = /^#?([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
+  
+  if (hexRegex.test(trimmedColor)) {
+    // Ensure it starts with #
+    return trimmedColor.startsWith('#') ? trimmedColor : `#${trimmedColor}`;
+  }
+  
+  // If it's not a valid hex color, return default
+  return PRESET_COLORS[0];
+};
+
+// Helper function to validate icon
+const validateIcon = (icon: TaskIcon | undefined | null): TaskIcon => {
+  if (!icon || typeof icon !== 'string') {
+    return 'None';
+  }
+  
+  // Check if the icon exists in our available icons
+  if (icon === 'None' || ICONS.includes(icon)) {
+    return icon;
+  }
+  
+  // If invalid icon, return None
+  return 'None';
+};
+
+// Helper function to validate priority
+const validatePriority = (priority: TaskPriority | undefined | null): TaskPriority => {
+  if (!priority || !['low', 'medium', 'high'].includes(priority)) {
+    return 'medium';
+  }
+  return priority;
+};
+
 // Dropdown component
 const Dropdown = ({
 label,
@@ -119,31 +165,51 @@ color: PRESET_COLORS[0]
 isCreating = false,
 }: EditModalProps) => {
   const { t } = useTranslation();
-  const [title, setTitle] = useState(initialData.title);
-  const [description, setDescription] = useState(initialData.description || '');
-  const [selectedIcon, setSelectedIcon] = useState<TaskIcon>(initialData.icon || 'None');
-  const [selectedColor, setSelectedColor] = useState(initialData.color || PRESET_COLORS[0]);
+  
+  // Validate and set initial state with proper defaults
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState<TaskIcon>('None');
+  const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
   const [customColor, setCustomColor] = useState('');
-  const [priority, setPriority] = useState<TaskPriority>(initialData.priority || 'medium');
+  const [priority, setPriority] = useState<TaskPriority>('medium');
   const [deadline, setDeadline] = useState<string>('');
   const [deadlineTime, setDeadlineTime] = useState<string>('');
   const [isCustomColor, setIsCustomColor] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setTitle(initialData.title);
+      // Validate and set all initial data with proper fallbacks
+      setTitle(initialData.title || '');
       setDescription(initialData.description || '');
-      setSelectedIcon(initialData.icon || 'None');
-      setSelectedColor(initialData.color || PRESET_COLORS[0]);
-      setPriority(initialData.priority || 'medium');
+      setSelectedIcon(validateIcon(initialData.icon));
+      setSelectedColor(validateColor(initialData.color));
+      setPriority(validatePriority(initialData.priority));
+      
+      // Handle deadline
       if (initialData.deadline) {
-        const date = new Date(initialData.deadline);
-        setDeadline(date.toISOString().split('T')[0]);
-        setDeadlineTime(date.toTimeString().slice(0, 5));
+        try {
+          const date = new Date(initialData.deadline);
+          if (!isNaN(date.getTime())) {
+            setDeadline(date.toISOString().split('T')[0]);
+            setDeadlineTime(date.toTimeString().slice(0, 5));
+          } else {
+            setDeadline('');
+            setDeadlineTime('');
+          }
+        } catch (error) {
+          console.warn('Invalid deadline date:', initialData.deadline);
+          setDeadline('');
+          setDeadlineTime('');
+        }
       } else {
         setDeadline('');
         setDeadlineTime('');
       }
+      
+      // Reset custom color state
+      setIsCustomColor(false);
+      setCustomColor('');
     }
   }, [initialData, isOpen]);
 
@@ -163,9 +229,19 @@ isCreating = false,
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim()) {
-      const deadlineDate = deadline && deadlineTime
-          ? new Date(`${deadline}T${deadlineTime}`)
-          : undefined;
+      let deadlineDate: Date | undefined;
+      
+      if (deadline && deadlineTime) {
+        try {
+          deadlineDate = new Date(`${deadline}T${deadlineTime}`);
+          if (isNaN(deadlineDate.getTime())) {
+            deadlineDate = undefined;
+          }
+        } catch (error) {
+          console.warn('Invalid deadline format, ignoring:', `${deadline}T${deadlineTime}`);
+          deadlineDate = undefined;
+        }
+      }
 
       onSubmit({
         title: title.trim(),
@@ -173,20 +249,25 @@ isCreating = false,
         icon: selectedIcon,
         priority,
         deadline: deadlineDate,
-        color: selectedColor,
+        color: validateColor(selectedColor), // Ensure color is valid before submitting
       });
       onClose();
     }
   };
 
   const handleColorChange = (color: string) => {
-    setSelectedColor(color);
+    const validColor = validateColor(color);
+    setSelectedColor(validColor);
     setIsCustomColor(false);
   };
 
   const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomColor(e.target.value);
-    setSelectedColor(e.target.value);
+    const newColor = e.target.value;
+    setCustomColor(newColor);
+    
+    // Validate the custom color before setting it
+    const validColor = validateColor(newColor);
+    setSelectedColor(validColor);
     setIsCustomColor(true);
   };
 
@@ -260,6 +341,16 @@ isCreating = false,
                         );
                       }
                       const Icon = ICONS_MAP[icon as keyof typeof ICONS_MAP];
+                      // Safety check for Icon component
+                      if (!Icon) {
+                        return (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4" />
+                              <span>{icon}</span>
+                              {icon === selectedIcon && <Check size={16} className="ml-auto text-amber-500" />}
+                            </div>
+                        );
+                      }
                       return (
                           <div className="flex items-center gap-2">
                             <Icon size={16} />
@@ -278,6 +369,15 @@ isCreating = false,
                         );
                       }
                       const Icon = ICONS_MAP[icon as keyof typeof ICONS_MAP];
+                      // Safety check for Icon component
+                      if (!Icon) {
+                        return (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4" />
+                              <span>{icon}</span>
+                            </div>
+                        );
+                      }
                       return (
                           <div className="flex items-center gap-2">
                             <Icon size={16} />
@@ -303,7 +403,7 @@ isCreating = false,
                             <div className="flex items-center gap-2">
                               <div
                                   className="w-6 h-6 rounded-full"
-                                  style={{ backgroundColor: color }}
+                                  style={{ backgroundColor: validateColor(color) }}
                               />
                               <span>{color}</span>
                               {color === selectedColor && !isCustomColor && (
@@ -314,14 +414,14 @@ isCreating = false,
                         renderValue={(color) => (
                             <div
                                 className="w-8 h-8 rounded-full"
-                                style={{ backgroundColor: isCustomColor ? customColor : color }}
+                                style={{ backgroundColor: isCustomColor ? validateColor(customColor) : validateColor(color) }}
                             />
                         )}
                     />
                     <div className="relative mt-2">
                       <input
                           type="color"
-                          value={customColor}
+                          value={validateColor(customColor) || PRESET_COLORS[0]}
                           onChange={handleCustomColorChange}
                           className="sr-only"
                           id="custom-color"
@@ -442,4 +542,3 @@ isCreating = false,
       </>
   );
 }
-

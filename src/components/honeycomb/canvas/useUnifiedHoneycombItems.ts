@@ -20,46 +20,157 @@ import { logSharingChange } from '@/services/sharing'
 import supabase from '@/utils/supabase'
 import toast from 'react-hot-toast'
 
-// Transform database item to canvas item
-const transformDBToCanvas = (dbItem: HoneycombItemDB): HoneycombItem => ({
-  id: dbItem.id,
-  q: dbItem.q,
-  r: dbItem.r,
-  x: dbItem.x,
-  y: dbItem.y,
-  title: dbItem.title,
-  description: dbItem.description,
-  icon: dbItem.icon as TaskIcon,
-  priority: dbItem.priority,
-  completed: dbItem.completed,
-  connections: dbItem.connections,
-  color: dbItem.color,
-  category: dbItem.category,
-  isMain: dbItem.isMain,
-  deadline: dbItem.deadline,
-  createdAt: dbItem.createdAt,
-  updatedAt: dbItem.updatedAt,
-})
+// Enhanced validation functions
+const DEFAULT_COLOR = '#FDE68A';
+const DEFAULT_ICON: TaskIcon = 'None';
+const DEFAULT_PRIORITY: TaskPriority = 'medium';
 
-// Transform canvas item to database format
+const validateColor = (color: any): string => {
+  if (!color || typeof color !== 'string') {
+    return DEFAULT_COLOR;
+  }
+  
+  const trimmedColor = color.trim();
+  const hexRegex = /^#?([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
+  
+  if (hexRegex.test(trimmedColor)) {
+    return trimmedColor.startsWith('#') ? trimmedColor : `#${trimmedColor}`;
+  }
+  
+  return DEFAULT_COLOR;
+};
+
+const validateIcon = (icon: any): TaskIcon => {
+  if (!icon || typeof icon !== 'string') {
+    return DEFAULT_ICON;
+  }
+  
+  // Basic validation - you can expand this list based on your available icons
+  const validIcons = ['None', 'Star', 'Target', 'Flag', 'Timer', 'CheckCircle', 'Code', 'FileText', 'Heart', 'Home', 'Mail', 'MessageCircle', 'Settings'];
+  
+  if (validIcons.includes(icon)) {
+    return icon as TaskIcon;
+  }
+  
+  return DEFAULT_ICON;
+};
+
+const validatePriority = (priority: any): TaskPriority => {
+  if (!priority || typeof priority !== 'string') {
+    return DEFAULT_PRIORITY;
+  }
+  
+  if (['low', 'medium', 'high'].includes(priority)) {
+    return priority as TaskPriority;
+  }
+  
+  return DEFAULT_PRIORITY;
+};
+
+const validateTitle = (title: any): string => {
+  if (!title || typeof title !== 'string') {
+    return 'Untitled Task';
+  }
+  
+  return title.trim() || 'Untitled Task';
+};
+
+const validateDescription = (description: any): string => {
+  if (!description || typeof description !== 'string') {
+    return '';
+  }
+  
+  return description.trim();
+};
+
+const validateConnections = (connections: any): string[] => {
+  if (!Array.isArray(connections)) {
+    return [];
+  }
+  
+  return connections.filter(conn => typeof conn === 'string' && conn.trim().length > 0);
+};
+
+const validateCoordinates = (q: any, r: any): { q: number; r: number } => {
+  const validQ = typeof q === 'number' && !isNaN(q) ? Math.round(q) : 0;
+  const validR = typeof r === 'number' && !isNaN(r) ? Math.round(r) : 0;
+  
+  return { q: validQ, r: validR };
+};
+
+const validatePosition = (x: any, y: any): { x: number; y: number } => {
+  const validX = typeof x === 'number' && !isNaN(x) ? x : 0;
+  const validY = typeof y === 'number' && !isNaN(y) ? y : 0;
+  
+  return { x: validX, y: validY };
+};
+
+const validateDeadline = (deadline: any): Date | undefined => {
+  if (!deadline) {
+    return undefined;
+  }
+  
+  try {
+    const date = new Date(deadline);
+    if (isNaN(date.getTime())) {
+      return undefined;
+    }
+    return date;
+  } catch {
+    return undefined;
+  }
+};
+
+// Enhanced transform database item to canvas item with validation
+const transformDBToCanvas = (dbItem: HoneycombItemDB): HoneycombItem => {
+  const coordinates = validateCoordinates(dbItem.q, dbItem.r);
+  const position = validatePosition(dbItem.x, dbItem.y);
+  
+  return {
+    id: dbItem.id,
+    q: coordinates.q,
+    r: coordinates.r,
+    x: position.x,
+    y: position.y,
+    title: validateTitle(dbItem.title),
+    description: validateDescription(dbItem.description),
+    icon: validateIcon(dbItem.icon),
+    priority: validatePriority(dbItem.priority),
+    completed: Boolean(dbItem.completed),
+    connections: validateConnections(dbItem.connections),
+    color: validateColor(dbItem.color),
+    category: dbItem.category,
+    isMain: Boolean(dbItem.isMain),
+    deadline: validateDeadline(dbItem.deadline),
+    createdAt: dbItem.createdAt,
+    updatedAt: dbItem.updatedAt,
+  };
+};
+
+// Enhanced transform canvas item to database format with validation
 const transformCanvasToDBCreate = (
   canvasItem: Omit<HoneycombItem, 'id' | 'createdAt' | 'updatedAt'>
-): Omit<HoneycombItemDB, 'id' | 'honeycombId' | 'createdAt' | 'updatedAt'> => ({
-  title: canvasItem.title,
-  description: canvasItem.description,
-  icon: canvasItem.icon,
-  priority: canvasItem.priority,
-  color: canvasItem.color,
-  completed: canvasItem.completed,
-  isMain: canvasItem.isMain ?? false,
-  q: canvasItem.q,
-  r: canvasItem.r,
-  x: canvasItem.x,
-  y: canvasItem.y,
-  connections: canvasItem.connections,
-  deadline: canvasItem.deadline,
-  category: canvasItem.category,
-})
+): Omit<HoneycombItemDB, 'id' | 'honeycombId' | 'createdAt' | 'updatedAt'> => {
+  const coordinates = validateCoordinates(canvasItem.q, canvasItem.r);
+  const position = validatePosition(canvasItem.x, canvasItem.y);
+  
+  return {
+    title: validateTitle(canvasItem.title),
+    description: validateDescription(canvasItem.description),
+    icon: validateIcon(canvasItem.icon),
+    priority: validatePriority(canvasItem.priority),
+    color: validateColor(canvasItem.color),
+    completed: Boolean(canvasItem.completed),
+    isMain: Boolean(canvasItem.isMain ?? false),
+    q: coordinates.q,
+    r: coordinates.r,
+    x: position.x,
+    y: position.y,
+    connections: validateConnections(canvasItem.connections),
+    deadline: canvasItem.deadline,
+    category: canvasItem.category,
+  };
+};
 
 export const useUnifiedHoneycombItems = (
   honeycombId: string, 
@@ -94,12 +205,45 @@ export const useUnifiedHoneycombItems = (
       }
 
       if (data && data.length > 0) {
-        const transformedItems = data.map(transformDBToCanvas)
-        setItems(transformedItems)
+        try {
+          // Transform and validate items from database
+          const transformedItems = data.map(item => {
+            try {
+              return transformDBToCanvas(item);
+            } catch (transformError) {
+              console.warn('Error transforming item, using defaults:', transformError, item);
+              // Create a safe fallback item
+              return {
+                id: item.id,
+                q: 0,
+                r: 0,
+                x: 0,
+                y: 0,
+                title: validateTitle(item.title),
+                description: validateDescription(item.description),
+                icon: validateIcon(item.icon),
+                priority: validatePriority(item.priority),
+                completed: Boolean(item.completed),
+                connections: validateConnections(item.connections),
+                color: validateColor(item.color),
+                category: item.category,
+                isMain: Boolean(item.isMain),
+                deadline: validateDeadline(item.deadline),
+                createdAt: item.createdAt || new Date(),
+                updatedAt: item.updatedAt || new Date(),
+              };
+            }
+          });
+          setItems(transformedItems);
+        } catch (transformError) {
+          console.error('Error transforming items:', transformError);
+          toast.error('Some items could not be loaded properly');
+          setItems([]);
+        }
       } else {
         // Create default main item if no items exist
         if (canEdit && !isSharedMode) {
-          await createDefaultMainItem()
+          await createDefaultMainItem();
         }
       }
     } catch (error) {
@@ -124,7 +268,7 @@ export const useUnifiedHoneycombItems = (
       priority: "high" as TaskPriority,
       completed: false,
       connections: [],
-      color: "#FDE68A",
+      color: DEFAULT_COLOR,
       isMain: true,
     }
 
@@ -184,22 +328,28 @@ export const useUnifiedHoneycombItems = (
         (payload) => {
           console.log('Honeycomb item change:', payload.eventType, payload)
           
-          if (payload.eventType === 'INSERT' && payload.new) {
-            const newItem = transformDBToCanvas(payload.new as any)
-            setItems(prev => {
-              const exists = prev.some(item => item.id === newItem.id)
-              if (exists) return prev
-              return [...prev, newItem]
-            })
-          } else if (payload.eventType === 'UPDATE' && payload.new) {
-            const updatedItem = transformDBToCanvas(payload.new as any)
-            setItems(prev => 
-              prev.map(item => item.id === updatedItem.id ? updatedItem : item)
-            )
-          } else if (payload.eventType === 'DELETE' && payload.old) {
-            setItems(prev => 
-              prev.filter(item => item.id !== payload.old.id)
-            )
+          try {
+            if (payload.eventType === 'INSERT' && payload.new) {
+              const newItem = transformDBToCanvas(payload.new as any)
+              setItems(prev => {
+                const exists = prev.some(item => item.id === newItem.id)
+                if (exists) return prev
+                return [...prev, newItem]
+              })
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              const updatedItem = transformDBToCanvas(payload.new as any)
+              setItems(prev => 
+                prev.map(item => item.id === updatedItem.id ? updatedItem : item)
+              )
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              setItems(prev => 
+                prev.filter(item => item.id !== payload.old.id)
+              )
+            }
+          } catch (transformError) {
+            console.error('Error transforming real-time update:', transformError, payload);
+            // Reload items if transformation fails
+            loadItems();
           }
         }
       )
@@ -222,7 +372,7 @@ export const useUnifiedHoneycombItems = (
       })
 
     channelRef.current = channel
-  }, [honeycombId])
+  }, [honeycombId, loadItems])
 
   // Effect to manage subscription lifecycle
   useEffect(() => {
@@ -262,7 +412,7 @@ export const useUnifiedHoneycombItems = (
     onProgressUpdate(progress)
   }, [items, onProgressUpdate])
 
-  // Create new item
+  // Create new item with validation
   const createItem = async (newItem: Omit<HoneycombItem, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!canEdit) {
       toast.error(t('sharing.noEditingAllowed'))
@@ -271,7 +421,18 @@ export const useUnifiedHoneycombItems = (
 
     setSaving(true)
     try {
-      const { data, error } = await createHoneycombItem(honeycombId, transformCanvasToDBCreate(newItem))
+      // Validate the item before sending to database
+      const validatedItem = {
+        ...newItem,
+        title: validateTitle(newItem.title),
+        description: validateDescription(newItem.description),
+        icon: validateIcon(newItem.icon),
+        priority: validatePriority(newItem.priority),
+        color: validateColor(newItem.color),
+        connections: validateConnections(newItem.connections),
+      };
+
+      const { data, error } = await createHoneycombItem(honeycombId, transformCanvasToDBCreate(validatedItem))
       
       if (error) {
         console.error('Error creating item:', error)
@@ -304,7 +465,7 @@ export const useUnifiedHoneycombItems = (
     return null
   }
 
-  // Update existing item
+  // Update existing item with validation
   const updateItem = async (id: string, updates: Partial<Omit<HoneycombItem, 'id' | 'createdAt' | 'updatedAt'>>) => {
     if (!canEdit) {
       toast.error(t('sharing.noEditingAllowed'))
@@ -315,18 +476,19 @@ export const useUnifiedHoneycombItems = (
     try {
       const dbUpdates: Partial<Omit<HoneycombItemDB, 'id' | 'honeycombId' | 'createdAt' | 'updatedAt'>> = {}
       
-      if (updates.title !== undefined) dbUpdates.title = updates.title
-      if (updates.description !== undefined) dbUpdates.description = updates.description
-      if (updates.icon !== undefined) dbUpdates.icon = updates.icon
-      if (updates.priority !== undefined) dbUpdates.priority = updates.priority
-      if (updates.color !== undefined) dbUpdates.color = updates.color
+      // Validate each update field
+      if (updates.title !== undefined) dbUpdates.title = validateTitle(updates.title)
+      if (updates.description !== undefined) dbUpdates.description = validateDescription(updates.description)
+      if (updates.icon !== undefined) dbUpdates.icon = validateIcon(updates.icon)
+      if (updates.priority !== undefined) dbUpdates.priority = validatePriority(updates.priority)
+      if (updates.color !== undefined) dbUpdates.color = validateColor(updates.color)
       if (updates.completed !== undefined) dbUpdates.completed = updates.completed
       if (updates.isMain !== undefined) dbUpdates.isMain = updates.isMain
       if (updates.q !== undefined) dbUpdates.q = updates.q
       if (updates.r !== undefined) dbUpdates.r = updates.r
       if (updates.x !== undefined) dbUpdates.x = updates.x
       if (updates.y !== undefined) dbUpdates.y = updates.y
-      if (updates.connections !== undefined) dbUpdates.connections = updates.connections
+      if (updates.connections !== undefined) dbUpdates.connections = validateConnections(updates.connections)
       if (updates.deadline !== undefined) dbUpdates.deadline = updates.deadline
       if (updates.category !== undefined) dbUpdates.category = updates.category
 
@@ -399,7 +561,7 @@ export const useUnifiedHoneycombItems = (
     return false
   }
 
-  // Bulk create items (for AI generation)
+  // Bulk create items (for AI generation) with enhanced validation
   const bulkCreateItems = async (newItems: Omit<HoneycombItem, 'id' | 'createdAt' | 'updatedAt'>[]) => {
     if (!canEdit) {
       toast.error(t('sharing.noEditingAllowed'))
@@ -410,7 +572,19 @@ export const useUnifiedHoneycombItems = (
     try {
       await clearHoneycombItems(honeycombId)
       
-      const dbItems = newItems.map(transformCanvasToDBCreate)
+      // Validate all items before creating
+      const validatedItems = newItems.map(item => ({
+        ...item,
+        title: validateTitle(item.title),
+        description: validateDescription(item.description),
+        icon: validateIcon(item.icon),
+        priority: validatePriority(item.priority),
+        color: validateColor(item.color),
+        connections: validateConnections(item.connections),
+        completed: false,
+      }));
+      
+      const dbItems = validatedItems.map(transformCanvasToDBCreate)
       const { data, error } = await bulkCreateHoneycombItems(honeycombId, dbItems)
       
       if (error) {
@@ -444,7 +618,7 @@ export const useUnifiedHoneycombItems = (
 
   // Update connections for an item
   const updateItemConnections = async (id: string, connections: string[]) => {
-    return await updateItem(id, { connections })
+    return await updateItem(id, { connections: validateConnections(connections) })
   }
 
   // Mark item as complete/incomplete

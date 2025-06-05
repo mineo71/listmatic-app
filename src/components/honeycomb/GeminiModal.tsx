@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { X, Clock, AlertCircle, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GoogleGenAI } from "@google/genai";
-import type { HoneycombItem, TaskPriority } from './canvas/HoneycombTypes';
+import type { HoneycombItem, TaskIcon, TaskPriority } from './canvas/HoneycombTypes';
 import { 
   getRecentAIRequests, 
   createAIRequest, 
@@ -16,8 +17,8 @@ interface GeminiModalProps {
   onGenerate: (items: HoneycombItem[]) => void;
 }
 
-// Expanded set of icons for better task visualization
-const AVAILABLE_ICONS = [
+// Expanded set of icons for better task visualization - properly typed
+const AVAILABLE_ICONS: TaskIcon[] = [
 // Main workflow icons
 'Target', 'Star', 'Flag', 'Timer', 'CheckCircle', 
     
@@ -63,7 +64,55 @@ const AVAILABLE_ICONS = [
     
 // Misc
 'Bell', 'Bookmark', 'Archive', 'Tag', 'Zap', 'Plus'
+] as const;
+
+// Predefined valid colors to ensure consistency
+const VALID_COLORS = [
+  '#FDE68A', '#FCA5A5', '#A7F3D0', '#BFDBFE', '#DDD6FE', '#FBCFE8',
+  '#FCD34D', '#F87171', '#6EE7B7', '#93C5FD', '#C4B5FD', '#F9A8D4',
+  '#FBBF24', '#EF4444', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899',
+  '#FEF3C7', '#FEE2E2', '#D1FAE5', '#DBEAFE', '#EDE9FE', '#FCE7F3',
+  '#F59E0B', '#DC2626', '#059669', '#2563EB', '#7C3AED', '#DB2777'
 ];
+
+// Helper function to validate color
+const validateColor = (color: string | undefined | null): string => {
+  if (!color || typeof color !== 'string') {
+    return VALID_COLORS[0];
+  }
+  
+  const trimmedColor = color.trim();
+  const hexRegex = /^#?([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
+  
+  if (hexRegex.test(trimmedColor)) {
+    const normalizedColor = trimmedColor.startsWith('#') ? trimmedColor : `#${trimmedColor}`;
+    return normalizedColor;
+  }
+  
+  return VALID_COLORS[0];
+};
+
+// Helper function to validate icon
+const validateIcon = (icon: string | undefined | null): TaskIcon => {
+  if (!icon || typeof icon !== 'string') {
+    return 'Target';
+  }
+  
+  // Check if the icon exists in our available icons
+  if (AVAILABLE_ICONS.includes(icon as TaskIcon)) {
+    return icon as TaskIcon;
+  }
+  
+  return 'Target'; // Default icon
+};
+
+// Helper function to validate priority
+const validatePriority = (priority: string | undefined | null): TaskPriority => {
+  if (!priority || !['low', 'medium', 'high'].includes(priority)) {
+    return 'medium';
+  }
+  return priority as TaskPriority;
+};
 
 const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }) => {
   const { t } = useTranslation();
@@ -139,33 +188,39 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
       // Initialize the Google GenAI client
       const genAI = new GoogleGenAI({ apiKey });
       const iconsList = AVAILABLE_ICONS.join(", ");
+      const colorsList = VALID_COLORS.join(", ");
 
-      // Prepare an enhanced prompt
+      // Enhanced prompt with better validation instructions
       const fullPrompt = `
         Generate a honeycomb structure for a task planning app based on this description:
         "${prompt}"
         
-        The structure should be a valid JSON array where each item represents a task node with the following properties:
+        IMPORTANT VALIDATION REQUIREMENTS:
+        - ALL colors MUST be valid hex codes from this list: ${colorsList}
+        - ALL icons MUST be from this list: ${iconsList}
+        - ALL priorities MUST be exactly: "low", "medium", or "high"
+        
+        The structure should be a valid JSON array where each item represents a task node with these EXACT properties:
         - id: string - any unique identifier (can be simple like "main", "task1", "task2", etc.)
-        - q, r: number - axial coordinates for hexagon grid positioning
+        - q, r: number - axial coordinates for hexagon grid positioning (integers only)
         - x, y: number - set to 0 (will be recalculated)
         - title: string - short title of the task (max 15 chars)
         - description: string - longer description
-        - icon: string - one of: ${iconsList}
-        - priority: string - "low", "medium", or "high"
+        - icon: string - MUST be exactly one of: ${iconsList}
+        - priority: string - MUST be exactly "low", "medium", or "high"
         - completed: boolean - always false initially
         - connections: string[] - array of IDs this node connects to (use the same IDs you created)
-        - color: string - hex color code (choose appropriate colors)
+        - color: string - MUST be exactly one of: ${colorsList}
         - isMain: boolean - true only for the main/central node
 
         The first item should have id "main", be the central node (q:0, r:0) with isMain:true.
         
         Create a well-structured honeycomb with logical connections between nodes.
         Include 5-15 nodes total. Position nodes logically around the main goal.
-        Use varied colors to distinguish different types of tasks or phases.
+        Use varied colors from the provided list to distinguish different types of tasks or phases.
         Make sure the connections array contains valid IDs that exist in your generated items.
 
-        Only respond with the valid JSON array, nothing else.
+        CRITICAL: Only respond with valid JSON array, no markdown, no explanation, no extra text.
       `;
 
       // Make the API call
@@ -184,9 +239,16 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
       const jsonString = responseText.replace(/```json|```/g, '').trim();
       
       // Parse the JSON
-      const parsedItems = JSON.parse(jsonString) as HoneycombItem[];
+      let parsedItems: any[];
+      try {
+        parsedItems = JSON.parse(jsonString);
+      } catch (parseError) {
+        console.error('JSON parsing error:', parseError);
+        console.error('Response text:', responseText);
+        throw new Error("Invalid JSON response from AI. Please try again.");
+      }
       
-      // Process the items
+      // Process and validate the items
       const processedItems = processHoneycombItems(parsedItems);
       
       // Save the AI request to database
@@ -243,55 +305,72 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
     });
   }
 
-  // Helper function to process and validate the generated items
-  function processHoneycombItems(items: HoneycombItem[]): HoneycombItem[] {
+  // Enhanced helper function to process and validate the generated items
+  function processHoneycombItems(items: any[]): HoneycombItem[] {
+    if (!Array.isArray(items)) {
+      throw new Error('Invalid response format: expected array');
+    }
+
     // Create a mapping of old IDs to new UUIDs
     const idMapping = new Map<string, string>();
     
-    // First pass: generate new UUIDs for all items
-    items.forEach(item => {
-      idMapping.set(item.id, generateUUID());
+    // First pass: generate new UUIDs for all items and validate basic structure
+    const validatedItems = items.map((item, index) => {
+      // Generate new UUID
+      const newId = generateUUID();
+      const oldId = item?.id || `item_${index}`;
+      idMapping.set(oldId, newId);
+
+      // Validate and normalize all properties
+      const validatedItem: HoneycombItem = {
+        id: newId,
+        q: typeof item?.q === 'number' ? Math.round(item.q) : (index === 0 ? 0 : Math.floor(Math.random() * 3) - 1),
+        r: typeof item?.r === 'number' ? Math.round(item.r) : (index === 0 ? 0 : Math.floor(Math.random() * 3) - 1),
+        x: 0, // Will be calculated
+        y: 0, // Will be calculated
+        title: typeof item?.title === 'string' && item.title.trim() 
+          ? item.title.trim().slice(0, 15) 
+          : `Task ${index + 1}`,
+        description: typeof item?.description === 'string' 
+          ? item.description.trim() 
+          : '',
+        icon: validateIcon(item?.icon),
+        priority: validatePriority(item?.priority),
+        completed: false,
+        connections: Array.isArray(item?.connections) ? item.connections : [],
+        color: validateColor(item?.color),
+        isMain: index === 0 || item?.isMain === true,
+        category: undefined,
+        deadline: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Ensure main item has correct coordinates
+      if (validatedItem.isMain) {
+        validatedItem.q = 0;
+        validatedItem.r = 0;
+      }
+
+      return validatedItem;
     });
-    
-    // Ensure all items have required properties
-    return items.map((item, index) => {
-      // Get the new UUID for this item
-      const newId = idMapping.get(item.id) || generateUUID();
-      
+
+    // Second pass: update connections to use new UUIDs and calculate positions
+    return validatedItems.map(item => {
       // Update connections to use new UUIDs
       const updatedConnections = item.connections
-        .map(connId => idMapping.get(connId))
-        .filter(id => id !== undefined) as string[];
-      
-      // Make sure the main item is properly set
-      if (index === 0 && !item.isMain) {
-        item.isMain = true;
-        item.q = 0;
-        item.r = 0;
-      }
+        .map((connId: string) => idMapping.get(connId))
+        .filter((id: string | undefined) => id !== undefined) as string[];
       
       // Calculate pixel positions based on q,r coordinates
-      const x = item.q * 90; // Using simple calculation for demo
+      const x = item.q * 90; // Using simple calculation
       const y = (item.r * 52) + (item.q * 26); // Approximate hexagon geometry
-      
-      // Ensure priority is valid
-      if (!item.priority || !['low', 'medium', 'high'].includes(item.priority)) {
-        item.priority = 'medium';
-      }
-      
-      // Set timestamps
-      const now = new Date();
       
       return {
         ...item,
-        id: newId, // Use the new UUID
         x,
         y,
-        connections: updatedConnections, // Use updated connections
-        completed: false,
-        priority: item.priority as TaskPriority,
-        createdAt: now,
-        updatedAt: now,
+        connections: updatedConnections,
       };
     });
   }

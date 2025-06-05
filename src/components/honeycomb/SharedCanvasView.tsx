@@ -15,6 +15,7 @@ import {
   cleanupOfflineParticipants
 } from '@/services/sharing';
 import { useAuth } from '@/context/AuthContext';
+import { generateGuestName } from '@/utils/guestNames';
 import supabase from '@/utils/supabase';
 
 interface Participant {
@@ -108,10 +109,10 @@ export const SharedCanvasView = () => {
 
       setSession(sessionData);
       
-      // Generate display name
+      // UPDATED: Generate display name with cool animal names for guests
       const displayName = user ? 
         `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.email : 
-        `Guest ${Math.floor(Math.random() * 1000)}`;
+        generateGuestName(t); // NEW: Use the animal name generator
       
       // Check for existing participant
       const { data: existingParticipants } = await getSessionParticipants(sessionData.id);
@@ -135,7 +136,7 @@ export const SharedCanvasView = () => {
       } else {
         const { data: newParticipant, error: joinError } = await joinSharingSession(
           sessionData.id,
-          displayName || 'Anonymous User',
+          displayName || generateGuestName(t), // NEW: Use animal name as fallback
           user?.id
         );
         

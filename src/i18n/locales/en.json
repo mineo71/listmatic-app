@@ -10,6 +10,25 @@
     "forgotPassword": "Forgot Password?",
     "registerLink": "Don't have an account? Sign up"
   },
+  "forgotPassword": {
+    "title": "Reset Password",
+    "description": "Enter your email address and we'll send you a link to reset your password.",
+    "submit": "Send Reset Link",
+    "sending": "Sending...",
+    "backToLogin": "Back to Login",
+    "emailPlaceholder": "Enter your email address",
+    "emailSent": "Check Your Email",
+    "emailSentDescription": "We've sent a password reset link to {{email}}",
+    "checkEmail": "Next Steps",
+    "checkEmailDescription": "Follow these steps to reset your password:",
+    "checkInbox": "Check your email inbox for the reset link",
+    "checkSpam": "Don't forget to check your spam/junk folder",
+    "emailDelay": "It may take a few minutes for the email to arrive",
+    "sendAgain": "Send Another Email",
+    "errors": {
+      "resetFailed": "Failed to send reset email. Please try again."
+    }
+  },
   "register": {
     "title": "Register",
     "firstName": "First Name",
@@ -104,6 +123,7 @@
     "createHive": "New Bee-Garden",
     "createHoneycomb": "New Hive",
     "rename": "Rename",
+    "renaming": "Renaming...",
     "delete": "Delete",
     "addTask": "Add Task",
     "openSidebar": "Open Sidebar",
@@ -150,7 +170,9 @@
     "delete": "Delete",
     "editHexagon": "Edit Honeycomb",
     "createHexagon": "Create New Honeycomb",
-    "aiGenerate": "Generate with AI"
+    "aiGenerate": "Generate with AI",
+    "renameHive": "Rename Bee-Garden",
+    "renameHoneycomb": "Rename Hive"
   },
   "placeholders": {
     "newTask": "Add a new task...",
@@ -407,5 +429,10 @@
     "cosmic": "Cosmic",
     "nebula": "Nebula",
     "galaxy": "Galaxy"
+  },
+  "rename": {
+    "hiveName": "Bee-Garden Name",
+    "honeycombName": "Hive Name",
+    "currentName": "Current name"
   }
 }

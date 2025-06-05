@@ -61,7 +61,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     participantId,
     participants = [],
     onItemSelection,
-    showParticipantCursors = true,
+    // showParticipantCursors = true,
     onCursorMove,
   }) => {
   const { t } = useTranslation()
@@ -378,7 +378,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
   }, [ghostHex, containerRef, t, createItem, updateItem, items, canEdit]);
 
   // Enhanced canvas click handler to support center creation
-  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+  const handleCanvasClick = useCallback(() => {
     if (!isCreating || !canEdit) return;
     
     // If no items exist and user clicks, create first hexagon at center

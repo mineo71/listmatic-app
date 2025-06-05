@@ -1,71 +1,113 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/auth/ForgotPasswordForm.tsx
 import { useState } from 'react';
-// import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import toast from 'react-hot-toast';
 
 export const ForgotPasswordForm = () => {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const { t } = useTranslation();
   const { resetPassword } = useAuth();
-  // const { t } = useTranslation();
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEmailSent, setIsEmailSent] = useState(false);
+  const [error, setError] = useState('');
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email) {
-      toast.error('Please enter your email address');
+    setError('');
+
+    // Validation
+    if (!email.trim()) {
+      setError(t('register.errors.emailRequired'));
       return;
     }
 
-    setLoading(true);
+    if (!validateEmail(email)) {
+      setError(t('register.errors.emailInvalid'));
+      return;
+    }
 
+    setIsLoading(true);
+    
     try {
       const { error } = await resetPassword(email);
       
       if (error) {
-        toast.error(error.message || 'Failed to send reset email');
+        console.error('Reset password error:', error);
+        setError(t('forgotPassword.errors.resetFailed'));
       } else {
-        setSent(true);
-        toast.success('Password reset email sent! Check your inbox.');
+        setIsEmailSent(true);
       }
     } catch (error) {
       console.error('Reset password error:', error);
-      toast.error('An unexpected error occurred');
+      setError(t('forgotPassword.errors.resetFailed'));
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  if (sent) {
+  if (isEmailSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50 to-white">
-        <div className="max-w-[400px] w-full bg-gradient-to-b from-white to-amber-50 rounded-[40px] p-[25px_35px] border-[5px] border-white shadow-[0_30px_30px_-20px_rgba(133,189,215,0.88)] m-5">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <div className="text-3xl font-black text-amber-600 mb-4">
-              Check Your Email
+            <div className="mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <p className="text-gray-600 mb-6">
-              We've sent a password reset link to <strong>{email}</strong>
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+              {t('forgotPassword.emailSent')}
+            </h2>
+            <p className="mt-2 text-sm text-gray-600 max-w-sm mx-auto">
+              {t('forgotPassword.emailSentDescription', { email })}
             </p>
-            <div className="space-y-4">
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <Mail className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-blue-800">
+                    {t('forgotPassword.checkEmail')}
+                  </h3>
+                  <div className="mt-2 text-sm text-blue-700">
+                    <p>{t('forgotPassword.checkEmailDescription')}</p>
+                    <ul className="mt-2 list-disc list-inside space-y-1">
+                      <li>{t('forgotPassword.checkInbox')}</li>
+                      <li>{t('forgotPassword.checkSpam')}</li>
+                      <li>{t('forgotPassword.emailDelay')}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col space-y-3">
               <button
                 onClick={() => {
-                  setSent(false);
+                  setIsEmailSent(false);
                   setEmail('');
+                  setError('');
                 }}
-                className="w-full font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-white py-4 px-4 rounded-[20px] shadow-[0_20px_10px_-15px_rgba(133,189,215,0.88)] border-none transition-all hover:scale-[1.03] hover:shadow-[0_23px_10px_-20px_rgba(133,189,215,0.88)] active:scale-95 active:shadow-[0_15px_10px_-10px_rgba(133,189,215,0.88)]"
+                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
               >
-                Send Another Email
+                {t('forgotPassword.sendAgain')}
               </button>
+              
               <Link
                 to="/login"
-                className="block text-center text-xs text-amber-600 hover:text-amber-700 transition-colors"
+                className="w-full flex justify-center items-center gap-2 py-2 px-4 border border-transparent rounded-md text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
               >
-                Back to Login
+                <ArrowLeft size={16} />
+                {t('forgotPassword.backToLogin')}
               </Link>
             </div>
           </div>
@@ -75,41 +117,84 @@ export const ForgotPasswordForm = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50 to-white">
-      <div className="max-w-[400px] w-full bg-gradient-to-b from-white to-amber-50 rounded-[40px] p-[25px_35px] border-[5px] border-white shadow-[0_30px_30px_-20px_rgba(133,189,215,0.88)] m-5">
-        <div className="text-center font-black text-3xl text-amber-600">
-          Reset Password
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <div className="flex justify-center">
+            <img className="h-12 w-auto" src="/LogoBeeTask.ico" alt="Combly" />
+          </div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            {t('forgotPassword.title')}
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            {t('forgotPassword.description')}
+          </p>
         </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              {t('login.email')}
+            </label>
+            <div className="mt-1 relative">
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 focus:z-10 sm:text-sm"
+                placeholder={t('forgotPassword.emailPlaceholder')}
+                disabled={isLoading}
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Mail className="h-5 w-5 text-gray-400" />
+              </div>
+            </div>
+          </div>
 
-        <p className="text-center text-gray-600 text-sm mt-4 mb-6">
-          Enter your email address and we'll send you a link to reset your password.
-        </p>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-5 w-5 text-red-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-white border-none py-4 px-5 rounded-[20px] shadow-[0_10px_10px_-5px_#fff3e0] border-x-2 border-transparent focus:outline-none focus:border-x-2 focus:border-amber-400 transition-all"
-            placeholder="Enter your email"
-            disabled={loading}
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-white py-4 px-4 rounded-[20px] shadow-[0_20px_10px_-15px_rgba(133,189,215,0.88)] border-none transition-all hover:scale-[1.03] hover:shadow-[0_23px_10px_-20px_rgba(133,189,215,0.88)] active:scale-95 active:shadow-[0_15px_10px_-10px_rgba(133,189,215,0.88)] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Sending...' : 'Send Reset Email'}
-          </button>
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading || !email.trim()}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isLoading ? (
+                <div className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {t('forgotPassword.sending')}
+                </div>
+              ) : (
+                t('forgotPassword.submit')
+              )}
+            </button>
+          </div>
 
           <div className="text-center">
             <Link
               to="/login"
-              className="text-xs text-amber-600 hover:text-amber-700 transition-colors"
+              className="font-medium text-amber-600 hover:text-amber-500 transition-colors flex items-center justify-center gap-2"
             >
-              Back to Login
+              <ArrowLeft size={16} />
+              {t('forgotPassword.backToLogin')}
             </Link>
           </div>
         </form>

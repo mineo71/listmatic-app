@@ -51,6 +51,9 @@ export const SharedCanvasView = () => {
   const currentParticipantRef = useRef<string | null>(null);
   const cursorUpdateThrottleRef = useRef<NodeJS.Timeout | null>(null);
   const currentCursorPosition = useRef({ x: 0, y: 0 });
+  
+  // NEW: Ref for canvas container to properly position cursors
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // Load session data
   useEffect(() => {
@@ -228,7 +231,7 @@ export const SharedCanvasView = () => {
             filter: `session_id=eq.${sessionId}`
           },
           (payload) => {
-            console.log('Sharing change:', payload);
+            console.log('Change received:', payload);
             if (payload.new) {
               handleChangeReceived(payload.new);
             }
@@ -278,36 +281,7 @@ export const SharedCanvasView = () => {
 
   const handleChangeReceived = useCallback((change: any) => {
     console.log('Real-time change received:', change);
-    
-    // Show notification for changes made by others
-    if (change.participant_id !== currentParticipantRef.current) {
-      const participant = participants.find(p => p.id === change.participant_id);
-      const participantName = participant?.display_name || 'Someone';
-      
-      switch (change.change_type) {
-        case 'create':
-          if (change.item_id === 'bulk') {
-            toast.success(`${participantName} generated new honeycomb structure`, {
-              icon: '✨'
-            });
-          } else {
-            toast.success(`${participantName} added a new hexagon`, {
-              icon: '➕'
-            });
-          }
-          break;
-        case 'update':
-          toast.success(`${participantName} updated a hexagon`, {
-            icon: '✏️'
-          });
-          break;
-        case 'delete':
-          toast.success(`${participantName} removed a hexagon`, {
-            icon: '🗑️'
-          });
-          break;
-      }
-    }
+    // Toast notifications removed as requested
   }, [participants]);
 
   // Handle cursor movement from canvas
@@ -514,8 +488,8 @@ export const SharedCanvasView = () => {
         </div>
       </header>
 
-      {/* Canvas */}
-      <div className="flex-1 relative">
+      {/* Canvas - NEW: Added ref for proper cursor positioning */}
+      <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden">
         <HoneycombCanvas
           honeycombId={session.honeycomb_id}
           zoom={zoom}
@@ -535,14 +509,26 @@ export const SharedCanvasView = () => {
           onCursorMove={handleCursorMove}
         />
         
-        {/* Participant Cursors - positioned relative to the canvas container */}
+        {/* FIXED: Participant Cursors - now properly constrained to canvas area */}
         {participants.filter(p => p.is_online && p.cursor_position && p.id !== participantId).map(participant => {
           // Additional null check to satisfy TypeScript
-          if (!participant.cursor_position) return null;
+          if (!participant.cursor_position || !canvasContainerRef.current) return null;
           
-          // Convert world coordinates to screen coordinates
+          // Get canvas container bounds
+          const canvasRect = canvasContainerRef.current.getBoundingClientRect();
+          
+          // Convert world coordinates to screen coordinates relative to canvas
           const screenX = participant.cursor_position.x * zoom + offset.x;
           const screenY = participant.cursor_position.y * zoom + offset.y;
+          
+          // Check if cursor is within canvas bounds
+          const isWithinCanvas = screenX >= 0 && 
+                                screenX <= canvasRect.width && 
+                                screenY >= 0 && 
+                                screenY <= canvasRect.height;
+          
+          // Only render cursor if it's within the canvas area
+          if (!isWithinCanvas) return null;
           
           return (
             <div

@@ -209,7 +209,8 @@ export const HoneycombViewWrapper = () => {
               isTaskSidebarOpen={isTaskSidebarOpen}
               setisTaskSidebarOpen={setIsTaskSidebarOpen}
               onProgressUpdate={handleProgressUpdate}
-              showParticipantCursors={showParticipantCursors} // NEW: Pass cursor visibility state
+              showParticipantCursors={showParticipantCursors}
+              onCursorMove={() => {}}
           />
         </div>
         

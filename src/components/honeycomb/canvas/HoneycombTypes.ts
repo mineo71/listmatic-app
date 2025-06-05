@@ -45,6 +45,7 @@ export interface HoneycombCanvasProps {
         selected_item_id?: string
         color: string
     }>
-    // New callback for item selection
     onItemSelection?: (itemId: string | null) => void
+    onCursorMove?: (position: { x: number; y: number }) => void
+    showParticipantCursors?: boolean
 }

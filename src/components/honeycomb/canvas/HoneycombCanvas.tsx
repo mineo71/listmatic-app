@@ -15,6 +15,7 @@ import { useUnifiedHoneycombItems } from "./useUnifiedHoneycombItems"
 interface EnhancedHoneycombCanvasProps extends HoneycombCanvasProps {
   onItemSelection?: (itemId: string | null) => void;
   showParticipantCursors?: boolean; // NEW: Control cursor visibility
+  onCursorMove?: (position: { x: number; y: number }) => void; // NEW: Cursor position callback
 }
 
 // Constants for canvas limits
@@ -60,7 +61,8 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     participantId,
     participants = [],
     onItemSelection,
-    showParticipantCursors = true, // NEW: Default to show cursors
+    showParticipantCursors = true,
+    onCursorMove,
   }) => {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -287,6 +289,15 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      // Track cursor position for shared mode
+      if (isSharedMode && onCursorMove && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        // Calculate world coordinates (canvas content coordinates)
+        const worldX = (e.clientX - rect.left - offset.x) / zoom;
+        const worldY = (e.clientY - rect.top - offset.y) / zoom;
+        onCursorMove({ x: worldX, y: worldY });
+      }
+
       if (isDraggingRef.current) {
         const dx = e.clientX - lastMousePosRef.current.x;
         const dy = e.clientY - lastMousePosRef.current.y;
@@ -311,7 +322,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
         }
       }
     },
-    [isCreating, zoom, offset, items, isEditModalOpen, setOffset, limitOffsetToBounds, canEdit]
+    [isCreating, zoom, offset, items, isEditModalOpen, setOffset, limitOffsetToBounds, canEdit, isSharedMode, onCursorMove]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -381,14 +392,6 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
       }, 50);
     }
   }, [isCreating, canEdit, items.length, createNewHexagon]);
-
-  // Ghost hexagon click handler - removed since it's now inline
-  // const handleGhostClick = useCallback((e: React.MouseEvent) => {
-  //   e.stopPropagation();
-  //   if (!isEditModalOpen && canEdit) {
-  //     createNewHexagon();
-  //   }
-  // }, [createNewHexagon, isEditModalOpen, canEdit]);
 
   // Mark task as complete
   const handleMarkComplete = useCallback(async (id: string) => {
@@ -697,36 +700,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
           )}
 
           {/* FIXED: Participant cursors - now correctly positioned in canvas coordinates */}
-          {isSharedMode && showParticipantCursors && participants.map(participant => {
-            if (!participant.cursor_position || participant.id === participantId) return null;
-            
-            // Convert canvas position to screen position
-            const screenX = participant.cursor_position.x * zoom + offset.x;
-            const screenY = participant.cursor_position.y * zoom + offset.y;
-            
-            return (
-              <div
-                key={participant.id}
-                className="absolute pointer-events-none z-50 transition-all duration-200"
-                style={{
-                  left: screenX,
-                  top: screenY,
-                  transform: 'translate(-2px, -2px)',
-                }}
-              >
-                <div 
-                  className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
-                  style={{ backgroundColor: participant.color }}
-                />
-                <div 
-                  className="mt-1 px-2 py-1 rounded text-xs text-white shadow-lg whitespace-nowrap"
-                  style={{ backgroundColor: participant.color }}
-                >
-                  {participant.display_name}
-                </div>
-              </div>
-            );
-          })}
+          {/* Cursors are now handled in SharedCanvasView.tsx for correct positioning */}
         </div>
       </div>
 

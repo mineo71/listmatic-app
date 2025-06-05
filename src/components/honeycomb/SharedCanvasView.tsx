@@ -45,13 +45,12 @@ export const SharedCanvasView = () => {
   const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
-  // Refs to track cleanup and mouse position
+  // Refs to track cleanup and status updates
   const cleanupRef = useRef<(() => void) | null>(null);
   const statusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentParticipantRef = useRef<string | null>(null);
-  const mousePositionRef = useRef({ x: 0, y: 0 });
   const cursorUpdateThrottleRef = useRef<NodeJS.Timeout | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const currentCursorPosition = useRef({ x: 0, y: 0 });
 
   // Load session data
   useEffect(() => {
@@ -161,7 +160,7 @@ export const SharedCanvasView = () => {
           updateParticipantStatus(
             currentParticipantRef.current, 
             true,
-            mousePositionRef.current,
+            currentCursorPosition.current,
             selectedItemId
           );
         }
@@ -311,16 +310,9 @@ export const SharedCanvasView = () => {
     }
   }, [participants]);
 
-  // Handle mouse movement for cursor tracking
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!containerRef.current) return;
-    
-    const rect = containerRef.current.getBoundingClientRect();
-    // Calculate canvas-relative position accounting for zoom and offset
-    const canvasX = (e.clientX - rect.left - offset.x) / zoom;
-    const canvasY = (e.clientY - rect.top - offset.y) / zoom;
-    
-    mousePositionRef.current = { x: canvasX, y: canvasY };
+  // Handle cursor movement from canvas
+  const handleCursorMove = useCallback((position: { x: number; y: number }) => {
+    currentCursorPosition.current = position;
     
     // Throttle cursor position updates
     if (cursorUpdateThrottleRef.current) {
@@ -332,20 +324,12 @@ export const SharedCanvasView = () => {
         updateParticipantStatus(
           currentParticipantRef.current,
           true,
-          mousePositionRef.current,
+          currentCursorPosition.current,
           selectedItemId || undefined
         );
       }
     }, 200); // Update cursor every 200ms when moving
-  }, [selectedItemId, zoom, offset]);
-
-  // Setup mouse tracking
-  useEffect(() => {
-    document.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, [handleMouseMove]);
+  }, [selectedItemId]);
 
   // Update selection when selectedItemId changes
   useEffect(() => {
@@ -353,7 +337,7 @@ export const SharedCanvasView = () => {
       updateParticipantStatus(
         currentParticipantRef.current,
         true,
-        mousePositionRef.current,
+        currentCursorPosition.current,
         selectedItemId
       );
     }
@@ -377,14 +361,8 @@ export const SharedCanvasView = () => {
 
   // Canvas control handlers
   const handleReset = useCallback(() => {
-    if (!containerRef.current) return;
-    
-    const rect = containerRef.current.getBoundingClientRect();
     setZoom(1);
-    setOffset({
-      x: rect.width / 2,
-      y: rect.height / 2
-    });
+    setOffset({ x: 400, y: 300 }); // Reset to default center position
   }, []);
 
   const handleZoomIn = useCallback(() => {
@@ -415,7 +393,7 @@ export const SharedCanvasView = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50" ref={containerRef}>
+    <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -554,7 +532,41 @@ export const SharedCanvasView = () => {
           participants={participants.filter(p => p.is_online)}
           onItemSelection={handleItemSelection}
           showParticipantCursors={true}
+          onCursorMove={handleCursorMove}
         />
+        
+        {/* Participant Cursors - positioned relative to the canvas container */}
+        {participants.filter(p => p.is_online && p.cursor_position && p.id !== participantId).map(participant => {
+          // Additional null check to satisfy TypeScript
+          if (!participant.cursor_position) return null;
+          
+          // Convert world coordinates to screen coordinates
+          const screenX = participant.cursor_position.x * zoom + offset.x;
+          const screenY = participant.cursor_position.y * zoom + offset.y;
+          
+          return (
+            <div
+              key={participant.id}
+              className="absolute pointer-events-none z-50 transition-all duration-200"
+              style={{
+                left: screenX,
+                top: screenY,
+                transform: 'translate(-2px, -2px)',
+              }}
+            >
+              <div 
+                className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
+                style={{ backgroundColor: participant.color }}
+              />
+              <div 
+                className="mt-1 px-2 py-1 rounded text-xs text-white shadow-lg whitespace-nowrap"
+                style={{ backgroundColor: participant.color }}
+              >
+                {participant.display_name}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

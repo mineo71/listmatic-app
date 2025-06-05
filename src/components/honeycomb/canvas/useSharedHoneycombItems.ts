@@ -417,20 +417,16 @@ export const useSharedHoneycombItems = (
 
     // If this is the main item, check if all others are completed
     if (item.isMain) {
-      const otherItems = items.filter((i) => !i.isMain)
-      const allOthersCompleted = otherItems.every((i) => i.completed)
+      // const otherItems = items.filter((i) => !i.isMain)
+      // const allOthersCompleted = otherItems.every((i) => i.completed)
 
-      if (!allOthersCompleted && !item.completed) {
-        toast.error(t("messages.completeOtherTasks"))
-        return false
-      }
+      // if (!allOthersCompleted && !item.completed) {
+      //   toast.error(t("messages.completeOtherTasks"))
+      //   return false
+      // }
     }
 
     const success = await updateItem(id, { completed: !item.completed })
-    
-    if (success && !item.completed) {
-      toast.success(t("messages.taskCompleted"))
-    }
     
     return success
   }

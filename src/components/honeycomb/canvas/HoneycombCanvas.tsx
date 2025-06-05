@@ -372,10 +372,6 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     
     // If no items exist and user clicks, create first hexagon at center
     if (items.length === 0 && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const clickX = (e.clientX - rect.left) / zoom - offset.x / zoom;
-      const clickY = (e.clientY - rect.top) / zoom - offset.y / zoom;
-      
       // Set ghost hex to center position
       setGhostHex({ q: 0, r: 0, parentId: 'center' });
       
@@ -384,15 +380,15 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
         createNewHexagon();
       }, 50);
     }
-  }, [isCreating, canEdit, items.length, zoom, offset, createNewHexagon]);
+  }, [isCreating, canEdit, items.length, createNewHexagon]);
 
-  // Ghost hexagon click handler
-  const handleGhostClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isEditModalOpen && canEdit) {
-      createNewHexagon();
-    }
-  }, [createNewHexagon, isEditModalOpen, canEdit]);
+  // Ghost hexagon click handler - removed since it's now inline
+  // const handleGhostClick = useCallback((e: React.MouseEvent) => {
+  //   e.stopPropagation();
+  //   if (!isEditModalOpen && canEdit) {
+  //     createNewHexagon();
+  //   }
+  // }, [createNewHexagon, isEditModalOpen, canEdit]);
 
   // Mark task as complete
   const handleMarkComplete = useCallback(async (id: string) => {
@@ -515,28 +511,6 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     lastZoomRef.current = zoom;
   }, [zoom]);
 
-  // Generate ghost hexagon when creating
-  const ghostHexagon = useMemo(() => {
-    if (isCreating && ghostHex && canEdit) {
-      const { x, y } = axialToPixel(ghostHex.q, ghostHex.r);
-      return (
-        <HoneycombHexagon
-          id="ghost"
-          x={x}
-          y={y}
-          isGhost
-          isCreating={isCreating}
-          connections={[]}
-          color="rgba(251, 146, 60, 0.8)"
-          onClick={handleGhostClick}
-          icon="Plus"
-          title=""
-        />
-      );
-    }
-    return null;
-  }, [isCreating, ghostHex, handleGhostClick, canEdit]);
-
   return (
     <div
       ref={containerRef}
@@ -566,21 +540,6 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
             <span className="text-sm text-gray-600">{t('actions.saving')}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Real-time indicator for shared mode */}
-      {isSharedMode && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm z-40">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Real-time sync active</span>
-            {participants.length > 0 && (
-              <span className="ml-2 bg-green-200 px-2 py-0.5 rounded text-xs">
-                {participants.length} online
-              </span>
-            )}
           </div>
         </div>
       )}
@@ -717,7 +676,57 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
           })}
 
           {/* Ghost hexagon for creation mode */}
-          {ghostHexagon}
+          {isCreating && ghostHex && canEdit && (
+            <HoneycombHexagon
+              id="ghost"
+              x={axialToPixel(ghostHex.q, ghostHex.r).x}
+              y={axialToPixel(ghostHex.q, ghostHex.r).y}
+              isGhost
+              isCreating={isCreating}
+              connections={[]}
+              color="rgba(251, 146, 60, 0.8)"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                if (!isEditModalOpen && canEdit) {
+                  createNewHexagon();
+                }
+              }}
+              icon="Plus"
+              title=""
+            />
+          )}
+
+          {/* FIXED: Participant cursors - now correctly positioned in canvas coordinates */}
+          {isSharedMode && showParticipantCursors && participants.map(participant => {
+            if (!participant.cursor_position || participant.id === participantId) return null;
+            
+            // Convert canvas position to screen position
+            const screenX = participant.cursor_position.x * zoom + offset.x;
+            const screenY = participant.cursor_position.y * zoom + offset.y;
+            
+            return (
+              <div
+                key={participant.id}
+                className="absolute pointer-events-none z-50 transition-all duration-200"
+                style={{
+                  left: screenX,
+                  top: screenY,
+                  transform: 'translate(-2px, -2px)',
+                }}
+              >
+                <div 
+                  className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
+                  style={{ backgroundColor: participant.color }}
+                />
+                <div 
+                  className="mt-1 px-2 py-1 rounded text-xs text-white shadow-lg whitespace-nowrap"
+                  style={{ backgroundColor: participant.color }}
+                >
+                  {participant.display_name}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -790,34 +799,6 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
           onGenerate={handleGeminiGenerate}
         />
       )}
-
-      {/* Participant cursors for shared mode - NOW CONTROLLABLE */}
-      {isSharedMode && showParticipantCursors && participants.map(participant => {
-        if (!participant.cursor_position || participant.id === participantId) return null;
-        
-        return (
-          <div
-            key={participant.id}
-            className="absolute pointer-events-none z-30 transition-all duration-200"
-            style={{
-              left: participant.cursor_position.x,
-              top: participant.cursor_position.y,
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            <div 
-              className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
-              style={{ backgroundColor: participant.color }}
-            />
-            <div 
-              className="mt-1 px-2 py-1 rounded text-xs text-white shadow-lg whitespace-nowrap"
-              style={{ backgroundColor: participant.color }}
-            >
-              {participant.display_name}
-            </div>
-          </div>
-        );
-      })}
 
       {/* CSS for animations */}
       <style>{`

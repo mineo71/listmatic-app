@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/shared/Sidebar.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { Hive } from '@/types';
 import { useNavigate } from 'react-router-dom';
+import { RenameModal } from './RenameModal';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -61,6 +61,19 @@ export const Sidebar = ({
     x: number;
     y: number;
   } | null>(null);
+  
+  // NEW: Rename modal state
+  const [renameModal, setRenameModal] = useState<{
+    isOpen: boolean;
+    id: string;
+    currentName: string;
+    type: 'hive' | 'honeycomb';
+  }>({
+    isOpen: false,
+    id: '',
+    currentName: '',
+    type: 'hive'
+  });
 
   const toggleHive = (hiveId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -87,6 +100,50 @@ export const Sidebar = ({
   const handleSelect = (id: string, type: 'hive' | 'honeycomb' | 'settings') => {
     onSelectItem(id, type);
     if (window.innerWidth < 640) onToggleSidebar();
+  };
+
+  // NEW: Handle rename click from context menu
+  const handleRenameClick = (id: string, type: 'hive' | 'honeycomb') => {
+    // Find the current name
+    let currentName = '';
+    if (type === 'hive') {
+      const hive = hives.find(h => h.id === id);
+      currentName = hive?.name || '';
+    } else {
+      // Find honeycomb in any hive
+      for (const hive of hives) {
+        const honeycomb = hive.honeycombs.find(hc => hc.id === id);
+        if (honeycomb) {
+          currentName = honeycomb.name;
+          break;
+        }
+      }
+    }
+
+    setRenameModal({
+      isOpen: true,
+      id,
+      currentName,
+      type
+    });
+    setContextMenu(null);
+  };
+
+  // NEW: Handle rename submission
+  const handleRenameSubmit = async (newName: string) => {
+    if (renameModal.id && newName.trim()) {
+      await onRenameItem(renameModal.id, newName.trim(), renameModal.type);
+    }
+  };
+
+  // NEW: Close rename modal
+  const closeRenameModal = () => {
+    setRenameModal({
+      isOpen: false,
+      id: '',
+      currentName: '',
+      type: 'hive'
+    });
   };
 
   return (
@@ -311,18 +368,12 @@ export const Sidebar = ({
                   style={{
                     top: contextMenu.y,
                     left: Math.min(contextMenu.x, window.innerWidth - 128),
-                    width: 128
+                    width: 142
                   }}
               >
                 <button
                     className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => {
-                      const newName = prompt(t('prompts.enterNewName'));
-                      if (newName?.trim()) {
-                        onRenameItem(contextMenu.id, newName.trim(), contextMenu.type);
-                      }
-                      setContextMenu(null);
-                    }}
+                    onClick={() => handleRenameClick(contextMenu.id, contextMenu.type)}
                 >
                   {t('actions.rename')}
                 </button>
@@ -341,6 +392,15 @@ export const Sidebar = ({
               </div>
             </>
         )}
+
+        {/* NEW: Rename Modal */}
+        <RenameModal
+          isOpen={renameModal.isOpen}
+          onClose={closeRenameModal}
+          onSubmit={handleRenameSubmit}
+          currentName={renameModal.currentName}
+          type={renameModal.type}
+        />
       </>
   );
 };

@@ -42,7 +42,7 @@ export const HexagonTitle = ({ width, height, title, isCompleted, icon }: Hexago
             ${isCompleted ? 'line-through opacity-80' : ''}`}
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
         >
-          {truncateText(title, IconComponent ? 10 : 12)}
+          {truncateText(title, IconComponent ? 9 : 11)}
         </text>
       )}
 

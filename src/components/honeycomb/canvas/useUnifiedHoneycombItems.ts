@@ -1,6 +1,6 @@
+// src/components/honeycomb/canvas/useUnifiedHoneycombItems.ts
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/components/honeycomb/canvas/useUnifiedHoneycombItems.ts
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
@@ -189,6 +189,9 @@ export const useUnifiedHoneycombItems = (
   const channelRef = useRef<any>(null)
   const isSubscribedRef = useRef(false)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // NEW: Track local operations to prevent duplicate toasts
+  const localOperationsRef = useRef<Set<string>>(new Set())
 
   // Load items from database
   const loadItems = useCallback(async () => {
@@ -331,6 +334,13 @@ export const useUnifiedHoneycombItems = (
           try {
             if (payload.eventType === 'INSERT' && payload.new) {
               const newItem = transformDBToCanvas(payload.new as any)
+              
+              // Check if this was a local operation
+              if (localOperationsRef.current.has(newItem.id)) {
+                localOperationsRef.current.delete(newItem.id)
+                return // Skip real-time update for local operations
+              }
+              
               setItems(prev => {
                 const exists = prev.some(item => item.id === newItem.id)
                 if (exists) return prev
@@ -338,10 +348,23 @@ export const useUnifiedHoneycombItems = (
               })
             } else if (payload.eventType === 'UPDATE' && payload.new) {
               const updatedItem = transformDBToCanvas(payload.new as any)
+              
+              // Check if this was a local operation
+              if (localOperationsRef.current.has(updatedItem.id)) {
+                localOperationsRef.current.delete(updatedItem.id)
+                return // Skip real-time update for local operations
+              }
+              
               setItems(prev => 
                 prev.map(item => item.id === updatedItem.id ? updatedItem : item)
               )
             } else if (payload.eventType === 'DELETE' && payload.old) {
+              // Check if this was a local operation
+              if (localOperationsRef.current.has(payload.old.id)) {
+                localOperationsRef.current.delete(payload.old.id)
+                return // Skip real-time update for local operations
+              }
+              
               setItems(prev => 
                 prev.filter(item => item.id !== payload.old.id)
               )
@@ -443,6 +466,9 @@ export const useUnifiedHoneycombItems = (
       if (data) {
         const transformedItem = transformDBToCanvas(data)
         
+        // Mark as local operation to prevent duplicate real-time update
+        localOperationsRef.current.add(transformedItem.id)
+        
         // Log sharing change if in shared mode
         if (isSharedMode && sessionId && participantId) {
           await logSharingChange(
@@ -474,6 +500,9 @@ export const useUnifiedHoneycombItems = (
 
     setSaving(true)
     try {
+      // Mark as local operation to prevent duplicate real-time update
+      localOperationsRef.current.add(id)
+      
       const dbUpdates: Partial<Omit<HoneycombItemDB, 'id' | 'honeycombId' | 'createdAt' | 'updatedAt'>> = {}
       
       // Validate each update field
@@ -497,6 +526,8 @@ export const useUnifiedHoneycombItems = (
       if (error) {
         console.error('Error updating item:', error)
         toast.error(t('messages.updateError'))
+        // Remove from local operations since it failed
+        localOperationsRef.current.delete(id)
         return false
       }
 
@@ -517,6 +548,8 @@ export const useUnifiedHoneycombItems = (
     } catch (error) {
       console.error('Error updating item:', error)
       toast.error(t('messages.updateError'))
+      // Remove from local operations since it failed
+      localOperationsRef.current.delete(id)
     } finally {
       setSaving(false)
     }
@@ -532,11 +565,16 @@ export const useUnifiedHoneycombItems = (
 
     setSaving(true)
     try {
+      // Mark as local operation to prevent duplicate real-time update
+      localOperationsRef.current.add(id)
+      
       const { error } = await deleteHoneycombItem(id)
       
       if (error) {
         console.error('Error deleting item:', error)
         toast.error(t('messages.deleteError'))
+        // Remove from local operations since it failed
+        localOperationsRef.current.delete(id)
         return false
       }
 
@@ -555,6 +593,8 @@ export const useUnifiedHoneycombItems = (
     } catch (error) {
       console.error('Error deleting item:', error)
       toast.error(t('messages.deleteError'))
+      // Remove from local operations since it failed
+      localOperationsRef.current.delete(id)
     } finally {
       setSaving(false)
     }
@@ -594,6 +634,9 @@ export const useUnifiedHoneycombItems = (
       }
 
       if (data) {
+        // Mark all items as local operations to prevent duplicate real-time updates
+        data.forEach(item => localOperationsRef.current.add(item.id))
+        
         // Log sharing change if in shared mode
         if (isSharedMode && sessionId && participantId) {
           await logSharingChange(
@@ -621,7 +664,7 @@ export const useUnifiedHoneycombItems = (
     return await updateItem(id, { connections: validateConnections(connections) })
   }
 
-  // Mark item as complete/incomplete
+  // Mark item as complete/incomplete - FIXED to prevent duplicate toasts
   const toggleItemCompletion = async (id: string) => {
     if (!canEdit) {
       toast.error(t('sharing.noEditingAllowed'))
@@ -643,6 +686,7 @@ export const useUnifiedHoneycombItems = (
 
     const success = await updateItem(id, { completed: !item.completed })
     
+    // Show success toast only for local operations
     if (success && !item.completed) {
       toast.success(t("messages.taskCompleted"))
     }

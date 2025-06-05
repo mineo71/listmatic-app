@@ -394,13 +394,29 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
   }, [isCreating, canEdit, items.length, createNewHexagon]);
 
   // Mark task as complete
-  const handleMarkComplete = useCallback(async (id: string) => {
+  const handleMarkComplete = useCallback(async (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (!canEdit) {
       toast.error(t('sharing.noEditingAllowed'));
       return;
     }
-    await toggleItemCompletion(id)
-  }, [toggleItemCompletion, canEdit, t]);
+    
+    // Prevent multiple rapid clicks
+    if (saving) {
+      return;
+    }
+    
+    try {
+      await toggleItemCompletion(id);
+    } catch (error) {
+      console.error('Error completing task:', error);
+      toast.error(t('messages.updateError'));
+    }
+  }, [toggleItemCompletion, canEdit, saving, t]);
 
   // Edit modal handlers
   const handleModalClose = useCallback(() => {
@@ -648,7 +664,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
                       };
                     })}
                   onClick={() => !isCreating && handleItemSelection(item.id)}
-                  onMarkComplete={() => !isCreating && handleMarkComplete(item.id)}
+                  onMarkComplete={(e) => !isCreating && handleMarkComplete(item.id, e)}
                   onEdit={() => !isCreating && handleSidebarEditClick(item.id)}
                 />
                 

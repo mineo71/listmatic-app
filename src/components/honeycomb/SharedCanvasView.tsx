@@ -284,27 +284,54 @@ export const SharedCanvasView = () => {
       const participant = participants.find(p => p.id === change.participant_id);
       const participantName = participant?.display_name || 'Someone';
       
+      // Get more specific information about the change
+      const changeData = change.changes || {};
+      
       switch (change.change_type) {
         case 'create':
           if (change.item_id === 'bulk') {
             toast.success(`${participantName} generated new honeycomb structure`, {
-              icon: '✨'
+              icon: '✨',
+              duration: 3000
             });
           } else {
             toast.success(`${participantName} added a new hexagon`, {
-              icon: '➕'
+              icon: '➕',
+              duration: 3000
             });
           }
           break;
         case 'update':
-          toast.success(`${participantName} updated a hexagon`, {
-            icon: '✏️'
-          });
+          // Check if it was a completion toggle
+          if (changeData.updates && typeof changeData.updates.completed === 'boolean') {
+            if (changeData.updates.completed) {
+              toast.success(`${participantName} completed a task`, {
+                icon: '✅',
+                duration: 3000
+              });
+            } else {
+              toast.success(`${participantName} uncompleted a task`, {
+                icon: '↩️',
+                duration: 3000
+              });
+            }
+          } else {
+            // General update (title, description, etc.)
+            toast.success(`${participantName} updated a hexagon`, {
+              icon: '✏️',
+              duration: 3000
+            });
+          }
           break;
         case 'delete':
           toast.success(`${participantName} removed a hexagon`, {
-            icon: '🗑️'
+            icon: '🗑️',
+            duration: 3000
           });
+          break;
+        default:
+          // Fallback for unknown change types
+          console.log('Unknown change type:', change.change_type);
           break;
       }
     }

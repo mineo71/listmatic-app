@@ -4,13 +4,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Copy, Users, Plus, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { Copy, Users, AlertCircle, RotateCcw, ZoomIn, ZoomOut, List } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { HoneycombCanvas } from './canvas/HoneycombCanvas';
 import { 
   getSessionByCode, 
-  joinSharingSession, 
-  cloneHoneycombForUser,
+  joinSharingSession,
   updateParticipantStatus,
   getSessionParticipants,
   cleanupOfflineParticipants
@@ -39,8 +38,6 @@ export const SharedCanvasView = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [showParticipants, setShowParticipants] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
-  const [isCloning, setIsCloning] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'reconnecting'>('disconnected');
   
   // Canvas state
   const [zoom, setZoom] = useState(1);
@@ -54,6 +51,7 @@ export const SharedCanvasView = () => {
   const currentParticipantRef = useRef<string | null>(null);
   const mousePositionRef = useRef({ x: 0, y: 0 });
   const cursorUpdateThrottleRef = useRef<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Load session data
   useEffect(() => {
@@ -94,8 +92,6 @@ export const SharedCanvasView = () => {
       updateParticipantStatus(currentParticipantRef.current, false);
       currentParticipantRef.current = null;
     }
-
-    setConnectionStatus('disconnected');
   };
 
   const loadSession = async () => {
@@ -171,7 +167,6 @@ export const SharedCanvasView = () => {
         }
       }, 15000); // Every 15 seconds
 
-      setConnectionStatus('connected');
     } catch (error) {
       console.error('Error loading session:', error);
       toast.error(t('sharing.errorLoadingSession'));
@@ -242,14 +237,6 @@ export const SharedCanvasView = () => {
         )
         .subscribe((status, err) => {
           console.log('Sharing subscription status:', status, err);
-          
-          if (status === 'SUBSCRIBED') {
-            setConnectionStatus('connected');
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED' || status === 'SUBSCRIBING') {
-            setConnectionStatus('disconnected');
-          } else {
-            console.error('Subscription error:', status, err);
-          }
         });
 
       // Store cleanup function
@@ -260,7 +247,6 @@ export const SharedCanvasView = () => {
       
     } catch (error) {
       console.error('Error setting up real-time subscriptions:', error);
-      setConnectionStatus('disconnected');
       
       // Retry after delay
       setTimeout(() => {
@@ -327,7 +313,14 @@ export const SharedCanvasView = () => {
 
   // Handle mouse movement for cursor tracking
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    mousePositionRef.current = { x: e.clientX, y: e.clientY };
+    if (!containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    // Calculate canvas-relative position accounting for zoom and offset
+    const canvasX = (e.clientX - rect.left - offset.x) / zoom;
+    const canvasY = (e.clientY - rect.top - offset.y) / zoom;
+    
+    mousePositionRef.current = { x: canvasX, y: canvasY };
     
     // Throttle cursor position updates
     if (cursorUpdateThrottleRef.current) {
@@ -344,7 +337,7 @@ export const SharedCanvasView = () => {
         );
       }
     }, 200); // Update cursor every 200ms when moving
-  }, [selectedItemId]);
+  }, [selectedItemId, zoom, offset]);
 
   // Setup mouse tracking
   useEffect(() => {
@@ -366,30 +359,6 @@ export const SharedCanvasView = () => {
     }
   }, [selectedItemId]);
 
-  const handleAddToFiles = async () => {
-    if (!session || !user) {
-      toast.error(t('sharing.mustBeLoggedIn'));
-      return;
-    }
-
-    setIsCloning(true);
-    try {
-      const { data: newHoneycombId, error } = await cloneHoneycombForUser(session.id);
-      
-      if (error) {
-        throw error;
-      }
-
-      toast.success(t('sharing.addedToFiles'));
-      navigate(`/honeycomb/${newHoneycombId}`);
-    } catch (error) {
-      console.error('Error cloning honeycomb:', error);
-      toast.error(t('sharing.errorAddingToFiles'));
-    } finally {
-      setIsCloning(false);
-    }
-  };
-
   const copyShareLink = () => {
     const shareLink = `${window.location.origin}/share/${shareCode}`;
     navigator.clipboard.writeText(shareLink)
@@ -405,6 +374,30 @@ export const SharedCanvasView = () => {
   const handleItemSelection = useCallback((itemId: string | null) => {
     setSelectedItemId(itemId);
   }, []);
+
+  // Canvas control handlers
+  const handleReset = useCallback(() => {
+    if (!containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    setZoom(1);
+    setOffset({
+      x: rect.width / 2,
+      y: rect.height / 2
+    });
+  }, []);
+
+  const handleZoomIn = useCallback(() => {
+    setZoom(z => Math.min(z + 0.1, 3));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom(z => Math.max(z - 0.1, 0.5));
+  }, []);
+
+  const toggleTaskSidebar = useCallback(() => {
+    setIsTaskSidebarOpen(!isTaskSidebarOpen);
+  }, [isTaskSidebarOpen]);
 
   if (loading) {
     return (
@@ -422,7 +415,7 @@ export const SharedCanvasView = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50" ref={containerRef}>
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -435,36 +428,45 @@ export const SharedCanvasView = () => {
                 <AlertCircle size={16} />
                 <span>{t('sharing.sharedView')}</span>
               </div>
-              
-              {/* Connection Status */}
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                connectionStatus === 'connected' 
-                  ? 'bg-green-100 text-green-800' 
-                  : connectionStatus === 'reconnecting'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {connectionStatus === 'connected' ? (
-                  <>
-                    <Wifi size={16} />
-                    <span>Live</span>
-                  </>
-                ) : connectionStatus === 'reconnecting' ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
-                    <span>Connecting...</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff size={16} />
-                    <span>Offline</span>
-                  </>
-                )}
-              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Canvas Controls */}
+            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={handleReset}
+                className="p-2 text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition-all"
+                title={t('actions.resetView')}
+              >
+                <RotateCcw size={16} />
+              </button>
+              <button
+                onClick={handleZoomOut}
+                className="p-2 text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition-all"
+                title={t('actions.zoomOut')}
+              >
+                <ZoomOut size={16} />
+              </button>
+              <span className="text-xs text-gray-600 px-2 min-w-[45px] text-center">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                onClick={handleZoomIn}
+                className="p-2 text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition-all"
+                title={t('actions.zoomIn')}
+              >
+                <ZoomIn size={16} />
+              </button>
+              <button
+                onClick={toggleTaskSidebar}
+                className="p-2 text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition-all"
+                title={isTaskSidebarOpen ? t('actions.closeSidebar') : t('actions.openSidebar')}
+              >
+                <List size={16} />
+              </button>
+            </div>
+
             {/* Participants */}
             <div className="relative">
               <button
@@ -519,22 +521,6 @@ export const SharedCanvasView = () => {
               <Copy size={16} />
               <span className="text-sm">{t('sharing.copyLink')}</span>
             </button>
-
-            {/* Add to Files */}
-            {user && (
-              <button
-                onClick={handleAddToFiles}
-                disabled={isCloning}
-                className="flex items-center gap-2 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md transition-colors disabled:opacity-50"
-              >
-                {isCloning ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Plus size={16} />
-                )}
-                <span className="text-sm">{t('sharing.addToFiles')}</span>
-              </button>
-            )}
           </div>
         </div>
 
@@ -567,21 +553,9 @@ export const SharedCanvasView = () => {
           participantId={participantId}
           participants={participants.filter(p => p.is_online)}
           onItemSelection={handleItemSelection}
-          showParticipantCursors={true} // Always show cursors in shared view (guests can't control this)
+          showParticipantCursors={true}
         />
       </div>
-
-      {/* Limitations Notice */}
-      {!canEdit && (
-        <div className="absolute bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
-          <h3 className="text-sm font-medium text-gray-900 mb-2">{t('sharing.viewOnlyNotice')}</h3>
-          <ul className="text-xs text-gray-600 space-y-1">
-            <li>• {t('sharing.noEditingAllowed')}</li>
-            <li>• {t('sharing.noAIGeneration')}</li>
-            <li>• {t('sharing.noSharingAllowed')}</li>
-          </ul>
-        </div>
-      )}
     </div>
   );
 };

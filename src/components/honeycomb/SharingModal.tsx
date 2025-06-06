@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/honeycomb/SharingModal.tsx
 import { useState, useEffect } from 'react'
-import { Copy, Users, ChevronDown, Eye, Edit, X, EyeOff, Crown, Clock } from 'lucide-react'
+import { Copy, Users, ChevronDown, Eye, Edit, X, Crown, Clock } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import QRCode from 'qrcode'
@@ -11,8 +11,7 @@ import {
   getActiveSession, 
   updateSessionPermissions, 
   endSharingSession,
-  getSessionParticipants,
-  updateParticipantPermissions
+  getSessionParticipants
 } from '@/services/sharing'
 
 interface SharingModalProps {
@@ -45,8 +44,8 @@ export default function SharingModal({
     onClose, 
     honeycombId, 
     honeycombName,
-    isHost = true, // NEW: Default to host
-    onToggleCursors, // NEW: Cursor toggle callback
+    // isHost = true,
+    // onToggleCursors,
 }: SharingModalProps) {
     const { t } = useTranslation();
     const [shareUrl, setShareUrl] = useState('');
@@ -58,7 +57,7 @@ export default function SharingModal({
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [activeTab, setActiveTab] = useState<TabType>('share'); // NEW: Tab state
-    const [showCursors, setShowCursors] = useState(true); // NEW: Cursor visibility state
+    // const [showCursor , setShowCursors] = useState(true);
     const [participantsLoading, setParticipantsLoading] = useState(false); // NEW: Participants loading state
 
     useEffect(() => {
@@ -67,9 +66,9 @@ export default function SharingModal({
         }
     }, [isOpen, honeycombId]);
 
-    // NEW: Load participants when switching to participants tab
+    // Load participants immediately when modal opens and refresh periodically
     useEffect(() => {
-        if (isOpen && activeTab === 'participants' && sessionId) {
+        if (isOpen && sessionId) {
             loadParticipants();
             
             // Set up interval to refresh participants every 5 seconds
@@ -79,7 +78,7 @@ export default function SharingModal({
             
             return () => clearInterval(interval);
         }
-    }, [isOpen, activeTab, sessionId]);
+    }, [isOpen, sessionId]);
 
     const loadOrCreateSession = async () => {
         setLoading(true);
@@ -193,27 +192,6 @@ export default function SharingModal({
         }
     };
 
-    // NEW: Handle participant permission change
-    const handleParticipantPermissionChange = async (participantId: string, newPermission: 'view' | 'edit' | 'comment') => {
-        try {
-            const { error } = await updateParticipantPermissions(participantId, newPermission);
-            
-            if (error) {
-                throw error;
-            }
-            
-            // Update local state
-            setParticipants(prev => prev.map(p => 
-                p.id === participantId ? { ...p, permissions: newPermission } : p
-            ));
-            
-            toast.success(t('sharing.participantPermissionsUpdated'));
-        } catch (error) {
-            console.error('Error updating participant permissions:', error);
-            toast.error(t('sharing.errorUpdatingParticipantPermissions'));
-        }
-    };
-
     const handleEndSession = async () => {
         if (!sessionId) return;
         
@@ -237,14 +215,6 @@ export default function SharingModal({
         }
     };
 
-    // NEW: Handle cursor visibility toggle
-    const handleToggleCursors = () => {
-        const newShowCursors = !showCursors;
-        setShowCursors(newShowCursors);
-        onToggleCursors?.(newShowCursors);
-        toast.success(newShowCursors ? t('sharing.cursorsShown') : t('sharing.cursorsHidden'));
-    };
-
     // NEW: Format time ago helper
     const formatTimeAgo = (date: Date) => {
         const now = new Date();
@@ -264,7 +234,7 @@ export default function SharingModal({
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
                 {/* Header with Tabs */}
                 <div className="px-6 py-4 border-b border-gray-200">
                     <div className="flex items-center justify-between mb-4">
@@ -307,8 +277,8 @@ export default function SharingModal({
                     </div>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6">
+                {/* Content - FIXED: Removed overflow-hidden and added proper overflow handling */}
+                <div className={`flex-1 p-6 ${activeTab === 'participants' ? 'overflow-y-auto' : ''}`}>
                     {loading ? (
                         <div className="flex items-center justify-center py-8">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
@@ -350,7 +320,7 @@ export default function SharingModal({
                                             </button>
                                         </div>
 
-                                        {/* Permissions Dropdown */}
+                                        {/* FIXED: Permissions Dropdown with proper overflow handling */}
                                         <div className="relative">
                                             <button
                                                 onClick={() => setShowPermissionDropdown(!showPermissionDropdown)}
@@ -366,34 +336,42 @@ export default function SharingModal({
                                             </button>
 
                                             {showPermissionDropdown && (
-                                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                                                    <button
-                                                        onClick={() => handlePermissionChange('view')}
-                                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 text-left"
-                                                    >
-                                                        <Eye size={16} className="text-gray-500" />
-                                                        <div className="flex-1">
-                                                            <p className="text-sm font-medium">{t('sharing.viewOnly')}</p>
-                                                            <p className="text-xs text-gray-500">{t('sharing.viewOnlyDesc')}</p>
-                                                        </div>
-                                                        {permissions === 'view' && (
-                                                            <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                                                        )}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handlePermissionChange('edit')}
-                                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 text-left"
-                                                    >
-                                                        <Edit size={16} className="text-gray-500" />
-                                                        <div className="flex-1">
-                                                            <p className="text-sm font-medium">{t('sharing.canEdit')}</p>
-                                                            <p className="text-xs text-gray-500">{t('sharing.canEditDesc')}</p>
-                                                        </div>
-                                                        {permissions === 'edit' && (
-                                                            <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                                                        )}
-                                                    </button>
-                                                </div>
+                                                <>
+                                                    {/* Backdrop to close dropdown */}
+                                                    <div 
+                                                        className="fixed inset-0 z-10" 
+                                                        onClick={() => setShowPermissionDropdown(false)}
+                                                    />
+                                                    {/* Dropdown with higher z-index and proper positioning */}
+                                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+                                                        <button
+                                                            onClick={() => handlePermissionChange('view')}
+                                                            className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 text-left"
+                                                        >
+                                                            <Eye size={16} className="text-gray-500" />
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-medium">{t('sharing.viewOnly')}</p>
+                                                                <p className="text-xs text-gray-500">{t('sharing.viewOnlyDesc')}</p>
+                                                            </div>
+                                                            {permissions === 'view' && (
+                                                                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handlePermissionChange('edit')}
+                                                            className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 text-left"
+                                                        >
+                                                            <Edit size={16} className="text-gray-500" />
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-medium">{t('sharing.canEdit')}</p>
+                                                                <p className="text-xs text-gray-500">{t('sharing.canEditDesc')}</p>
+                                                            </div>
+                                                            {permissions === 'edit' && (
+                                                                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                </>
                                             )}
                                         </div>
                                     </div>
@@ -403,35 +381,6 @@ export default function SharingModal({
                             {/* NEW: Participants Tab Content */}
                             {activeTab === 'participants' && (
                                 <div className="space-y-4">
-                                    {/* Host Controls */}
-                                    {isHost && (
-                                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                                            <h3 className="text-sm font-medium text-gray-900">{t('sharing.hostControls')}</h3>
-                                            
-                                            {/* Cursor visibility toggle */}
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    {showCursors ? <Eye size={16} /> : <EyeOff size={16} />}
-                                                    <span className="text-sm text-gray-700">
-                                                        {t('sharing.participantCursors')}
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    onClick={handleToggleCursors}
-                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                                        showCursors ? 'bg-amber-600' : 'bg-gray-300'
-                                                    }`}
-                                                >
-                                                    <span
-                                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                                            showCursors ? 'translate-x-6' : 'translate-x-1'
-                                                        }`}
-                                                    />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
                                     {/* Participants List */}
                                     <div>
                                         <div className="flex items-center justify-between mb-3">
@@ -450,74 +399,54 @@ export default function SharingModal({
                                                 <p className="text-xs text-gray-400 mt-1">{t('sharing.shareToInvite')}</p>
                                             </div>
                                         ) : (
-                                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                                            <div className="space-y-2 max-h-60 overflow-y-auto">
                                                 {participants.map(participant => (
                                                     <div 
                                                         key={participant.id} 
-                                                        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                                                        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                                                             participant.is_online 
                                                                 ? 'bg-green-50 border-green-200' 
                                                                 : 'bg-gray-50 border-gray-200 opacity-60'
                                                         }`}
                                                     >
-                                                        <div className="flex items-center gap-3">
-                                                            {/* Status indicator */}
-                                                            <div className="relative">
-                                                                <div 
-                                                                    className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
-                                                                    style={{ backgroundColor: participant.color }}
-                                                                >
-                                                                    <span className="text-xs font-medium text-white">
-                                                                        {participant.display_name.charAt(0).toUpperCase()}
-                                                                    </span>
-                                                                </div>
-                                                                <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                                                                    participant.is_online ? 'bg-green-500' : 'bg-gray-400'
-                                                                }`} />
+                                                        {/* Status indicator */}
+                                                        <div className="relative flex-shrink-0">
+                                                            <div 
+                                                                className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
+                                                                style={{ backgroundColor: participant.color }}
+                                                            >
+                                                                <span className="text-xs font-medium text-white">
+                                                                    {participant.display_name.charAt(0).toUpperCase()}
+                                                                </span>
                                                             </div>
-                                                            
-                                                            {/* Participant info */}
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-sm font-medium text-gray-900">
-                                                                        {participant.display_name}
-                                                                    </span>
-                                                                    {participant.user_id && (
-                                                                        <Crown size={12} className="text-amber-500" aria-label="Registered user" />
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex items-center gap-3 text-xs text-gray-500">
-                                                                    <span className={`capitalize ${
-                                                                        participant.permissions === 'edit' ? 'text-amber-600' : 
-                                                                        participant.permissions === 'view' ? 'text-blue-600' : 'text-gray-600'
-                                                                    }`}>
-                                                                        {participant.permissions}
-                                                                    </span>
-                                                                    <span className="flex items-center gap-1">
-                                                                        <Clock size={10} />
-                                                                        {participant.is_online ? 'Online' : formatTimeAgo(participant.last_seen_at)}
-                                                                    </span>
-                                                                </div>
+                                                            <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                                                                participant.is_online ? 'bg-green-500' : 'bg-gray-400'
+                                                            }`} />
+                                                        </div>
+                                                        
+                                                        {/* Participant info */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-medium text-gray-900 truncate">
+                                                                    {participant.display_name}
+                                                                </span>
+                                                                {participant.user_id && (
+                                                                    <Crown size={12} className="text-amber-500 flex-shrink-0" aria-label="Registered user" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                                                                <span className={`capitalize ${
+                                                                    participant.permissions === 'edit' ? 'text-amber-600' : 
+                                                                    participant.permissions === 'view' ? 'text-blue-600' : 'text-gray-600'
+                                                                }`}>
+                                                                    {participant.permissions}
+                                                                </span>
+                                                                <span className="flex items-center gap-1">
+                                                                    <Clock size={10} />
+                                                                    {participant.is_online ? 'Online' : formatTimeAgo(participant.last_seen_at)}
+                                                                </span>
                                                             </div>
                                                         </div>
-
-                                                        {/* Permissions dropdown for host */}
-                                                        {isHost && participant.is_online && (
-                                                            <div className="relative">
-                                                                <select
-                                                                    value={participant.permissions}
-                                                                    onChange={(e) => handleParticipantPermissionChange(
-                                                                        participant.id, 
-                                                                        e.target.value as 'view' | 'edit' | 'comment'
-                                                                    )}
-                                                                    className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                                                                >
-                                                                    <option value="view">{t('sharing.viewOnly')}</option>
-                                                                    <option value="edit">{t('sharing.canEdit')}</option>
-                                                                    <option value="comment">{t('sharing.canComment')}</option>
-                                                                </select>
-                                                            </div>
-                                                        )}
                                                     </div>
                                                 ))}
                                             </div>

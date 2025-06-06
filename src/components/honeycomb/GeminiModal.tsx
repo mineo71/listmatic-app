@@ -405,7 +405,7 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
 
       <div className="fixed inset-0 flex items-center justify-center z-[101] p-2 sm:p-4">
         <div
-          className="bg-white rounded-lg w-full max-w-4xl h-[75vh] sm:h-[55vh] relative shadow-xl flex flex-col sm:flex-row overflow-hidden"
+          className="bg-white rounded-lg w-full max-w-4xl h-[80vh] sm:h-[60vh] relative shadow-xl flex flex-col sm:flex-row overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
           {/* History Sidebar - Hidden on mobile, shows on desktop */}

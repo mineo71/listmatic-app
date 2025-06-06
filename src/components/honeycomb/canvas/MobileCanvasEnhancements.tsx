@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps */
 // src/components/honeycomb/canvas/MobileCanvasEnhancements.tsx
 // This file contains mobile-specific enhancements for the HoneycombCanvas
 
@@ -165,7 +165,7 @@ export const useMobileCanvasEnhancements = ({
   }, [limitOffsetToBounds, setOffset, zoomAtPoint, updateCursorPosition]);
 
   // Enhanced touch end handler
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback(() => {
     const touchDuration = Date.now() - touchStartTimeRef.current;
     
     // Handle tap gestures

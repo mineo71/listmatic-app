@@ -263,10 +263,10 @@ export default function SharingModal({
     return (
         <>
             {/* Backdrop */}
-            <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose} />
+            <div className="fixed inset-0 bg-black/50 z-[100] !important" onClick={onClose} />
             
             {/* Modal Container */}
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+            <div className="fixed inset-0 z-[100] !important flex items-center justify-center p-2 sm:p-4">
                 {/* Modal Content */}
                 <div className={`bg-white rounded-lg w-full max-h-[95vh] flex flex-col shadow-xl ${
                     isMobile ? 'max-w-full h-full' : 'max-w-2xl'

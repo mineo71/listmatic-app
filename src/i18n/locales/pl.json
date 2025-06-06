@@ -291,7 +291,18 @@
       "youCanEdit": "Masz uprawnienia do edycji",
       "viewOnlyMode": "Tryb tylko do odczytu",
       "noEditingAllowed": "Nie masz uprawnień do edycji",
-      "noAIGeneration": "Generowanie AI nie jest dostępne w widoku udostępnionym"
+      "noAIGeneration": "Generowanie AI nie jest dostępne w widoku udostępnionym",
+      "endSessionTitle": "Zakończ Sesję Udostępniania",
+      "endSessionWarning": "Czy na pewno chcesz zakończyć tę sesję udostępniania? Tej akcji nie można cofnąć.",
+      "activeParticipantsWarning_one": "{{count}} uczestnik jest obecnie aktywny",
+      "activeParticipantsWarning_other": "{{count}} uczestników jest obecnie aktywnych",
+      "participantsWillLoseAccess": "Natychmiast utracą dostęp do udostępnionego płótna.",
+      "whatHappensNext": "Co się stanie dalej:",
+      "shareLinkWillBeInvalidated": "Link udostępniania zostanie unieważniony",
+      "participantsWillBeDisconnected": "Wszyscy uczestnicy zostaną rozłączeni",
+      "newSessionCanBeCreated": "Możesz utworzyć nową sesję w dowolnym momencie",
+      "dataWillRemainSafe": "Twoje dane plastra miodu pozostaną bezpieczne",
+      "endingSession": "Kończenie Sesji..."
     },
     "notifications": {
       "linkCopied": "Link skopiowany!",

@@ -291,7 +291,18 @@
       "youCanEdit": "Du hast Bearbeitungsrechte",
       "viewOnlyMode": "Nur-Lesen-Modus",
       "noEditingAllowed": "Du hast keine Berechtigung zum Bearbeiten",
-      "noAIGeneration": "KI-Generierung ist in der geteilten Ansicht nicht verfügbar"
+      "noAIGeneration": "KI-Generierung ist in der geteilten Ansicht nicht verfügbar",
+      "endSessionTitle": "Freigabe-Sitzung Beenden",
+      "endSessionWarning": "Sind Sie sicher, dass Sie diese Freigabe-Sitzung beenden möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "activeParticipantsWarning_one": "{{count}} Teilnehmer ist derzeit aktiv",
+      "activeParticipantsWarning_other": "{{count}} Teilnehmer sind derzeit aktiv",
+      "participantsWillLoseAccess": "Sie verlieren sofort den Zugang zur geteilten Leinwand.",
+      "whatHappensNext": "Was als nächstes passiert:",
+      "shareLinkWillBeInvalidated": "Der Freigabe-Link wird ungültig",
+      "participantsWillBeDisconnected": "Alle Teilnehmer werden getrennt",
+      "newSessionCanBeCreated": "Sie können jederzeit eine neue Sitzung erstellen",
+      "dataWillRemainSafe": "Ihre Waben-Daten bleiben sicher",
+      "endingSession": "Sitzung wird beendet..."
     },
     "notifications": {
       "linkCopied": "Link kopiert!",

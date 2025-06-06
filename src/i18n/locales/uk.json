@@ -291,7 +291,18 @@
     "youCanEdit": "У вас є дозволи на редагування",
     "viewOnlyMode": "Режим тільки для перегляду",
     "noEditingAllowed": "У вас немає дозволу на редагування",
-    "noAIGeneration": "Генерація ШІ недоступна в спільному перегляді"
+    "noAIGeneration": "Генерація ШІ недоступна в спільному перегляді",
+    "endSessionTitle": "Завершити Сеанс Спільного Доступу",
+    "endSessionWarning": "Ви впевнені, що хочете завершити цей сеанс спільного доступу? Цю дію неможливо скасувати.",
+    "activeParticipantsWarning_one": "{{count}} учасник зараз активний",
+    "activeParticipantsWarning_other": "{{count}} учасників зараз активні",
+    "participantsWillLoseAccess": "Вони негайно втратять доступ до спільного полотна.",
+    "whatHappensNext": "Що станеться далі:",
+    "shareLinkWillBeInvalidated": "Посилання для спільного доступу буде анульовано",
+    "participantsWillBeDisconnected": "Всіх учасників буде від'єднано",
+    "newSessionCanBeCreated": "Ви можете створити новий сеанс будь-коли",
+    "dataWillRemainSafe": "Ваші дані стільників залишаться в безпеці",
+    "endingSession": "Завершення Сеансу..."
   },
   "notifications": {
     "linkCopied": "Посилання скопійовано!",

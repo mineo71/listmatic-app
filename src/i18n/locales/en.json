@@ -291,7 +291,18 @@
     "youCanEdit": "You have editing permissions",
     "viewOnlyMode": "View-only mode",
     "noEditingAllowed": "You don't have permission to edit",
-    "noAIGeneration": "AI generation is not available in shared view"
+    "noAIGeneration": "AI generation is not available in shared view",
+    "endSessionTitle": "End Sharing Session",
+    "endSessionWarning": "Are you sure you want to end this sharing session? This action cannot be undone.",
+    "activeParticipantsWarning_one": "{{count}} participant is currently active",
+    "activeParticipantsWarning_other": "{{count}} participants are currently active",
+    "participantsWillLoseAccess": "They will lose access to the shared canvas immediately.",
+    "whatHappensNext": "What happens next:",
+    "shareLinkWillBeInvalidated": "The share link will be invalidated",
+    "participantsWillBeDisconnected": "All participants will be disconnected",
+    "newSessionCanBeCreated": "You can create a new session anytime",
+    "dataWillRemainSafe": "Your honeycomb data will remain safe",
+    "endingSession": "Ending Session..."
   },
   "notifications": {
     "linkCopied": "Link copied!",

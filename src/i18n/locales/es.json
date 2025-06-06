@@ -291,7 +291,18 @@
       "youCanEdit": "Tienes permisos de edición",
       "viewOnlyMode": "Modo solo lectura",
       "noEditingAllowed": "No tienes permiso para editar",
-      "noAIGeneration": "La generación con IA no está disponible en vista compartida"
+      "noAIGeneration": "La generación con IA no está disponible en vista compartida",
+      "endSessionTitle": "Finalizar Sesión Compartida",
+      "endSessionWarning": "¿Estás seguro de que quieres finalizar esta sesión compartida? Esta acción no se puede deshacer.",
+      "activeParticipantsWarning_one": "{{count}} participante está actualmente activo",
+      "activeParticipantsWarning_other": "{{count}} participantes están actualmente activos",
+      "participantsWillLoseAccess": "Perderán acceso al lienzo compartido inmediatamente.",
+      "whatHappensNext": "Qué sucederá a continuación:",
+      "shareLinkWillBeInvalidated": "El enlace compartido será invalidado",
+      "participantsWillBeDisconnected": "Todos los participantes serán desconectados",
+      "newSessionCanBeCreated": "Puedes crear una nueva sesión en cualquier momento",
+      "dataWillRemainSafe": "Tus datos del panal seguirán seguros",
+      "endingSession": "Finalizando Sesión..."
     },
     "notifications": {
       "linkCopied": "¡Enlace copiado!",

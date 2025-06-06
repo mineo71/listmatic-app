@@ -291,7 +291,18 @@
       "youCanEdit": "Hai permessi di modifica",
       "viewOnlyMode": "Modalità solo lettura",
       "noEditingAllowed": "Non hai il permesso di modificare",
-      "noAIGeneration": "La generazione IA non è disponibile nella vista condivisa"
+      "noAIGeneration": "La generazione IA non è disponibile nella vista condivisa",
+      "endSessionTitle": "Termina Sessione di Condivisione",
+      "endSessionWarning": "Sei sicuro di voler terminare questa sessione di condivisione? Questa azione non può essere annullata.",
+      "activeParticipantsWarning_one": "{{count}} partecipante è attualmente attivo",
+      "activeParticipantsWarning_other": "{{count}} partecipanti sono attualmente attivi",
+      "participantsWillLoseAccess": "Perderanno immediatamente l'accesso alla tela condivisa.",
+      "whatHappensNext": "Cosa succederà dopo:",
+      "shareLinkWillBeInvalidated": "Il link di condivisione sarà invalidato",
+      "participantsWillBeDisconnected": "Tutti i partecipanti saranno disconnessi",
+      "newSessionCanBeCreated": "Puoi creare una nuova sessione in qualsiasi momento",
+      "dataWillRemainSafe": "I tuoi dati dell'alveare rimarranno al sicuro",
+      "endingSession": "Terminando Sessione..."
     },
     "notifications": {
       "linkCopied": "Link copiato!",

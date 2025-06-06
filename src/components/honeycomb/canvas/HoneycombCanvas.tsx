@@ -567,7 +567,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
 
       {/* Control buttons */}
       {(!isSharedMode || canEdit) && (
-        <div className="absolute top-4 left-4 z-10 flex">
+        <div className="absolute top-4 left-4 flex" style={{ zIndex: 100 }}>
           <button
             onClick={() => setIsCreating(!isCreating)}
             className={`flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all ${

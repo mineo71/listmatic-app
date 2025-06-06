@@ -4,7 +4,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Copy, Users, AlertCircle, RotateCcw, ZoomIn, ZoomOut, List } from 'lucide-react';
+import { 
+  Copy, 
+  Users, 
+  AlertCircle, 
+  RotateCcw, 
+  ZoomIn, 
+  ZoomOut, 
+  List, 
+  ChevronDown,
+  Share,
+  Crown,
+  Wifi,
+  WifiOff
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { HoneycombCanvas } from './canvas/HoneycombCanvas';
 import { 
@@ -37,8 +50,12 @@ export const SharedCanvasView = () => {
   const [session, setSession] = useState<any>(null);
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [showParticipants, setShowParticipants] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
+  
+  // Mobile UI state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'reconnecting'>('connected');
   
   // Canvas state
   const [zoom, setZoom] = useState(1);
@@ -52,8 +69,6 @@ export const SharedCanvasView = () => {
   const currentParticipantRef = useRef<string | null>(null);
   const cursorUpdateThrottleRef = useRef<NodeJS.Timeout | null>(null);
   const currentCursorPosition = useRef({ x: 0, y: 0 });
-  
-  // NEW: Ref for canvas container to properly position cursors
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // Load session data
@@ -71,26 +86,44 @@ export const SharedCanvasView = () => {
     };
   }, [shareCode]);
 
+  // Handle escape key and prevent body scroll when mobile menu is open
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+        setShowParticipants(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
   const cleanup = () => {
-    // Clear real-time subscriptions
     if (cleanupRef.current) {
       cleanupRef.current();
       cleanupRef.current = null;
     }
 
-    // Clear status interval
     if (statusIntervalRef.current) {
       clearInterval(statusIntervalRef.current);
       statusIntervalRef.current = null;
     }
 
-    // Clear cursor throttle
     if (cursorUpdateThrottleRef.current) {
       clearTimeout(cursorUpdateThrottleRef.current);
       cursorUpdateThrottleRef.current = null;
     }
 
-    // Update participant status to offline
     if (currentParticipantRef.current) {
       updateParticipantStatus(currentParticipantRef.current, false);
       currentParticipantRef.current = null;
@@ -109,12 +142,10 @@ export const SharedCanvasView = () => {
 
       setSession(sessionData);
       
-      // UPDATED: Generate display name with cool animal names for guests
       const displayName = user ? 
         `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.email : 
-        generateGuestName(t); // NEW: Use the animal name generator
+        generateGuestName(t);
       
-      // Check for existing participant
       const { data: existingParticipants } = await getSessionParticipants(sessionData.id);
       let existingParticipant = null;
       
@@ -136,7 +167,7 @@ export const SharedCanvasView = () => {
       } else {
         const { data: newParticipant, error: joinError } = await joinSharingSession(
           sessionData.id,
-          displayName || generateGuestName(t), // NEW: Use animal name as fallback
+          displayName || generateGuestName(t),
           user?.id
         );
         
@@ -152,13 +183,9 @@ export const SharedCanvasView = () => {
       currentParticipantRef.current = participant.id;
       setCanEdit(sessionData.permissions === 'edit' || participant.permissions === 'edit');
       
-      // Load participants
       loadParticipants(sessionData.id);
-      
-      // Setup real-time subscriptions
       setupRealtimeSubscriptions(sessionData.id);
 
-      // Update online status periodically
       statusIntervalRef.current = setInterval(() => {
         if (currentParticipantRef.current) {
           updateParticipantStatus(
@@ -168,7 +195,7 @@ export const SharedCanvasView = () => {
             selectedItemId
           );
         }
-      }, 15000); // Every 15 seconds
+      }, 15000);
 
     } catch (error) {
       console.error('Error loading session:', error);
@@ -194,18 +221,15 @@ export const SharedCanvasView = () => {
     }
   };
 
-  // Setup real-time subscriptions
   const setupRealtimeSubscriptions = (sessionId: string) => {
     console.log('Setting up realtime subscriptions for session:', sessionId);
     
-    // Clean up any existing subscription
     if (cleanupRef.current) {
       cleanupRef.current();
       cleanupRef.current = null;
     }
 
     try {
-      // Create a single channel for sharing events
       const channel = supabase
         .channel(`sharing_${sessionId}`)
         .on(
@@ -240,9 +264,19 @@ export const SharedCanvasView = () => {
         )
         .subscribe((status, err) => {
           console.log('Sharing subscription status:', status, err);
+          
+          if (status === 'SUBSCRIBED') {
+            setConnectionStatus('connected');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            setConnectionStatus('disconnected');
+            
+            setTimeout(() => {
+              setConnectionStatus('reconnecting');
+              setupRealtimeSubscriptions(sessionId);
+            }, 2000);
+          }
         });
 
-      // Store cleanup function
       cleanupRef.current = () => {
         console.log('Cleaning up sharing subscriptions');
         supabase.removeChannel(channel);
@@ -250,10 +284,11 @@ export const SharedCanvasView = () => {
       
     } catch (error) {
       console.error('Error setting up real-time subscriptions:', error);
+      setConnectionStatus('disconnected');
       
-      // Retry after delay
       setTimeout(() => {
         if (session) {
+          setConnectionStatus('reconnecting');
           setupRealtimeSubscriptions(sessionId);
         }
       }, 5000);
@@ -282,14 +317,11 @@ export const SharedCanvasView = () => {
 
   const handleChangeReceived = useCallback((change: any) => {
     console.log('Real-time change received:', change);
-    // Toast notifications removed as requested
   }, [participants]);
 
-  // Handle cursor movement from canvas
   const handleCursorMove = useCallback((position: { x: number; y: number }) => {
     currentCursorPosition.current = position;
     
-    // Throttle cursor position updates
     if (cursorUpdateThrottleRef.current) {
       clearTimeout(cursorUpdateThrottleRef.current);
     }
@@ -303,10 +335,9 @@ export const SharedCanvasView = () => {
           selectedItemId || undefined
         );
       }
-    }, 200); // Update cursor every 200ms when moving
+    }, 200);
   }, [selectedItemId]);
 
-  // Update selection when selectedItemId changes
   useEffect(() => {
     if (currentParticipantRef.current && selectedItemId !== null) {
       updateParticipantStatus(
@@ -329,7 +360,6 @@ export const SharedCanvasView = () => {
     console.log('Progress:', progress);
   };
 
-  // Custom item selection handler that updates selection state
   const handleItemSelection = useCallback((itemId: string | null) => {
     setSelectedItemId(itemId);
   }, []);
@@ -337,7 +367,11 @@ export const SharedCanvasView = () => {
   // Canvas control handlers
   const handleReset = useCallback(() => {
     setZoom(1);
-    setOffset({ x: 400, y: 300 }); // Reset to default center position
+    if( window.innerWidth < 768){
+      setOffset({ x: 180, y: 400 });
+    }else{
+      setOffset({ x: 800, y: 500 });
+    }
   }, []);
 
   const handleZoomIn = useCallback(() => {
@@ -350,7 +384,19 @@ export const SharedCanvasView = () => {
 
   const toggleTaskSidebar = useCallback(() => {
     setIsTaskSidebarOpen(!isTaskSidebarOpen);
+    // Close mobile menu when opening sidebar on mobile
+    if (window.innerWidth < 768) {
+      setIsMobileMenuOpen(false);
+    }
   }, [isTaskSidebarOpen]);
+
+  const toggleParticipants = () => {
+    setShowParticipants(!showParticipants);
+    // Close mobile menu when opening participants on mobile
+    if (window.innerWidth < 768) {
+      setIsMobileMenuOpen(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -367,26 +413,50 @@ export const SharedCanvasView = () => {
     return null;
   }
 
+  const activeParticipantsCount = participants.filter(p => p.is_online).length;
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold text-gray-900">
+      {/* Mobile-Optimized Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200 relative z-30">
+        {/* Main Header */}
+        <div className="px-3 sm:px-6 py-3 flex items-center justify-between">
+          {/* Left side - Title and status */}
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
               {session.honeycombs?.name || 'Shared Canvas'}
             </h1>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm">
-                <AlertCircle size={16} />
-                <span>{t('sharing.sharedView')}</span>
+            
+            {/* Connection Status - Mobile optimized */}
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs sm:text-sm ${
+                connectionStatus === 'connected' ? 'bg-green-100 text-green-800' :
+                connectionStatus === 'reconnecting' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {connectionStatus === 'connected' ? (
+                  <Wifi size={12} className="sm:w-4 sm:h-4" />
+                ) : (
+                  <WifiOff size={12} className="sm:w-4 sm:h-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {connectionStatus === 'connected' ? t('sharing.connected') :
+                   connectionStatus === 'reconnecting' ? t('sharing.reconnecting') :
+                   t('sharing.disconnected')}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs sm:text-sm">
+                <AlertCircle size={12} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">{t('sharing.sharedView')}</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Canvas Controls */}
-            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+          {/* Right side - Controls */}
+          <div className="flex items-center gap-2">
+            {/* Desktop Controls */}
+            <div className="hidden md:flex items-center gap-2 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={handleReset}
                 className="p-2 text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition-all"
@@ -420,56 +490,20 @@ export const SharedCanvasView = () => {
               </button>
             </div>
 
-            {/* Participants */}
-            <div className="relative">
-              <button
-                onClick={() => setShowParticipants(!showParticipants)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                <Users size={16} />
-                <span className="text-sm">{participants.filter(p => p.is_online).length}</span>
-              </button>
-              
-              {showParticipants && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setShowParticipants(false)} 
-                  />
-                  <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                    <div className="p-3">
-                      <h3 className="text-sm font-medium text-gray-900 mb-2">
-                        {t('sharing.activeParticipants')} ({participants.filter(p => p.is_online).length})
-                      </h3>
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {participants.filter(p => p.is_online).map(p => (
-                          <div key={p.id} className="flex items-center gap-2 py-1">
-                            <div 
-                              className="w-3 h-3 rounded-full border border-white" 
-                              style={{ backgroundColor: p.color }}
-                            />
-                            <span className="text-sm text-gray-700 flex-1">
-                              {p.display_name}
-                              {p.id === currentParticipantRef.current && (
-                                <span className="text-xs text-gray-500 ml-1">(You)</span>
-                              )}
-                            </span>
-                            {p.selected_item_id && (
-                              <div className="w-2 h-2 rounded-full bg-blue-500" title="Viewing item" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+            {/* Participants Button */}
+            <button
+              onClick={toggleParticipants}
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              <Users size={14} className="sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm">{activeParticipantsCount}</span>
+              <ChevronDown size={12} className={`sm:w-3 sm:h-3 transition-transform ${showParticipants ? 'rotate-180' : ''}`} />
+            </button>
 
-            {/* Copy Link */}
+            {/* Copy Link Button */}
             <button
               onClick={copyShareLink}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
             >
               <Copy size={16} />
               <span className="text-sm">{t('sharing.copyLink')}</span>
@@ -478,8 +512,8 @@ export const SharedCanvasView = () => {
         </div>
 
         {/* Permissions Banner */}
-        <div className="px-4 sm:px-6 py-2 bg-gray-50 border-t border-gray-200">
-          <p className="text-sm text-gray-600">
+        <div className="px-3 sm:px-6 py-2 bg-gray-50 border-t border-gray-200">
+          <p className="text-xs sm:text-sm text-gray-600">
             {canEdit ? (
               <span>{t('sharing.youCanEdit')}</span>
             ) : (
@@ -487,9 +521,91 @@ export const SharedCanvasView = () => {
             )}
           </p>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <>
+            <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setIsMobileMenuOpen(false)} />
+            <div className="absolute top-full right-0 w-full sm:w-64 bg-white border-b border-gray-200 shadow-lg z-50">
+              <div className="p-4 space-y-3">
+                {/* Share Options */}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-gray-900">{t('sharing.shareOptions')}</h3>
+                  <button
+                    onClick={() => { copyShareLink(); setIsMobileMenuOpen(false); }}
+                    className="flex items-center gap-2 w-full p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <Share size={16} />
+                    <span className="text-sm">{t('sharing.copyLink')}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Participants Dropdown */}
+        {showParticipants && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowParticipants(false)} />
+            <div className="absolute top-full right-0 w-full sm:w-80 bg-white border border-gray-200 rounded-b-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+              <div className="p-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">
+                  {t('sharing.activeParticipants')} ({activeParticipantsCount})
+                </h3>
+                
+                {participants.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Users size={24} className="mx-auto text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">{t('sharing.noParticipants')}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {participants.filter(p => p.is_online).map(p => (
+                      <div key={p.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="relative flex-shrink-0">
+                          <div 
+                            className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
+                            style={{ backgroundColor: p.color }}
+                          >
+                            <span className="text-xs font-medium text-white">
+                              {p.display_name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white bg-green-500" />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900 truncate">
+                              {p.display_name}
+                            </span>
+                            {p.id === currentParticipantRef.current && (
+                              <span className="text-xs text-gray-500">(You)</span>
+                            )}
+                            {(p as any).user_id && (
+                              <Crown size={12} className="text-amber-500 flex-shrink-0" />
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 capitalize">
+                            {(p as any).permissions || 'view'}
+                          </div>
+                        </div>
+                        
+                        {p.selected_item_id && (
+                          <div className="w-2 h-2 rounded-full bg-blue-500" title="Viewing item" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </header>
 
-      {/* Canvas - NEW: Added ref for proper cursor positioning */}
+      {/* Canvas */}
       <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden">
         <HoneycombCanvas
           honeycombId={session.honeycomb_id}
@@ -510,25 +626,19 @@ export const SharedCanvasView = () => {
           onCursorMove={handleCursorMove}
         />
         
-        {/* FIXED: Participant Cursors - now properly constrained to canvas area */}
+        {/* Participant Cursors */}
         {participants.filter(p => p.is_online && p.cursor_position && p.id !== participantId).map(participant => {
-          // Additional null check to satisfy TypeScript
           if (!participant.cursor_position || !canvasContainerRef.current) return null;
           
-          // Get canvas container bounds
           const canvasRect = canvasContainerRef.current.getBoundingClientRect();
-          
-          // Convert world coordinates to screen coordinates relative to canvas
           const screenX = participant.cursor_position.x * zoom + offset.x;
           const screenY = participant.cursor_position.y * zoom + offset.y;
           
-          // Check if cursor is within canvas bounds
           const isWithinCanvas = screenX >= 0 && 
                                 screenX <= canvasRect.width && 
                                 screenY >= 0 && 
                                 screenY <= canvasRect.height;
           
-          // Only render cursor if it's within the canvas area
           if (!isWithinCanvas) return null;
           
           return (
@@ -542,11 +652,11 @@ export const SharedCanvasView = () => {
               }}
             >
               <div 
-                className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
+                className="w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white shadow-lg"
                 style={{ backgroundColor: participant.color }}
               />
               <div 
-                className="mt-1 px-2 py-1 rounded text-xs text-white shadow-lg whitespace-nowrap"
+                className="mt-1 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded text-xs text-white shadow-lg whitespace-nowrap max-w-24 sm:max-w-none truncate"
                 style={{ backgroundColor: participant.color }}
               >
                 {participant.display_name}
@@ -555,6 +665,46 @@ export const SharedCanvasView = () => {
           );
         })}
       </div>
+
+      {/* Mobile Bottom Controls - Only show when not in task sidebar */}
+      {!isTaskSidebarOpen && (
+        <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white rounded-xl shadow-lg border border-gray-200 p-3 z-40">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleZoomOut}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ZoomOut size={18} />
+              </button>
+              <span className="text-sm font-medium text-gray-700 min-w-[50px] text-center">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                onClick={handleZoomIn}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ZoomIn size={18} />
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleReset}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <RotateCcw size={18} />
+              </button>
+              <button
+                onClick={toggleTaskSidebar}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <List size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -230,6 +230,7 @@ export const HoneycombViewWrapper = () => {
             handleZoomOut={handleZoomOut}
             toggleTaskSidebar={toggleTaskSidebar}
             isTaskSidebarOpen={isTaskSidebarOpen}
+            openSharingModal={openSharingModal}
         />
 
       </div>

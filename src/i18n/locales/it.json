@@ -210,6 +210,7 @@
     },
     "messages": {
       "selectHoneycomb": "Seleziona un alveare per visualizzare le attività",
+      "selectHiveDescription": "Scegli un alveare dalla barra laterale per iniziare a lavorare con i tuoi compiti",
       "noTasks": "Nessuna attività ancora",
       "noHives": "Nessun giardino delle api ancora. Crea il tuo primo!",
       "loading": "Caricamento...",

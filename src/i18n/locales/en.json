@@ -210,6 +210,7 @@
   },
   "messages": {
     "selectHoneycomb": "Select a hive to view tasks",
+    "selectHiveDescription": "Choose a hive from the sidebar to start working with your tasks",
     "noTasks": "No tasks yet",
     "noHives": "No bee-gardens yet. Create your first one!",
     "loading": "Loading...",

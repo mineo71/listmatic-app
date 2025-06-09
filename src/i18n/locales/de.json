@@ -210,6 +210,7 @@
   },
   "messages": {
     "selectHoneycomb": "Wähle einen Bienenstock aus, um Aufgaben anzuzeigen",
+    "selectHiveDescription": "Wähle einen Bienenstock aus der Seitenleiste, um mit deinen Aufgaben zu arbeiten",
     "noTasks": "Noch keine Aufgaben",
     "noHives": "Noch keine Bienengärten. Erstelle deinen ersten!",
     "loading": "Wird geladen...",

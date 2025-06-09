@@ -210,6 +210,7 @@
   },
   "messages": {
     "selectHoneycomb": "Wybierz ul, aby zobaczyć zadania",
+    "selectHiveDescription": "Wybierz ul z paska bocznego, aby zacząć pracować z zadaniami",
     "noTasks": "Jeszcze brak zadań",
     "noHives": "Jeszcze brak ogrodów pszczelich. Utwórz swój pierwszy!",
     "loading": "Ładowanie...",

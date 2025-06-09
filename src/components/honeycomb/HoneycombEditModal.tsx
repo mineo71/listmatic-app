@@ -329,7 +329,7 @@ isCreating = false,
                     label={t('hexagon.icon')}
                     value={selectedIcon}
                     onChange={setSelectedIcon}
-                    options={['None', ...ICONS]} // Add 'None' as first option
+                    options={[ ...ICONS]} // Add 'None' as first option
                     renderOption={(icon) => {
                       if (icon === 'None') {
                         return (

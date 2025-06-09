@@ -625,7 +625,7 @@ export const SharedCanvasView = () => {
           return (
             <div
               key={participant.id}
-              className="absolute pointer-events-none z-10 transition-all duration-0"
+              className="absolute pointer-events-none z-10 transition-all duration-150"
               style={{
                 left: screenX,
                 top: screenY,

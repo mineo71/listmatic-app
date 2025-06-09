@@ -12,7 +12,7 @@ export const HexagonShape = ({ points, gradientId, isSelected, isLinking }: Hexa
     points={points.join(' ')}
     fill={`url(#${gradientId})`}
     stroke={isSelected ? '#D97706' : '#F59E0B'}
-    strokeWidth={isSelected ? "3" : "2"}
+    strokeWidth="3"
     className={`transition-all duration-200 ${
       isLinking ? '!stroke-blue-500 stroke-[3]' : ''
     }`}

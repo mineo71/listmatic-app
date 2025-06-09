@@ -113,7 +113,7 @@ export const HoneycombViewWrapper = () => {
   };
 
   const handleZoomIn = () => {
-    setZoom(z => Math.min(z + 0.1, 3));
+    setZoom(z => Math.min(z + 0.1, 1.5));
   };
 
   const handleZoomOut = () => {

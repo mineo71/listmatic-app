@@ -25,7 +25,7 @@ const CANVAS_LIMITS = {
   minY: -2000,
   maxY: 2000,
   minZoom: 0.9,
-  maxZoom: 3,
+  maxZoom: 1.5,
 };
 
 // Typed debounce function

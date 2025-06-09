@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/honeycomb/SharingModal.tsx
 import { useState, useEffect } from 'react'
-import { Copy, Users, ChevronDown, Eye, Edit, X, Crown, Clock, Share, QrCode } from 'lucide-react'
+import { Copy, Users, Eye, Edit, X, Crown, Clock, Share, QrCode } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import QRCodeGenerator from 'qrcode'
@@ -50,7 +50,6 @@ export default function SharingModal({
     const [, setShareCode] = useState('');
     const [qrCodeUrl, setQrCodeUrl] = useState('');
     const [permissions, setPermissions] = useState<PermissionLevel>('view');
-    const [showPermissionDropdown, setShowPermissionDropdown] = useState(false);
     const [loading, setLoading] = useState(false);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [participants, setParticipants] = useState<Participant[]>([]);
@@ -83,7 +82,7 @@ export default function SharingModal({
         } else {
             document.body.style.overflow = 'unset';
         }
-        
+
         return () => {
             document.body.style.overflow = 'unset';
         };
@@ -95,10 +94,12 @@ export default function SharingModal({
         }
     }, [isOpen, honeycombId]);
 
+    // Load participants immediately when modal opens and refresh periodically
     useEffect(() => {
         if (isOpen && sessionId) {
             loadParticipants();
             
+            // Set up interval to refresh participants every 5 seconds
             const interval = setInterval(() => {
                 loadParticipants();
             }, 5000);
@@ -110,30 +111,57 @@ export default function SharingModal({
     const loadOrCreateSession = async () => {
         setLoading(true);
         try {
+            // Check if there's an active session
             const { data: existingSession } = await getActiveSession(honeycombId);
             
             if (existingSession) {
                 setShareUrl(existingSession.share_link);
                 setShareCode(existingSession.share_code);
                 setSessionId(existingSession.id);
-                setPermissions(existingSession.permissions as PermissionLevel);
-                generateQRCode(existingSession.share_link);
-            } else {
-                const { data: newSession, error } = await createSharingSession(honeycombId, permissions);
+                setPermissions(existingSession.permissions || 'view');
                 
-                if (error) {
-                    throw error;
+                // Generate QR code for existing session
+                if (existingSession.share_link) {
+                    try {
+                        const qrCode = await QRCodeGenerator.toDataURL(existingSession.share_link, {
+                            width: 200,
+                            margin: 1,
+                            color: {
+                                dark: '#000000',
+                                light: '#FFFFFF'
+                            }
+                        });
+                        setQrCodeUrl(qrCode);
+                    } catch (error) {
+                        console.error('Error generating QR code:', error);
+                    }
                 }
-                
+            } else {
+                // Create new session
+                const { data: newSession } = await createSharingSession(honeycombId, permissions);
                 if (newSession) {
                     setShareUrl(newSession.share_link);
                     setShareCode(newSession.share_code);
                     setSessionId(newSession.id);
-                    generateQRCode(newSession.share_link);
+                    
+                    // Generate QR code for new session
+                    try {
+                        const qrCode = await QRCodeGenerator.toDataURL(newSession.share_link, {
+                            width: 200,
+                            margin: 1,
+                            color: {
+                                dark: '#000000',
+                                light: '#FFFFFF'
+                            }
+                        });
+                        setQrCodeUrl(qrCode);
+                    } catch (error) {
+                        console.error('Error generating QR code:', error);
+                    }
                 }
             }
         } catch (error) {
-            console.error('Error creating sharing session:', error);
+            console.error('Error loading/creating session:', error);
             toast.error(t('sharing.errorCreatingSession'));
         } finally {
             setLoading(false);
@@ -143,117 +171,57 @@ export default function SharingModal({
     const loadParticipants = async () => {
         if (!sessionId) return;
         
-        setParticipantsLoading(true);
         try {
-            const { data, error } = await getSessionParticipants(sessionId);
-            
-            if (error) {
-                throw error;
-            }
-            
+            setParticipantsLoading(true);
+            const { data } = await getSessionParticipants(sessionId);
             if (data) {
-                const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
-                const participantsWithColors = data.map((p, index) => ({
-                    ...p,
-                    color: colors[index % colors.length],
-                    joined_at: new Date(p.joined_at),
-                    last_seen_at: new Date(p.last_seen_at),
-                }));
-                setParticipants(participantsWithColors);
+                setParticipants(data);
             }
         } catch (error) {
             console.error('Error loading participants:', error);
-            toast.error(t('sharing.errorLoadingParticipants'));
         } finally {
             setParticipantsLoading(false);
         }
     };
 
-    const generateQRCode = async (url: string) => {
-        try {
-            const qrDataUrl = await QRCodeGenerator.toDataURL(url, {
-                width: isMobile ? 180 : 200,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                }
-            });
-            setQrCodeUrl(qrDataUrl);
-        } catch (error) {
-            console.error('Error generating QR code:', error);
-        }
-    };
-
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(shareUrl)
-            .then(() => toast.success(t('notifications.linkCopied')))
-            .catch(err => {
-                console.error(t('errors.copyError'), err);
-                toast.error(t('errors.failedToCopyLink'));
-            });
-    };
-
-    const handlePermissionChange = async (newPermission: PermissionLevel) => {
+    const handlePermissionChange = async (newPermissions: PermissionLevel) => {
         if (!sessionId) return;
         
-        setLoading(true);
         try {
-            const { error } = await updateSessionPermissions(sessionId, newPermission);
-            
-            if (error) {
-                throw error;
-            }
-            
-            setPermissions(newPermission);
-            setShowPermissionDropdown(false);
+            await updateSessionPermissions(sessionId, newPermissions);
+            setPermissions(newPermissions);
             toast.success(t('sharing.permissionsUpdated'));
         } catch (error) {
             console.error('Error updating permissions:', error);
             toast.error(t('sharing.errorUpdatingPermissions'));
-        } finally {
-            setLoading(false);
         }
     };
 
-    const handleEndSessionClick = () => {
-        setShowEndSessionModal(true);
+    const copyToClipboard = async () => {
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            toast.success(t('notifications.linkCopied'));
+        } catch (error) {
+            console.error('Error copying to clipboard:', error);
+            toast.error('Failed to copy link');
+        }
     };
 
-    const handleConfirmEndSession = async () => {
+    const handleEndSession = async () => {
         if (!sessionId) return;
         
-        setEndingSession(true);
         try {
-            const { error } = await endSharingSession(sessionId);
-            
-            if (error) {
-                throw error;
-            }
-            
+            setEndingSession(true);
+            await endSharingSession(sessionId);
             toast.success(t('sharing.sessionEnded'));
-            setShowEndSessionModal(false);
             onClose();
         } catch (error) {
             console.error('Error ending session:', error);
             toast.error(t('sharing.errorEndingSession'));
         } finally {
             setEndingSession(false);
+            setShowEndSessionModal(false);
         }
-    };
-
-    const formatTimeAgo = (date: Date) => {
-        const now = new Date();
-        const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-        
-        if (diffInMinutes < 1) return 'Just now';
-        if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-        
-        const diffInHours = Math.floor(diffInMinutes / 60);
-        if (diffInHours < 24) return `${diffInHours}h ago`;
-        
-        const diffInDays = Math.floor(diffInHours / 24);
-        return `${diffInDays}d ago`;
     };
 
     const activeParticipantsCount = participants.filter(p => p.is_online).length;
@@ -262,284 +230,248 @@ export default function SharingModal({
 
     return (
         <>
-            {/* Backdrop */}
-            <div className="fixed inset-0 bg-black/50 z-[100] !important" onClick={onClose} />
-            
-            {/* Modal Container */}
-            <div className="fixed inset-0 z-[100] !important flex items-center justify-center p-2 sm:p-4">
-                {/* Modal Content */}
-                <div className={`bg-white rounded-lg w-full max-h-[95vh] flex flex-col shadow-xl ${
-                    isMobile ? 'max-w-full h-full' : 'max-w-2xl'
-                }`}>
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
                     {/* Header */}
-                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                        <div className="flex items-center justify-between mb-3 sm:mb-4">
-                            <div className="min-w-0 flex-1 mr-4">
-                                <h2 className="text-lg sm:text-xl font-semibold truncate">{t('sharing.title')}</h2>
-                                <p className="text-sm text-gray-500 mt-1 truncate">{honeycombName}</p>
+                    <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                        <div className="flex items-center gap-3">
+                            <Share className="text-amber-600" size={24} />
+                            <div>
+                                <h2 className="text-xl font-semibold text-gray-900">
+                                    {t('sharing.title')}
+                                </h2>
+                                <p className="text-sm text-gray-500 truncate max-w-48">
+                                    {honeycombName}
+                                </p>
                             </div>
-                            <button
-                                onClick={onClose}
-                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-                            >
-                                <X size={20} className="sm:w-6 sm:h-6" />
-                            </button>
                         </div>
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            aria-label="Close modal"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
 
-                        {/* Tab Navigation */}
-                        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-                            <button
-                                onClick={() => setActiveTab('share')}
-                                className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                                    activeTab === 'share'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                <Share size={14} className="sm:w-4 sm:h-4" />
-                                <span>{t('sharing.shareTab')}</span>
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('participants')}
-                                className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                                    activeTab === 'participants'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                <Users size={14} className="sm:w-4 sm:h-4" />
-                                <span>{t('sharing.participantsTab')}</span>
-                                <span className="ml-1 text-xs bg-gray-200 px-1.5 py-0.5 rounded-full">
-                                    {activeParticipantsCount}
-                                </span>
-                            </button>
-                        </div>
+                    {/* Tab Navigation */}
+                    <div className="flex border-b border-gray-200">
+                        <button
+                            onClick={() => setActiveTab('share')}
+                            className={`flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                                activeTab === 'share'
+                                    ? 'border-amber-500 text-amber-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <div className="flex items-center justify-center gap-2">
+                                <Share size={16} />
+                                {t('sharing.shareTab')}
+                            </div>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('participants')}
+                            className={`flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                                activeTab === 'participants'
+                                    ? 'border-amber-500 text-amber-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <div className="flex items-center justify-center gap-2">
+                                <Users size={16} />
+                                {t('sharing.participantsTab')}
+                                {activeParticipantsCount > 0 && (
+                                    <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">
+                                        {activeParticipantsCount}
+                                    </span>
+                                )}
+                            </div>
+                        </button>
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                    <div className="p-6 max-h-[60vh] overflow-y-auto">
                         {loading ? (
-                            <div className="flex items-center justify-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+                            <div className="flex items-center justify-center py-12">
+                                <div className="animate-spin w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full"></div>
+                            </div>
+                        ) : activeTab === 'share' ? (
+                            <div className="space-y-6">
+                                {/* QR Code */}
+                                {qrCodeUrl && (
+                                    <div className="flex justify-center">
+                                        <img 
+                                            src={qrCodeUrl} 
+                                            alt={t('sharing.qrCodeAlt')}
+                                            className={`rounded-lg border ${isMobile ? 'w-36 h-36' : 'w-48 h-48'}`}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Permissions - Updated to use buttons */}
+                                <div className="space-y-3">
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        {t('sharing.permissions')}
+                                    </label>
+                                    
+                                    {/* Permission Buttons */}
+                                    <div className="flex gap-2">
+                                        {/* View Only Button */}
+                                        <button
+                                            onClick={() => handlePermissionChange('view')}
+                                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all duration-200 ${
+                                                permissions === 'view'
+                                                    ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm ring-1 ring-blue-200'
+                                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'
+                                            }`}
+                                            type="button"
+                                        >
+                                            <Eye size={16} />
+                                            <div className="text-left">
+                                                <p className="text-sm font-medium">{t('sharing.viewOnly')}</p>
+                                                <p className="text-xs opacity-75 hidden sm:block">
+                                                    {t('sharing.viewOnlyDesc')}
+                                                </p>
+                                            </div>
+                                            {permissions === 'view' && (
+                                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                            )}
+                                        </button>
+
+                                        {/* Can Edit Button */}
+                                        <button
+                                            onClick={() => handlePermissionChange('edit')}
+                                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all duration-200 ${
+                                                permissions === 'edit'
+                                                    ? 'bg-green-50 border-green-200 text-green-700 shadow-sm ring-1 ring-green-200'
+                                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'
+                                            }`}
+                                            type="button"
+                                        >
+                                            <Edit size={16} />
+                                            <div className="text-left">
+                                                <p className="text-sm font-medium">{t('sharing.canEdit')}</p>
+                                                <p className="text-xs opacity-75 hidden sm:block">
+                                                    {t('sharing.canEditDesc')}
+                                                </p>
+                                            </div>
+                                            {permissions === 'edit' && (
+                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    {/* Mobile-friendly descriptions */}
+                                    <div className="block sm:hidden">
+                                        <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                                            {permissions === 'view' ? t('sharing.viewOnlyDesc') : t('sharing.canEditDesc')}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Share Link */}
+                                <div className="space-y-3">
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        {t('sharing.shareLink')}
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={shareUrl}
+                                            readOnly
+                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm"
+                                            aria-label={t('sharing.shareLink')}
+                                        />
+                                        <button
+                                            onClick={copyToClipboard}
+                                            className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md transition-colors flex-shrink-0"
+                                            aria-label={t('actions.copyLink')}
+                                        >
+                                            <Copy size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* End Session Button */}
+                                {sessionId && (
+                                    <div className="pt-4 border-t border-gray-200">
+                                        <button
+                                            onClick={() => setShowEndSessionModal(true)}
+                                            className="w-full px-4 py-2 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors"
+                                        >
+                                            {t('sharing.endSession')}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         ) : (
-                            <>
-                                {/* Share Tab Content */}
-                                {activeTab === 'share' && (
-                                    <div className="space-y-6">
-                                        {/* Mobile: QR Code Toggle Button */}
-                                        {isMobile && (
-                                            <button
-                                                onClick={() => setShowQRCode(!showQRCode)}
-                                                className="w-full flex items-center justify-center gap-2 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            // Participants Tab
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-medium text-gray-900">
+                                        {t('sharing.activeParticipants')} ({activeParticipantsCount})
+                                    </h3>
+                                    {participantsLoading && (
+                                        <div className="animate-spin w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full"></div>
+                                    )}
+                                </div>
+
+                                {participants.length === 0 ? (
+                                    <div className="text-center py-8">
+                                        <Users className="mx-auto text-gray-400 mb-4" size={48} />
+                                        <p className="text-gray-500 mb-2">{t('sharing.noParticipants')}</p>
+                                        <p className="text-sm text-gray-400">{t('sharing.shareToInvite')}</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {participants.map((participant) => (
+                                            <div
+                                                key={participant.id}
+                                                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
                                             >
-                                                <QrCode size={20} />
-                                                <span>{showQRCode ? t('sharing.hideQRCode') : t('sharing.showQRCode')}</span>
-                                                <ChevronDown size={16} className={`transition-transform ${showQRCode ? 'rotate-180' : ''}`} />
-                                            </button>
-                                        )}
-
-                                        {/* QR Code */}
-                                        {(!isMobile || showQRCode) && (
-                                            <div className="flex justify-center">
-                                                {qrCodeUrl ? (
-                                                    <img
-                                                        src={qrCodeUrl}
-                                                        alt={t('sharing.qrCodeAlt')}
-                                                        className={`rounded-lg shadow-lg ${isMobile ? 'w-36 h-36' : 'w-48 h-48'}`}
-                                                    />
-                                                ) : (
-                                                    <div className={`bg-gray-100 rounded-lg animate-pulse ${isMobile ? 'w-36 h-36' : 'w-48 h-48'}`}></div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Share Link */}
-                                        <div className="space-y-3">
-                                            <label className="block text-sm font-medium text-gray-700">
-                                                {t('sharing.shareLink')}
-                                            </label>
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="text"
-                                                    value={shareUrl}
-                                                    readOnly
-                                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm"
-                                                    aria-label={t('sharing.shareLink')}
-                                                />
-                                                <button
-                                                    onClick={copyToClipboard}
-                                                    className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md transition-colors flex-shrink-0"
-                                                    aria-label={t('actions.copyLink')}
+                                                <div 
+                                                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                                                    style={{ backgroundColor: participant.color }}
                                                 >
-                                                    <Copy size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Permissions */}
-                                        <div className="space-y-3">
-                                            <label className="block text-sm font-medium text-gray-700">
-                                                {t('sharing.permissions')}
-                                            </label>
-                                            <div className="relative">
-                                                <button
-                                                    onClick={() => setShowPermissionDropdown(!showPermissionDropdown)}
-                                                    className="flex items-center justify-between w-full px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                                                >
+                                                    {participant.display_name.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="flex-1">
                                                     <div className="flex items-center gap-2">
-                                                        {permissions === 'view' ? (
-                                                            <Eye size={16} className="text-gray-500" />
-                                                        ) : (
-                                                            <Edit size={16} className="text-gray-500" />
+                                                        <p className="font-medium text-gray-900">
+                                                            {participant.display_name}
+                                                        </p>
+                                                        {participant.permissions === 'edit' && (
+                                                            <Crown size={14} className="text-amber-500" />
                                                         )}
-                                                        <span className="text-sm">
-                                                            {permissions === 'view' ? t('sharing.viewOnly') : t('sharing.canEdit')}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                        <div className={`w-2 h-2 rounded-full ${
+                                                            participant.is_online ? 'bg-green-500' : 'bg-gray-400'
+                                                        }`}></div>
+                                                        <span>
+                                                            {participant.is_online ? 'Online' : 'Offline'}
+                                                        </span>
+                                                        <Clock size={12} />
+                                                        <span>
+                                                            {new Date(participant.last_seen_at).toLocaleTimeString()}
                                                         </span>
                                                     </div>
-                                                    <ChevronDown size={16} className={`transition-transform ${showPermissionDropdown ? 'rotate-180' : ''}`} />
-                                                </button>
-
-                                                {showPermissionDropdown && (
-                                                    <>
-                                                        <div 
-                                                            className="fixed inset-0 z-10" 
-                                                            onClick={() => setShowPermissionDropdown(false)}
-                                                        />
-                                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                                                            <button
-                                                                onClick={() => handlePermissionChange('view')}
-                                                                className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 text-left"
-                                                            >
-                                                                <Eye size={16} className="text-gray-500" />
-                                                                <div className="flex-1">
-                                                                    <p className="text-sm font-medium">{t('sharing.viewOnly')}</p>
-                                                                    <p className="text-xs text-gray-500">{t('sharing.viewOnlyDesc')}</p>
-                                                                </div>
-                                                                {permissions === 'view' && (
-                                                                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                                                                )}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handlePermissionChange('edit')}
-                                                                className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 text-left"
-                                                            >
-                                                                <Edit size={16} className="text-gray-500" />
-                                                                <div className="flex-1">
-                                                                    <p className="text-sm font-medium">{t('sharing.canEdit')}</p>
-                                                                    <p className="text-xs text-gray-500">{t('sharing.canEditDesc')}</p>
-                                                                </div>
-                                                                {permissions === 'edit' && (
-                                                                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                                                                )}
-                                                            </button>
-                                                        </div>
-                                                    </>
-                                                )}
+                                                </div>
                                             </div>
-                                        </div>
+                                        ))}
                                     </div>
                                 )}
-
-                                {/* Participants Tab Content */}
-                                {activeTab === 'participants' && (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-sm font-medium text-gray-900">
-                                                {t('sharing.activeParticipants')} ({activeParticipantsCount})
-                                            </h3>
-                                            {participantsLoading && (
-                                                <div className="w-4 h-4 border-2 border-gray-300 border-t-amber-600 rounded-full animate-spin" />
-                                            )}
-                                        </div>
-                                        
-                                        {participants.length === 0 ? (
-                                            <div className="text-center py-8">
-                                                <Users size={32} className="mx-auto text-gray-400 mb-2" />
-                                                <p className="text-sm text-gray-500">{t('sharing.noParticipants')}</p>
-                                                <p className="text-xs text-gray-400 mt-1">{t('sharing.shareToInvite')}</p>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-2 max-h-64 sm:max-h-72 overflow-y-auto">
-                                                {participants.map(participant => (
-                                                    <div 
-                                                        key={participant.id} 
-                                                        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                                                            participant.is_online 
-                                                                ? 'bg-green-50 border-green-200' 
-                                                                : 'bg-gray-50 border-gray-200 opacity-60'
-                                                        }`}
-                                                    >
-                                                        <div className="relative flex-shrink-0">
-                                                            <div 
-                                                                className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
-                                                                style={{ backgroundColor: participant.color }}
-                                                            >
-                                                                <span className="text-xs font-medium text-white">
-                                                                    {participant.display_name.charAt(0).toUpperCase()}
-                                                                </span>
-                                                            </div>
-                                                            <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                                                                participant.is_online ? 'bg-green-500' : 'bg-gray-400'
-                                                            }`} />
-                                                        </div>
-                                                        
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-sm font-medium text-gray-900 truncate">
-                                                                    {participant.display_name}
-                                                                </span>
-                                                                {participant.user_id && (
-                                                                    <Crown size={12} className="text-amber-500 flex-shrink-0" />
-                                                                )}
-                                                            </div>
-                                                            <div className="flex items-center gap-2 sm:gap-3 text-xs text-gray-500">
-                                                                <span className={`capitalize ${
-                                                                    participant.permissions === 'edit' ? 'text-amber-600' : 
-                                                                    participant.permissions === 'view' ? 'text-blue-600' : 'text-gray-600'
-                                                                }`}>
-                                                                    {participant.permissions}
-                                                                </span>
-                                                                <span className="flex items-center gap-1">
-                                                                    <Clock size={10} />
-                                                                    {participant.is_online ? 'Online' : formatTimeAgo(participant.last_seen_at)}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </>
+                            </div>
                         )}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="px-4 sm:px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row justify-between gap-3 flex-shrink-0">
-                        <button
-                            onClick={handleEndSessionClick}
-                            className="text-sm text-red-600 hover:text-red-700 transition-colors order-2 sm:order-1"
-                            disabled={loading || endingSession}
-                        >
-                            {t('sharing.endSession')}
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors order-1 sm:order-2"
-                        >
-                            {t('actions.done')}
-                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* End Session Confirmation Modal */}
+            {/* End Session Modal */}
             <EndSessionModal
                 isOpen={showEndSessionModal}
                 onClose={() => setShowEndSessionModal(false)}
-                onConfirm={handleConfirmEndSession}
+                onConfirm={handleEndSession}
                 honeycombName={honeycombName}
                 activeParticipants={activeParticipantsCount}
                 loading={endingSession}

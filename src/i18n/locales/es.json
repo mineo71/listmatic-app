@@ -302,7 +302,9 @@
       "participantsWillBeDisconnected": "Todos los participantes serán desconectados",
       "newSessionCanBeCreated": "Puedes crear una nueva sesión en cualquier momento",
       "dataWillRemainSafe": "Tus datos del panal seguirán seguros",
-      "endingSession": "Finalizando Sesión..."
+      "endingSession": "Finalizando Sesión...",
+      "permissions": "Permisos de acceso"    
+
     },
     "notifications": {
       "linkCopied": "¡Enlace copiado!",

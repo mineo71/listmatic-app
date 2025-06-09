@@ -26,6 +26,9 @@ export const HoneycombViewWrapper = () => {
   const { isSidebarOpen, onToggleSidebar } = useOutletContext<ContextType>();
   const { user } = useAuth();
 
+  // Add state for delayed menu button visibility
+  const [showMenuButton, setShowMenuButton] = useState(!isSidebarOpen);
+
   // View state
   const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -33,6 +36,21 @@ export const HoneycombViewWrapper = () => {
   const [progress, setProgress] = useState(0);
   const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
   const [showParticipantCursors, setShowParticipantCursors] = useState(true);
+
+  // Handle sidebar state changes with delay for menu button
+  useEffect(() => {
+    if (isSidebarOpen) {
+      // Hide menu button immediately when sidebar opens
+      setShowMenuButton(false);
+    } else {
+      // Show menu button after sidebar closing animation completes (300ms)
+      const timer = setTimeout(() => {
+        setShowMenuButton(true);
+      }, 50);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isSidebarOpen]);
 
   // Calculate the center position based on container size and sidebar state
   const calculateCenterPosition = useCallback(() => {
@@ -133,10 +151,13 @@ export const HoneycombViewWrapper = () => {
                 className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-8 transition-all duration-300 w-full`}
             >
               <div className='flex flex-row items-center gap-4'>
-                {!isSidebarOpen && onToggleSidebar && (
+                {showMenuButton && onToggleSidebar && (
                 <button
                     onClick={onToggleSidebar}
-                    className="z-20 p-2 bg-white shadow-lg hover:bg-gray-50 rounded-lg transition-all border border-gray-200 hover:shadow-xl"
+                    className="z-20 p-2 bg-white shadow-lg hover:bg-gray-50 rounded-lg transition-all duration-200 border border-gray-200 hover:shadow-xl opacity-0 animate-fade-in"
+                    style={{
+                      animation: 'fadeIn 0.1s ease-out forwards'
+                    }}
                     title={t('actions.openSidebar')}
                 >
                   <Menu size={20} className="text-gray-700" />
@@ -238,6 +259,19 @@ export const HoneycombViewWrapper = () => {
             isTaskSidebarOpen={isTaskSidebarOpen}
             openSharingModal={openSharingModal}
         />
+
+        <style>{`
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateX(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+        `}</style>
       </div>
   );
 };

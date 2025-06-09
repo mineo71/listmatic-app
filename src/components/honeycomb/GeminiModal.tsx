@@ -221,6 +221,7 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
         Make sure the connections array contains valid IDs that exist in your generated items.
 
         CRITICAL: Only respond with valid JSON array, no markdown, no explanation, no extra text.
+        Respond in the same language as the user input.
       `;
 
       // Make the API call

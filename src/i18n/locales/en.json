@@ -302,7 +302,8 @@
     "participantsWillBeDisconnected": "All participants will be disconnected",
     "newSessionCanBeCreated": "You can create a new session anytime",
     "dataWillRemainSafe": "Your honeycomb data will remain safe",
-    "endingSession": "Ending Session..."
+    "endingSession": "Ending Session...",
+    "permissions": "Access Permissions" 
   },
   "notifications": {
     "linkCopied": "Link copied!",

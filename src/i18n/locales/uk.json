@@ -302,7 +302,8 @@
     "participantsWillBeDisconnected": "Всіх учасників буде від'єднано",
     "newSessionCanBeCreated": "Ви можете створити новий сеанс будь-коли",
     "dataWillRemainSafe": "Ваші дані стільників залишаться в безпеці",
-    "endingSession": "Завершення Сеансу..."
+    "endingSession": "Завершення Сеансу...",
+    "permissions": "Права доступу"
   },
   "notifications": {
     "linkCopied": "Посилання скопійовано!",

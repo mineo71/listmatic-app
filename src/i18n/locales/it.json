@@ -302,7 +302,8 @@
       "participantsWillBeDisconnected": "Tutti i partecipanti saranno disconnessi",
       "newSessionCanBeCreated": "Puoi creare una nuova sessione in qualsiasi momento",
       "dataWillRemainSafe": "I tuoi dati dell'alveare rimarranno al sicuro",
-      "endingSession": "Terminando Sessione..."
+      "endingSession": "Terminando Sessione...",
+      "permissions": "Autorizzazioni di accesso"
     },
     "notifications": {
       "linkCopied": "Link copiato!",

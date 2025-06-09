@@ -403,7 +403,17 @@ const GeminiModal: React.FC<GeminiModalProps> = ({ isOpen, onClose, onGenerate }
         style={{ pointerEvents: 'all' }}
       />
 
-      <div className="fixed inset-0 flex items-center justify-center z-[101] p-2 sm:p-4">
+      <div 
+        className="fixed inset-0 flex items-center justify-center z-[101] p-2 sm:p-4"
+        style={{ pointerEvents: 'all' }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseMove={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+      >
         <div
           className="bg-white rounded-lg w-full max-w-4xl h-[80vh] sm:h-[60vh] relative shadow-xl flex flex-col sm:flex-row overflow-hidden"
           onClick={e => e.stopPropagation()}

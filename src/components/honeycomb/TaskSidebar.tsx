@@ -172,6 +172,12 @@ const TaskSidebar = ({
           bg-white/90 backdrop-blur-sm border-l border-gray-200
           sm:w-80 w-full ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
         style={{ pointerEvents: isOpen ? 'all' : 'none' }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseMove={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">

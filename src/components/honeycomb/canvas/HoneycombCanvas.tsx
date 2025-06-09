@@ -567,7 +567,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
 
       {/* Control buttons */}
       {(!isSharedMode || canEdit) && (
-        <div className="absolute top-4 left-4 flex" style={{ zIndex: 10 }}>
+        <div className="absolute top-4 left-4 flex z-20">
           <button
             onClick={() => setIsCreating(!isCreating)}
             className={`flex items-center px-4 py-2 gap-2 rounded-lg shadow-md hover:shadow-lg transition-all ${isCreating ? "bg-amber-500 text-white" : "bg-white hover:bg-gray-50"
@@ -707,6 +707,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
       {isEditModalOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          style={{ pointerEvents: 'all' }}
           onClick={(e) => e.stopPropagation()}
         />
       )}

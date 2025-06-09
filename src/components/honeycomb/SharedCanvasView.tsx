@@ -15,8 +15,6 @@ import {
   ChevronDown,
   Share,
   Crown,
-  Wifi,
-  WifiOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { HoneycombCanvas } from './canvas/HoneycombCanvas';
@@ -55,7 +53,7 @@ export const SharedCanvasView = () => {
   // Mobile UI state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'reconnecting'>('connected');
+  const [, setConnectionStatus] = useState<'connected' | 'disconnected' | 'reconnecting'>('connected');
   
   // Canvas state
   const [zoom, setZoom] = useState(1);
@@ -429,23 +427,6 @@ export const SharedCanvasView = () => {
             
             {/* Connection Status - Mobile optimized */}
             <div className="flex items-center gap-1 sm:gap-2">
-              <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs sm:text-sm ${
-                connectionStatus === 'connected' ? 'bg-green-100 text-green-800' :
-                connectionStatus === 'reconnecting' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {connectionStatus === 'connected' ? (
-                  <Wifi size={12} className="sm:w-4 sm:h-4" />
-                ) : (
-                  <WifiOff size={12} className="sm:w-4 sm:h-4" />
-                )}
-                <span className="hidden sm:inline">
-                  {connectionStatus === 'connected' ? t('sharing.connected') :
-                   connectionStatus === 'reconnecting' ? t('sharing.reconnecting') :
-                   t('sharing.disconnected')}
-                </span>
-              </div>
-              
               <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs sm:text-sm">
                 <AlertCircle size={12} className="sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">{t('sharing.sharedView')}</span>
@@ -644,7 +625,7 @@ export const SharedCanvasView = () => {
           return (
             <div
               key={participant.id}
-              className="absolute pointer-events-none z-50 transition-all duration-200"
+              className="absolute pointer-events-none z-10 transition-all duration-0"
               style={{
                 left: screenX,
                 top: screenY,

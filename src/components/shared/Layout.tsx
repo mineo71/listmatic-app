@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/components/shared/Layout.tsx
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -237,6 +236,10 @@ export const Layout = () => {
         } else if (data) {
           setHives(prev => [data, ...prev]);
           toast.success(t('messages.hiveCreated'));
+          
+          // Automatically select and open the newly created hive
+          setSelectedHiveId(data.id);
+          handleSelectItem(data.id, 'hive');
         }
       } else if (modalType === 'honeycomb' && selectedHiveId) {
         const { data, error } = await createHoneycomb(
@@ -269,6 +272,9 @@ export const Layout = () => {
 
           setHives(hives.map(updateHive));
           toast.success(t('messages.honeycombCreated'));
+          
+          // Automatically select and open the newly created honeycomb
+          handleSelectItem(data.id, 'honeycomb');
         }
       }
     } catch (error) {
@@ -289,14 +295,18 @@ export const Layout = () => {
     }
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
       <Sidebar
         isOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        onToggleSidebar={toggleSidebar}
         hives={hives}
         selectedHiveId={selectedHiveId}
-        selectedHoneycombId={location.pathname.startsWith('/honeycomb/') ? 
+        selectedHoneycombId={location.pathname.includes('/honeycomb/') ? 
           location.pathname.split('/').pop() : undefined}
         onSelectItem={handleSelectItem}
         onCreateHive={() => setModalType('hive')}
@@ -324,7 +334,8 @@ export const Layout = () => {
               hives,
               selectedHiveId,
               onUpdateHoneycomb: handleUpdateHoneycomb,
-              isSidebarOpen
+              isSidebarOpen,
+              onToggleSidebar: toggleSidebar
             }} />
           )}
         </main>

@@ -1,16 +1,24 @@
 // src/components/settings/Settings.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOutletContext } from 'react-router-dom';
 import { 
   Settings as SettingsIcon, 
   Globe,
+  Menu
 } from 'lucide-react';
 import { LanguageSelector } from '../shared/LanguageSelector';
 
 type SettingsSection = 'general' | 'notifications' | 'appearance' | 'privacy' | 'data';
 
+type ContextType = {
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+};
+
 export const Settings = () => {
   const { t } = useTranslation();
+  const { isSidebarOpen, onToggleSidebar } = useOutletContext<ContextType>();
   const [activeSection, setActiveSection] = useState<SettingsSection>('general');
 
   const sections = [
@@ -74,7 +82,18 @@ export const Settings = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-4 ">
+    <div className="max-w-4xl mx-auto px-6 py-4 relative">
+      {/* Menu button - show when sidebar is closed */}
+      {!isSidebarOpen && onToggleSidebar && (
+        <button
+          onClick={onToggleSidebar}
+          className="fixed top-4 left-4 z-50 p-3 bg-white rounded-lg shadow-lg border border-gray-200 transition-all duration-200 hover:bg-gray-50"
+          aria-label={t('actions.openSidebar')}
+        >
+          <Menu size={20} className="text-gray-700" />
+        </button>
+      )}
+      
     <h1 className="text-2xl font-bold text-gray-900 ml-12 mb-6">{t('settings.title')}</h1>
 
       <div className="flex flex-col lg:flex-row gap-8">

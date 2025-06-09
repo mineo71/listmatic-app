@@ -1,13 +1,20 @@
 // src/components/settings/Profile.tsx
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Camera, LogOut } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import { Camera, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
+type ContextType = {
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+};
+
 export const Profile = () => {
   const { t } = useTranslation();
+  const { isSidebarOpen, onToggleSidebar } = useOutletContext<ContextType>();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -100,7 +107,18 @@ export const Profile = () => {
   };
 
   return (
-    <div className="px-6 py-4 max-w-2xl mx-auto">
+    <div className="px-6 py-4 max-w-2xl mx-auto relative">
+      {/* Menu button - show when sidebar is closed */}
+      {!isSidebarOpen && onToggleSidebar && (
+        <button
+          onClick={onToggleSidebar}
+          className="fixed top-4 left-4 z-50 p-3 bg-white rounded-lg shadow-lg border border-gray-200 transition-all duration-200 hover:bg-gray-50"
+          aria-label={t('actions.openSidebar')}
+        >
+          <Menu size={20} className="text-gray-700" />
+        </button>
+      )}
+      
       <h1 className="text-2xl font-bold text-gray-900 ml-12 mb-6">{t('profile.title')}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">

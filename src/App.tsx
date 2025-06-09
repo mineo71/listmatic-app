@@ -1,10 +1,10 @@
 // src/App.tsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/components/shared/ProtectedRoute';
 import { Layout } from '@/components/shared/Layout';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
@@ -20,8 +20,6 @@ import { SharedCanvasView } from './components/honeycomb/SharedCanvasView';
 const queryClient = new QueryClient();
 
 function App() {
-  const { t } = useTranslation();
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -50,11 +48,7 @@ function App() {
                 )
               }
             >
-              <Route index element={
-                <div className="p-6 text-gray-500 text-center">
-                  {t('messages.selectHoneycomb')}
-                </div>
-              } />
+              <Route index element={<EmptyState />} />
               <Route path="honeycomb/:id" element={<HoneycombViewWrapper />} />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />

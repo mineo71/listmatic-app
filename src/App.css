@@ -7,6 +7,7 @@
 * {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
+  user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -14,6 +15,14 @@ body {
   /* Prevent page zoom but allow vertical scrolling */
   touch-action: pan-y;
   overflow-x: hidden;
+}
+
+/* Override for shared canvas container */
+.shared-canvas-container {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
 }
 
 /* Interface elements - NO zoom allowed */
@@ -86,18 +95,25 @@ input, textarea, select {
     height: 100%;
   }
 
-  /* Ensure modals are properly sized on mobile */
+  /* Ensure modals are properly sized on mobile - FIXED FOR FULL VIEWPORT */
   .sharing-modal {
     margin: 0;
-    height: 100vh;
+    height: 100vh !important;
+    height: 100dvh !important; /* Dynamic viewport height for better mobile support */
     border-radius: 0;
     max-width: 100vw;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
 
   .sharing-modal.is-mobile {
-    border-radius: 16px 16px 0 0;
-    height: 95vh;
-    margin-top: 5vh;
+    border-radius: 0;
+    height: 100vh !important;
+    height: 100dvh !important; /* Dynamic viewport height */
+    margin-top: 0;
   }
 
   /* Mobile-friendly buttons */
@@ -114,12 +130,16 @@ input, textarea, select {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Mobile canvas controls */
+  /* Mobile canvas controls - FIXED FOR PROFILE BUTTON OVERLAP */
   .mobile-canvas-controls {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(0, 0, 0, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    bottom: max(80px, env(safe-area-inset-bottom) + 64px) !important;
+    left: max(16px, env(safe-area-inset-left));
+    right: max(16px, env(safe-area-inset-right));
+    z-index: 30; /* Lower than sidebar z-index */
   }
 
   /* Hide scrollbars on mobile for cleaner look */
@@ -372,7 +392,7 @@ input, textarea, select {
   }
 }
 
-/* Safe area adjustments for devices with notches */
+/* Safe area adjustments for devices with notches - UPDATED */
 @supports (padding: max(0px)) {
   .mobile-header-safe-area {
     padding-left: max(16px, env(safe-area-inset-left));
@@ -381,8 +401,96 @@ input, textarea, select {
   }
 
   .mobile-canvas-controls {
-    bottom: max(16px, env(safe-area-inset-bottom));
+    bottom: max(80px, env(safe-area-inset-bottom) + 64px);
     left: max(16px, env(safe-area-inset-left));
     right: max(16px, env(safe-area-inset-right));
   }
+}
+
+/* Additional Mobile Fixes for Profile Button Overlap */
+@media (max-width: 768px) {
+  /* Ensure sidebar has higher z-index */
+  .sidebar,
+  aside {
+    z-index: 50 !important;
+  }
+
+  /* Add bottom padding to prevent overlap with mobile controls */
+  .sidebar .border-t {
+    padding-bottom: max(100px, env(safe-area-inset-bottom) + 80px);
+  }
+
+  /* Hide mobile controls when sidebar is open to prevent overlap */
+  .sidebar-open .mobile-canvas-controls {
+    display: none;
+  }
+
+  /* Fix for SharedCanvasView component */
+  .shared-canvas-view {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .shared-canvas-view.task-sidebar-open .mobile-canvas-controls {
+    display: none;
+  }
+
+  /* Canvas area should flex to fill remaining space */
+  .canvas-area {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Header should be fixed height */
+  .shared-canvas-header {
+    flex-shrink: 0;
+    height: auto;
+  }
+}
+
+/* Fix for iOS Safari viewport issues */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 768px) {
+    .sharing-modal,
+    .shared-canvas-container {
+      /* Use -webkit-fill-available for iOS Safari */
+      height: -webkit-fill-available !important;
+    }
+  }
+}
+
+/* Utility classes for better mobile handling */
+.mobile-full-height {
+  height: 100vh;
+  height: 100dvh;
+  height: -webkit-fill-available;
+}
+
+.mobile-no-scroll {
+  overflow: hidden;
+  touch-action: none;
+}
+
+.mobile-safe-bottom {
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+/* Prevent body scroll when in shared canvas view */
+body.canvas-view {
+  overflow: hidden;
+  height: 100vh;
+  height: 100dvh;
+  position: fixed;
+  width: 100%;
+}
+
+/* Full screen shared canvas without scroll */
+.shared-canvas-container {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
 }

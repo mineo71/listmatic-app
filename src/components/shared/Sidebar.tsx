@@ -325,7 +325,7 @@ export const Sidebar = ({
           </div>
 
           {/* **Pinned** Settings / Profile at bottom */}
-          <div className="border-t border-gray-200 p-4">
+          <div className="border-t border-gray-200 p-4 pb-28 md:pb-6 lg:pb-2">
             <button
                 onClick={() => handleSelect('settings','settings')}
                 className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100

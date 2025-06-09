@@ -8,7 +8,6 @@ import {
   Plus,
   Settings,
   User,
-  Menu,
   ChevronLeft,
   Star,
   Loader2
@@ -148,17 +147,6 @@ export const Sidebar = ({
 
   return (
       <>
-        {/* Hamburger on mobile */}
-        {!isOpen && (
-            <button
-                onClick={onToggleSidebar}
-                className="fixed top-3 left-4 p-2 rounded-md bg-white shadow-md hover:bg-gray-50 z-30"
-                aria-label={t('actions.openSidebar')}
-            >
-              <Menu size={20} />
-            </button>
-        )}
-
         <aside
             className={`
           fixed top-0 left-0 h-screen bg-white border-r border-gray-200

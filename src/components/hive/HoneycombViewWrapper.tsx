@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
-import { RotateCcw, ZoomIn, ZoomOut, List, Share } from 'lucide-react';
+import { RotateCcw, ZoomIn, ZoomOut, List, Share, Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Hive, Honeycomb } from '@/types';
 import { HoneycombCanvas } from '../honeycomb/canvas/HoneycombCanvas.tsx';
@@ -14,6 +14,7 @@ type ContextType = {
   hives: Hive[];
   onUpdateHoneycomb: (honeycomb: Honeycomb) => void;
   isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 };
 
 export const HoneycombViewWrapper = () => {
@@ -22,8 +23,8 @@ export const HoneycombViewWrapper = () => {
   const { t } = useTranslation();
   const { hives } = useOutletContext<ContextType>();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { isSidebarOpen } = useOutletContext<ContextType>();
-  const { user } = useAuth(); // NEW: Get current user
+  const { isSidebarOpen, onToggleSidebar } = useOutletContext<ContextType>();
+  const { user } = useAuth();
 
   // View state
   const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
@@ -31,7 +32,7 @@ export const HoneycombViewWrapper = () => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [progress, setProgress] = useState(0);
   const [isSharingModalOpen, setIsSharingModalOpen] = useState(false);
-  const [showParticipantCursors, setShowParticipantCursors] = useState(true); // NEW: Cursor visibility state
+  const [showParticipantCursors, setShowParticipantCursors] = useState(true);
 
   // Calculate the center position based on container size and sidebar state
   const calculateCenterPosition = useCallback(() => {
@@ -113,30 +114,36 @@ export const HoneycombViewWrapper = () => {
     setIsSharingModalOpen(false);
   };
 
-  // NEW: Handle cursor visibility toggle from sharing modal
+  // Handle cursor visibility toggle from sharing modal
   const handleToggleCursors = (show: boolean) => {
     setShowParticipantCursors(show);
   };
 
-  // NEW: Check if current user is the owner/host of this honeycomb
+  // Check if current user is the owner/host of this honeycomb
   const isHost = useMemo(() => {
-    // You might need to add owner_id to your honeycomb data structure
-    // For now, we'll assume the user is always the host in normal view
     return true;
   }, [user, honeycomb]);
 
   return (
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-col h-full overflow-hidden relative">
         {/* Header with controls */}
-        <div className="flex-shrink-0 px-6 py-[14px]  border-b border-gray-200 bg-white">
+        <div className="flex-shrink-0 px-6 py-[14px] border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between">
             <div
-                className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-8 transition-all duration-300 w-full ${
-                    isSidebarOpen ? 'pl-0' : 'pl-12'
-                }`}
+                className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-8 transition-all duration-300 w-full`}
             >
-
-              <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
+              <div className='flex flex-row items-center gap-4'>
+                {!isSidebarOpen && onToggleSidebar && (
+                <button
+                    onClick={onToggleSidebar}
+                    className="z-20 p-2 bg-white shadow-lg hover:bg-gray-50 rounded-lg transition-all border border-gray-200 hover:shadow-xl"
+                    title={t('actions.openSidebar')}
+                >
+                  <Menu size={20} className="text-gray-700" />
+                </button>
+              )}
+                <h1 className="text-2xl font-bold text-gray-900">{honeycomb.name}</h1>
+              </div>
 
               {/* Progress bar */}
               <div className="w-[90%] sm:w-64">
@@ -152,7 +159,6 @@ export const HoneycombViewWrapper = () => {
                 </div>
               </div>
             </div>
-
 
             <div className="hidden sm:flex gap-2">
               <button
@@ -219,8 +225,8 @@ export const HoneycombViewWrapper = () => {
           onClose={closeSharingModal}
           honeycombId={honeycomb.id}
           honeycombName={honeycomb.name}
-          isHost={isHost} // NEW: Pass host status
-          onToggleCursors={handleToggleCursors} // NEW: Pass cursor toggle handler
+          isHost={isHost}
+          onToggleCursors={handleToggleCursors}
         />
 
         <MobileControlsMenu
@@ -232,7 +238,6 @@ export const HoneycombViewWrapper = () => {
             isTaskSidebarOpen={isTaskSidebarOpen}
             openSharingModal={openSharingModal}
         />
-
       </div>
   );
 };

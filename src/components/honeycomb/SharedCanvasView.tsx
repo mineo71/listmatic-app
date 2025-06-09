@@ -84,17 +84,6 @@ export const SharedCanvasView = () => {
     };
   }, [shareCode]);
 
-  // Add body class for canvas view and handle escape key
-  useEffect(() => {
-    // Add canvas-view class to body for mobile viewport handling
-    document.body.classList.add('canvas-view');
-    
-    return () => {
-      // Clean up on unmount
-      document.body.classList.remove('canvas-view');
-    };
-  }, []);
-
   // Handle escape key and prevent body scroll when mobile menu is open
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -425,9 +414,9 @@ export const SharedCanvasView = () => {
   const activeParticipantsCount = participants.filter(p => p.is_online).length;
 
   return (
-    <div className={`shared-canvas-view flex flex-col mobile-full-height bg-gray-50 ${isTaskSidebarOpen ? 'task-sidebar-open' : ''}`}>
+    <div className="flex flex-col h-screen bg-gray-50">
       {/* Mobile-Optimized Header */}
-      <header className="shared-canvas-header bg-white shadow-sm border-b border-gray-200 relative z-30">
+      <header className="bg-white shadow-sm border-b border-gray-200 relative z-30">
         {/* Main Header */}
         <div className="px-3 sm:px-6 py-3 flex items-center justify-between">
           {/* Left side - Title and status */}
@@ -598,8 +587,7 @@ export const SharedCanvasView = () => {
       </header>
 
       {/* Canvas */}
-      <div className="canvas-area flex-1 overflow-hidden relative">
-        <div ref={canvasContainerRef} className="w-full h-full relative overflow-hidden">
+      <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden">
         <HoneycombCanvas
           honeycombId={session.honeycomb_id}
           zoom={zoom}
@@ -657,12 +645,11 @@ export const SharedCanvasView = () => {
             </div>
           );
         })}
-        </div>
       </div>
 
       {/* Mobile Bottom Controls - Only show when not in task sidebar */}
       {!isTaskSidebarOpen && (
-        <div className="md:hidden mobile-canvas-controls fixed bg-white rounded-xl shadow-lg border border-gray-200 p-3">
+        <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white rounded-xl shadow-lg border border-gray-200 p-3 z-40">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button

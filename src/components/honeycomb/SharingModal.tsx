@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/honeycomb/SharingModal.tsx
 import { useState, useEffect } from 'react'
-import { Copy, Users, Eye, Edit, X, Crown, Clock, Share, QrCode } from 'lucide-react'
+import { Copy, Users, Eye, Edit, X, Crown, Clock, Share } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import QRCodeGenerator from 'qrcode'
@@ -55,7 +55,7 @@ export default function SharingModal({
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [activeTab, setActiveTab] = useState<TabType>('share');
     const [participantsLoading, setParticipantsLoading] = useState(false);
-    const [showQRCode, setShowQRCode] = useState(false);
+    // const [showQRCode, setShowQRCode] = useState(false);
     
     // End session modal state
     const [showEndSessionModal, setShowEndSessionModal] = useState(false);
@@ -319,14 +319,14 @@ export default function SharingModal({
                                         {/* View Only Button */}
                                         <button
                                             onClick={() => handlePermissionChange('view')}
-                                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all duration-200 ${
+                                            className={`flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-lg border transition-all duration-200 ${
                                                 permissions === 'view'
                                                     ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm ring-1 ring-blue-200'
                                                     : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'
                                             }`}
                                             type="button"
                                         >
-                                            <Eye size={16} />
+                                            <Eye size={20} />
                                             <div className="text-left">
                                                 <p className="text-sm font-medium">{t('sharing.viewOnly')}</p>
                                                 <p className="text-xs opacity-75 hidden sm:block">
@@ -341,14 +341,14 @@ export default function SharingModal({
                                         {/* Can Edit Button */}
                                         <button
                                             onClick={() => handlePermissionChange('edit')}
-                                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all duration-200 ${
+                                            className={`flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-lg border transition-all duration-200 ${
                                                 permissions === 'edit'
                                                     ? 'bg-green-50 border-green-200 text-green-700 shadow-sm ring-1 ring-green-200'
                                                     : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'
                                             }`}
                                             type="button"
                                         >
-                                            <Edit size={16} />
+                                            <Edit size={20} />
                                             <div className="text-left">
                                                 <p className="text-sm font-medium">{t('sharing.canEdit')}</p>
                                                 <p className="text-xs opacity-75 hidden sm:block">
@@ -362,11 +362,11 @@ export default function SharingModal({
                                     </div>
 
                                     {/* Mobile-friendly descriptions */}
-                                    <div className="block sm:hidden">
+                                    {/* <div className="block sm:hidden">
                                         <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
                                             {permissions === 'view' ? t('sharing.viewOnlyDesc') : t('sharing.canEditDesc')}
                                         </div>
-                                    </div>
+                                    </div> */}
                                 </div>
 
                                 {/* Share Link */}

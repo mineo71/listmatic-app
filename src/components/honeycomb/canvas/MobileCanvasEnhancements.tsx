@@ -1,6 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// src/components/honeycomb/canvas/MobileCanvasEnhancements.tsx
-// This file contains mobile-specific enhancements for the HoneycombCanvas
+// Enhanced version of your MobileCanvasEnhancements.tsx
 
 import { useCallback, useRef, useEffect } from 'react';
 
@@ -28,6 +27,7 @@ export const useMobileCanvasEnhancements = ({
   const touchStartTimeRef = useRef<number>(0);
   const touchCountRef = useRef(0);
   const cursorThrottleRef = useRef<NodeJS.Timeout | null>(null);
+  const isCanvasInteractionRef = useRef(false);
   
   // Constants for mobile interaction
   const MOBILE_LIMITS = {
@@ -93,13 +93,19 @@ export const useMobileCanvasEnhancements = ({
           const worldY = (clientY - rect.top - offset.y) / zoom;
           onCursorMove({ x: worldX, y: worldY });
         }
-      }, 50); // Throttle to 20fps for mobile performance
+      }, 50);
     }
   }, [onCursorMove, containerRef, offset, zoom]);
 
   // Enhanced touch start handler
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    e.preventDefault(); // Prevent default mobile behaviors
+    // CRITICAL: Only prevent default for canvas touches
+    if (e.currentTarget === containerRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      isCanvasInteractionRef.current = true;
+    }
+    
     touchStartTimeRef.current = Date.now();
     touchCountRef.current = e.touches.length;
 
@@ -122,11 +128,15 @@ export const useMobileCanvasEnhancements = ({
       // Update cursor position for shared mode
       updateCursorPosition(touch.clientX, touch.clientY);
     }
-  }, [updateCursorPosition]);
+  }, [updateCursorPosition, containerRef]);
 
   // Enhanced touch move handler
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    // Only handle canvas interactions
+    if (!isCanvasInteractionRef.current) return;
+    
     e.preventDefault();
+    e.stopPropagation();
     
     if (e.touches.length === 2 && lastTouchDistanceRef.current !== null) {
       // Two finger pinch zoom
@@ -171,16 +181,19 @@ export const useMobileCanvasEnhancements = ({
     // Handle tap gestures
     if (touchCountRef.current === 1 && touchDuration < MOBILE_LIMITS.tapTimeout && !isDraggingRef.current) {
       // Single tap - could be used for selection in the future
-      console.log('Single tap detected');
+      console.log('Canvas tap detected');
     }
     
     lastTouchDistanceRef.current = null;
     isDraggingRef.current = false;
+    isCanvasInteractionRef.current = false;
   }, []);
 
   // Enhanced mouse handlers for desktop/hybrid devices
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 0) {
+      e.preventDefault();
+      e.stopPropagation();
       isDraggingRef.current = true;
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       
@@ -194,6 +207,7 @@ export const useMobileCanvasEnhancements = ({
     updateCursorPosition(e.clientX, e.clientY);
 
     if (isDraggingRef.current) {
+      e.preventDefault();
       const dx = e.clientX - lastMousePosRef.current.x;
       const dy = e.clientY - lastMousePosRef.current.y;
 
@@ -216,7 +230,13 @@ export const useMobileCanvasEnhancements = ({
 
   // Enhanced wheel handler with mobile consideration
   const handleWheel = useCallback((e: WheelEvent) => {
+    // Only handle wheel events on the canvas
+    if (e.target !== containerRef.current && !containerRef.current?.contains(e.target as Node)) {
+      return;
+    }
+    
     e.preventDefault();
+    e.stopPropagation();
     
     // Reduce sensitivity on mobile devices
     const isMobile = 'ontouchstart' in window;
@@ -226,7 +246,7 @@ export const useMobileCanvasEnhancements = ({
     
     const newZoom = lastZoomRef.current * zoomFactor;
     zoomAtPoint(newZoom, e.clientX, e.clientY);
-  }, [zoomAtPoint]);
+  }, [zoomAtPoint, containerRef]);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -254,24 +274,5 @@ export const useMobileCanvasEnhancements = ({
     limitOffsetToBounds,
     cleanup,
     MOBILE_LIMITS,
-  };
-};
-
-// Mobile-specific utility functions
-export const isMobileDevice = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-         ('ontouchstart' in window) ||
-         (window.innerWidth <= 768);
-};
-
-export const getOptimalCanvasSettings = () => {
-  const mobile = isMobileDevice();
-  
-  return {
-    maxParticipantCursors: mobile ? 3 : 10, // Limit cursor count on mobile
-    cursorUpdateInterval: mobile ? 100 : 50, // Less frequent updates on mobile
-    maxVisibleHexagons: mobile ? 50 : 200, // Limit rendered hexagons on mobile
-    enableSmoothAnimations: !mobile, // Disable some animations on mobile for performance
-    touchSensitivity: mobile ? 1.2 : 1.0, // Increase touch sensitivity on mobile
   };
 };

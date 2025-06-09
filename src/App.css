@@ -1,6 +1,70 @@
 /* Mobile Shared Canvas Enhancements */
 /* Add this to your global CSS or as a separate file */
 
+/* Add these to your App.css to prevent interface zoom */
+
+/* Global zoom prevention */
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  /* Prevent page zoom but allow vertical scrolling */
+  touch-action: pan-y;
+  overflow-x: hidden;
+}
+
+/* Interface elements - NO zoom allowed */
+.interface-element,
+button,
+input,
+textarea,
+select,
+.modal,
+.header,
+.sidebar,
+.controls {
+  touch-action: manipulation !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Ensure inputs don't trigger zoom on iOS */
+input, textarea, select {
+  font-size: 16px !important; /* Prevents iOS zoom */
+}
+
+/* Your honeycomb canvas container - ZOOM allowed */
+.shared-canvas-container {
+  touch-action: none !important; /* Allow all touch actions for canvas */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent zoom on modals and UI overlays */
+.sharing-modal,
+.modal-open,
+.participant-list-mobile,
+.mobile-canvas-controls,
+.mobile-zoom-controls {
+  touch-action: manipulation !important;
+}
+
+/* Special handling for your mobile controls */
+.mobile-touch-button,
+.mobile-zoom-button {
+  touch-action: manipulation !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* Prevent unwanted mobile behaviors */
 .shared-canvas-container {
   -webkit-touch-callout: none;

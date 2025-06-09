@@ -237,6 +237,10 @@ export const Layout = () => {
         } else if (data) {
           setHives(prev => [data, ...prev]);
           toast.success(t('messages.hiveCreated'));
+          
+          // Automatically select and open the newly created hive
+          setSelectedHiveId(data.id);
+          handleSelectItem(data.id, 'hive');
         }
       } else if (modalType === 'honeycomb' && selectedHiveId) {
         const { data, error } = await createHoneycomb(
@@ -269,6 +273,9 @@ export const Layout = () => {
 
           setHives(hives.map(updateHive));
           toast.success(t('messages.honeycombCreated'));
+          
+          // Automatically select and open the newly created honeycomb
+          handleSelectItem(data.id, 'honeycomb');
         }
       }
     } catch (error) {

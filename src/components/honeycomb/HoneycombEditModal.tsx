@@ -338,13 +338,6 @@ const ColorPalette = ({
           />
         </div>
       </div>
-      
-      {/* Custom color display */}
-      {isCustomColor && (
-        <div className="mt-2 text-xs text-gray-600">
-          {t('hexagon.customColorSelected') || 'Custom color'}: {selectedColor}
-        </div>
-      )}
     </div>
   );
 };

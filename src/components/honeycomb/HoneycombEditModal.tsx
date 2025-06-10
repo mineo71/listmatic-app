@@ -1,5 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -366,10 +366,12 @@ export const HoneycombEditModal = ({
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [deadline, setDeadline] = useState<string>('');
   const [deadlineTime, setDeadlineTime] = useState<string>('');
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Initialize form data
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !hasInitialized) {
+      // Only initialize when modal opens for the first time
       setTitle(initialData.title || '');
       setDescription(initialData.description || '');
       setSelectedIcon(validateIcon(initialData.icon));
@@ -396,8 +398,14 @@ export const HoneycombEditModal = ({
         setDeadline('');
         setDeadlineTime('');
       }
+      
+      // Mark as initialized
+      setHasInitialized(true);
+    } else if (!isOpen) {
+      // Reset initialization flag when modal closes
+      setHasInitialized(false);
     }
-  }, [initialData, isOpen]);
+  }, [isOpen, hasInitialized]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {

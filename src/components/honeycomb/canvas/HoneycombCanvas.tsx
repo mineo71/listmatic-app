@@ -179,13 +179,18 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     }));
   }, [zoom, offset, setZoom, setOffset, limitOffsetToBounds]);
 
-  // Modified wheel event handler for smoother zooming
+  // FIXED: Modified wheel event handler - blocks zoom when modal is open
   const handleWheel = useCallback((e: WheelEvent) => {
+    // Block zoom when modal is open
+    if (isEditModalOpen) {
+      return;
+    }
+
     e.preventDefault();
     const zoomFactor = e.deltaY > 0 ? 0.8 : 1.25;
     const newZoom = lastZoomRef.current * zoomFactor;
     zoomAtPoint(newZoom, e.clientX, e.clientY);
-  }, [zoomAtPoint]);
+  }, [zoomAtPoint, isEditModalOpen]); // Added isEditModalOpen to dependencies
 
   // Setup wheel event listener
   useEffect(() => {
@@ -229,8 +234,13 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     };
   }, [offset, setOffset]);
 
-  // Touch events for pinch-to-zoom
+  // FIXED: Touch events for pinch-to-zoom - blocks when modal is open
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Block touch interactions when modal is open
+    if (isEditModalOpen) {
+      return;
+    }
+
     if (e.touches.length === 2) {
       const distance = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
@@ -241,9 +251,14 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
       isDraggingRef.current = true;
       lastMousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
-  }, []);
+  }, [isEditModalOpen]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    // Block touch movement when modal is open
+    if (isEditModalOpen) {
+      return;
+    }
+
     e.preventDefault();
 
     if (e.touches.length === 2 && lastTouchDistanceRef.current !== null) {
@@ -272,15 +287,16 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
 
       lastMousePosRef.current = { x: touch.clientX, y: touch.clientY };
     }
-  }, [limitOffsetToBounds, setOffset, zoomAtPoint]);
+  }, [limitOffsetToBounds, setOffset, zoomAtPoint, isEditModalOpen]);
 
   const handleTouchEnd = useCallback(() => {
     lastTouchDistanceRef.current = null;
     isDraggingRef.current = false;
   }, []);
 
-  // Mouse handlers for panning
+  // FIXED: Mouse handlers for panning - blocks when modal is open
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Block dragging when modal is open
     if (e.button === 0 && !isCreating && !isEditModalOpen) {
       isDraggingRef.current = true;
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -289,7 +305,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      // Track cursor position for shared mode
+      // Track cursor position for shared mode (can work even with modal open)
       if (isSharedMode && onCursorMove && containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         // Calculate world coordinates (canvas content coordinates)
@@ -298,7 +314,8 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
         onCursorMove({ x: worldX, y: worldY });
       }
 
-      if (isDraggingRef.current) {
+      // Block canvas dragging when modal is open
+      if (isDraggingRef.current && !isEditModalOpen) {
         const dx = e.clientX - lastMousePosRef.current.x;
         const dy = e.clientY - lastMousePosRef.current.y;
 
@@ -309,6 +326,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
 
         lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       } else if (isCreating && containerRef.current && !isEditModalOpen && canEdit) {
+        // Block ghost hexagon creation when modal is open
         const rect = containerRef.current.getBoundingClientRect();
         const mouseX = (e.clientX - rect.left) / zoom - offset.x / zoom;
         const mouseY = (e.clientY - rect.top) / zoom - offset.y / zoom;
@@ -377,9 +395,10 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
     setGhostHex(null);
   }, [ghostHex, containerRef, t, createItem, updateItem, items, canEdit]);
 
-  // Enhanced canvas click handler to support center creation
+  // FIXED: Enhanced canvas click handler - blocks when modal is open
   const handleCanvasClick = useCallback(() => {
-    if (!isCreating || !canEdit) return;
+    // Block canvas clicks when modal is open
+    if (!isCreating || !canEdit || isEditModalOpen) return;
 
     // If no items exist and user clicks, create first hexagon at center
     if (items.length === 0 && containerRef.current) {
@@ -391,7 +410,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
         createNewHexagon();
       }, 50);
     }
-  }, [isCreating, canEdit, items.length, createNewHexagon]);
+  }, [isCreating, canEdit, items.length, createNewHexagon, isEditModalOpen]);
 
   // Mark task as complete
   const handleMarkComplete = useCallback(async (id: string) => {
@@ -513,6 +532,15 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
   useEffect(() => {
     lastZoomRef.current = zoom;
   }, [zoom]);
+
+  // FIXED: Clear drag state when modal opens
+  useEffect(() => {
+    if (isEditModalOpen) {
+      // Clear drag state when modal opens
+      isDraggingRef.current = false;
+      lastTouchDistanceRef.current = null;
+    }
+  }, [isEditModalOpen]);
 
   return (
     <div
@@ -678,7 +706,7 @@ export const HoneycombCanvas: React.FC<EnhancedHoneycombCanvasProps> = ({
           })}
 
           {/* Ghost hexagon for creation mode */}
-          {isCreating && ghostHex && canEdit && (
+          {isCreating && ghostHex && canEdit && !isEditModalOpen && (
             <HoneycombHexagon
               id="ghost"
               x={axialToPixel(ghostHex.q, ghostHex.r).x}

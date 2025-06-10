@@ -4,8 +4,8 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useTranslation } from "react-i18next"
-import type { HoneycombItem, TaskIcon, TaskPriority } from "./HoneycombTypes"
-import { axialToPixel } from "./honeycombUtils"
+import type { HoneycombItem, TaskIcon, TaskPriority } from "../types/HoneycombTypes"
+import { axialToPixel } from "../utils/honeycombUtils"
 import { 
   getHoneycombItems, 
   createHoneycombItem, 

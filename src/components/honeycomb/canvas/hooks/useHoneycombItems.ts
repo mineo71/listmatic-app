@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
-import type { HoneycombItem, TaskIcon, TaskPriority } from "./HoneycombTypes"
-import { axialToPixel } from "./honeycombUtils"
+import type { HoneycombItem, TaskIcon, TaskPriority } from "../types/HoneycombTypes"
+import { axialToPixel } from "../utils/honeycombUtils"
 
 export const useHoneycombItems = (onProgressUpdate: (progress: number) => void) => {
     const [items, setItems] = useState<HoneycombItem[]>([])

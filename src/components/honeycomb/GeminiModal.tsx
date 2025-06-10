@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Clock, AlertCircle, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GoogleGenAI } from "@google/genai";
-import type { HoneycombItem, TaskIcon, TaskPriority } from './canvas/HoneycombTypes';
+import type { HoneycombItem, TaskIcon, TaskPriority } from './canvas/types/HoneycombTypes';
 import { 
   getRecentAIRequests, 
   createAIRequest, 

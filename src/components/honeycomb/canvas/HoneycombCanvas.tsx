@@ -7,9 +7,9 @@ import { HoneycombEditModal } from "../HoneycombEditModal"
 import TaskSidebar from "../TaskSidebar"
 import GeminiModal from "../GeminiModal"
 import toast from "react-hot-toast"
-import type { HoneycombItem, HoneycombCanvasProps, TaskIcon, TaskPriority } from "./HoneycombTypes"
-import { axialToPixel, findClosestNeighbor } from "./honeycombUtils"
-import { useUnifiedHoneycombItems } from "./useUnifiedHoneycombItems"
+import type { HoneycombItem, HoneycombCanvasProps, TaskIcon, TaskPriority } from "./types/HoneycombTypes"
+import { axialToPixel, findClosestNeighbor } from "./utils/honeycombUtils"
+import { useUnifiedHoneycombItems } from "./hooks/useUnifiedHoneycombItems"
 
 // Enhanced interface with new callbacks
 interface EnhancedHoneycombCanvasProps extends HoneycombCanvasProps {

@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Types for our structure
-import type { HoneycombItem } from "../components/honeycomb/canvas/HoneycombTypes";
+import type { HoneycombItem } from "../components/honeycomb/canvas/types/HoneycombTypes";
 
 export async function generateHoneycombWithAI(prompt: string): Promise<HoneycombItem[]> {
   try {

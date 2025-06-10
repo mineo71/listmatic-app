@@ -575,7 +575,7 @@ export const HoneycombEditModal = ({
 
               {/* Action Buttons */}
               <div className="flex-shrink-0 pt-4 border-t border-gray-200">
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+                <div className={`flex flex-col sm:flex-row ${isCreating ? 'justify-end' : 'justify-between'} items-stretch sm:items-center gap-3`}>
                   {/* Delete Button */}
                   {!isCreating && onDelete && !initialData?.isMain && (
                     <button

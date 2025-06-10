@@ -36,6 +36,7 @@ export async function generateHoneycombWithAI(prompt: string): Promise<Honeycomb
       Include 5-15 nodes total.
 
       Only respond with the valid JSON array, nothing else.
+      Respond in the same language as the user input.
     `;
 
     // Make the API call

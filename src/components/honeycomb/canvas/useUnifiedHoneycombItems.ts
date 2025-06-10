@@ -14,7 +14,8 @@ import {
   deleteHoneycombItem, 
   bulkCreateHoneycombItems,
   clearHoneycombItems,
-  type HoneycombItemDB 
+  type HoneycombItemDB, 
+  VALID_ICONS
 } from '@/services/database'
 import { logSharingChange } from '@/services/sharing'
 import supabase from '@/utils/supabase'
@@ -45,10 +46,7 @@ const validateIcon = (icon: any): TaskIcon => {
     return DEFAULT_ICON;
   }
   
-  // Basic validation - you can expand this list based on your available icons
-  const validIcons = ['None', 'Star', 'Target', 'Flag', 'Timer', 'CheckCircle', 'Code', 'FileText', 'Heart', 'Home', 'Mail', 'MessageCircle', 'Settings'];
-  
-  if (validIcons.includes(icon)) {
+  if (VALID_ICONS.includes(icon as TaskIcon)) {
     return icon as TaskIcon;
   }
   

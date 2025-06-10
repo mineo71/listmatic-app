@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Trash2, Calendar, Clock, ChevronDown, Check, Plus } from 'lucide-react';
+import { X, Trash2, Calendar, Clock, Search, Check, Plus } from 'lucide-react';
 import type { TaskIcon, TaskPriority } from '../../types';
 import { ICONS_MAP, ICONS } from '@/utils/icons';
 
@@ -35,11 +35,7 @@ const PRESET_COLORS = [
   // Light colors
   '#FDE68A', '#FCA5A5', '#A7F3D0', '#BFDBFE', '#DDD6FE', '#FBCFE8',
   // Medium colors
-  '#FCD34D', '#F87171', '#6EE7B7', '#93C5FD', '#C4B5FD', '#F9A8D4',
-  // Vibrant colors
-  '#FBBF24', '#EF4444', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899',
-  // Pastel colors
-  '#FEF3C7', '#FEE2E2', '#D1FAE5', '#DBEAFE', '#EDE9FE', '#FCE7F3',
+  '#FCD34D', '#F87171', '#6EE7B7', '#93C5FD', '#C4B5FD',
 ];
 
 const PRIORITIES = ['low', 'medium', 'high'];
@@ -47,21 +43,16 @@ const PRIORITIES = ['low', 'medium', 'high'];
 // Helper function to validate and normalize color values
 const validateColor = (color: string | undefined | null): string => {
   if (!color || typeof color !== 'string') {
-    return PRESET_COLORS[0]; // Default to first preset color
+    return PRESET_COLORS[0];
   }
   
-  // Remove any whitespace
   const trimmedColor = color.trim();
-  
-  // Check if it's a valid hex color (with or without #)
   const hexRegex = /^#?([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
   
   if (hexRegex.test(trimmedColor)) {
-    // Ensure it starts with #
     return trimmedColor.startsWith('#') ? trimmedColor : `#${trimmedColor}`;
   }
   
-  // If it's not a valid hex color, return default
   return PRESET_COLORS[0];
 };
 
@@ -71,12 +62,10 @@ const validateIcon = (icon: TaskIcon | undefined | null): TaskIcon => {
     return 'None';
   }
   
-  // Check if the icon exists in our available icons
   if (icon === 'None' || ICONS.includes(icon)) {
     return icon;
   }
   
-  // If invalid icon, return None
   return 'None';
 };
 
@@ -88,98 +77,261 @@ const validatePriority = (priority: TaskPriority | undefined | null): TaskPriori
   return priority;
 };
 
-// Dropdown component
-const Dropdown = ({
-label,
-value,
-onChange,
-options,
-renderOption,
-renderValue,
-className = ''
+// Enhanced Icon Selector Component
+const IconSelector = ({
+  selectedIcon,
+  onIconChange,
+  className = ''
 }: {
-  label: string;
-  value: any;
-  onChange: (value: any) => void;
-  options: any[];
-  renderOption: (option: any) => React.ReactNode;
-  renderValue: (value: any) => React.ReactNode;
+  selectedIcon: TaskIcon;
+  onIconChange: (icon: TaskIcon) => void;
   className?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { t } = useTranslation();
+
+  // Filter icons based on search query
+  const filteredIcons = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return ICONS;
+    }
+    
+    const query = searchQuery.toLowerCase();
+    return ICONS.filter(icon => 
+      icon.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+
+  const renderIcon = (icon: TaskIcon) => {
+    if (icon === 'None') {
+      return <div className="w-5 h-5" />;
+    }
+    
+    const Icon = ICONS_MAP[icon as keyof typeof ICONS_MAP];
+    if (!Icon) {
+      return <div className="w-5 h-5" />;
+    }
+    
+    return <Icon size={20} />;
+  };
+
+  const renderIconOption = (icon: TaskIcon) => (
+    <button
+      key={icon}
+      type="button"
+      onClick={() => {
+        onIconChange(icon);
+        setIsOpen(false);
+        setSearchQuery('');
+      }}
+      className={`flex items-center gap-3 w-full p-3 text-left hover:bg-gray-100 rounded-lg transition-colors ${
+        selectedIcon === icon ? 'bg-amber-50 border border-amber-200' : ''
+      }`}
+    >
+      <div className="flex-shrink-0">
+        {renderIcon(icon)}
+      </div>
+      <span className="text-sm font-medium text-gray-700">{icon}</span>
+      {selectedIcon === icon && (
+        <Check size={16} className="ml-auto text-amber-600" />
+      )}
+    </button>
+  );
 
   return (
-      <div className="relative">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {label}
-        </label>
-        <button
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className={`flex items-center justify-between w-full px-3 py-2 text-left 
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {t('hexagon.icon')}
+      </label>
+      
+      {/* Selected Icon Display */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center justify-between w-full px-3 py-2 text-left 
           border border-gray-300 rounded-md focus:outline-none focus:ring-2 
-          focus:ring-amber-500 focus:border-transparent ${className}`}
+          focus:ring-amber-500 focus:border-transparent hover:bg-gray-50 ${className}`}
+      >
+        <div className="flex items-center gap-2">
+          {renderIcon(selectedIcon)}
+          <span className="text-sm text-gray-700">{selectedIcon}</span>
+        </div>
+        <svg
+          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          {renderValue(value)}
-          <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
-        {isOpen && (
-            <>
-              <div
-                  className="fixed inset-0 z-30"
-                  onClick={() => setIsOpen(false)}
-              />
-              <div className="absolute z-40 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-auto">
-                {options.map((option, index) => (
-                    <button
-                        key={index}
-                        type="button"
-                        onClick={() => {
-                          onChange(option);
-                          setIsOpen(false);
-                        }}
-                        className="flex items-center w-full px-3 py-2 text-left hover:bg-gray-100"
-                    >
-                      {renderOption(option)}
-                    </button>
-                ))}
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Dropdown */}
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => {
+              setIsOpen(false);
+              setSearchQuery('');
+            }}
+          />
+          
+          {/* Dropdown Content */}
+          <div 
+            className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-80 overflow-hidden"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onMouseMove={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+          >
+            {/* Search Input */}
+            <div className="p-3 border-b border-gray-200">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('placeholders.searchIcons') || 'Search icons...'}
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md 
+                    focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  onClick={(e) => e.stopPropagation()}
+                />
               </div>
-            </>
-        )}
+            </div>
+            
+            {/* Icons Grid */}
+            <div 
+              className="max-h-60 overflow-y-auto p-2"
+              onWheel={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+            >
+              {filteredIcons.length === 0 ? (
+                <div className="p-4 text-center text-gray-500 text-sm">
+                  {t('placeholders.noIconsFound') || 'No icons found'}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredIcons.map(renderIconOption)}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// Color Palette Component
+const ColorPalette = ({
+  selectedColor,
+  onColorChange,
+  className = ''
+}: {
+  selectedColor: string;
+  onColorChange: (color: string) => void;
+  className?: string;
+}) => {
+  const [customColor, setCustomColor] = useState('');
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+  const { t } = useTranslation();
+
+  const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setCustomColor(newColor);
+    onColorChange(newColor);
+    setShowCustomPicker(false);
+  };
+
+  return (
+    <div className={className}>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {t('hexagon.color')}
+      </label>
+      
+      {/* Color Grid */}
+      <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50">
+        {PRESET_COLORS.map((color) => (
+          <button
+            key={color}
+            type="button"
+            onClick={() => onColorChange(color)}
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full transition-all duration-200 hover:scale-110 ${
+              selectedColor === color
+                ? 'ring-2 ring-amber-500 ring-offset-2 shadow-lg'
+                : 'hover:shadow-md'
+            }`}
+            style={{ backgroundColor: color }}
+            title={color}
+          />
+        ))}
+        
+        {/* Custom Color Button */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowCustomPicker(true)}
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-dashed border-gray-400 
+              hover:border-gray-600 transition-colors flex items-center justify-center
+              hover:bg-gray-100"
+            title={t('hexagon.customColor') || 'Custom color'}
+          >
+            <Plus size={14} className="text-gray-600" />
+          </button>
+          
+          {/* Hidden color input */}
+          {showCustomPicker && (
+            <input
+              type="color"
+              value={selectedColor}
+              onChange={handleCustomColorChange}
+              className="absolute top-0 left-0 w-8 h-8 sm:w-9 sm:h-9 opacity-0 cursor-pointer"
+              title={t('hexagon.pickCustomColor') || 'Pick custom color'}
+            />
+          )}
+        </div>
       </div>
+    </div>
   );
 };
 
 export const HoneycombEditModal = ({
-isOpen,
-onClose,
-onSubmit,
-onDelete,
-initialData = {
-title: '',
-description: '',
-icon: 'None' as TaskIcon,
-priority: 'medium' as TaskPriority,
-color: PRESET_COLORS[0]
-},
-isCreating = false,
+  isOpen,
+  onClose,
+  onSubmit,
+  onDelete,
+  initialData = {
+    title: '',
+    description: '',
+    icon: 'None' as TaskIcon,
+    priority: 'medium' as TaskPriority,
+    color: PRESET_COLORS[0]
+  },
+  isCreating = false,
 }: EditModalProps) => {
   const { t } = useTranslation();
   
-  // Validate and set initial state with proper defaults
+  // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<TaskIcon>('None');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
-  const [customColor, setCustomColor] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [deadline, setDeadline] = useState<string>('');
   const [deadlineTime, setDeadlineTime] = useState<string>('');
-  const [isCustomColor, setIsCustomColor] = useState(false);
 
+  // Initialize form data
   useEffect(() => {
     if (isOpen) {
-      // Validate and set all initial data with proper fallbacks
       setTitle(initialData.title || '');
       setDescription(initialData.description || '');
       setSelectedIcon(validateIcon(initialData.icon));
@@ -206,13 +358,10 @@ isCreating = false,
         setDeadline('');
         setDeadlineTime('');
       }
-      
-      // Reset custom color state
-      setIsCustomColor(false);
-      setCustomColor('');
     }
   }, [initialData, isOpen]);
 
+  // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -249,216 +398,113 @@ isCreating = false,
         icon: selectedIcon,
         priority,
         deadline: deadlineDate,
-        color: validateColor(selectedColor), // Ensure color is valid before submitting
+        color: validateColor(selectedColor),
       });
       onClose();
     }
   };
 
-  const handleColorChange = (color: string) => {
-    const validColor = validateColor(color);
-    setSelectedColor(validColor);
-    setIsCustomColor(false);
-  };
-
-  const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newColor = e.target.value;
-    setCustomColor(newColor);
-    
-    // Validate the custom color before setting it
-    const validColor = validateColor(newColor);
-    setSelectedColor(validColor);
-    setIsCustomColor(true);
-  };
-
   return (
-      <>
-        <div className="fixed inset-0 bg-black/50 z-[100]" onClick={onClose} />
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/50 z-[100]" onClick={onClose} />
 
-        <div className="fixed inset-0 flex items-center justify-center z-[101]">
-          <div
-              className="bg-white rounded-lg w-full max-w-2xl p-6 relative shadow-xl mx-4"
-              onClick={e => e.stopPropagation()}
-          >
-            <button
-                onClick={onClose}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X size={24} />
-            </button>
-
-            <h2 className="text-xl font-semibold mb-4">
+      {/* Modal Container */}
+      <div className="fixed inset-0 flex items-center justify-center z-[101] p-2 sm:p-4">
+        <div
+          className="bg-white rounded-lg w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] 
+            relative shadow-xl flex flex-col overflow-hidden"
+          onClick={e => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
               {isCreating ? t('modals.createHexagon') : t('modals.editHexagon')}
             </h2>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Form Content */}
+          <div className="flex-1 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-4 space-y-4 sm:space-y-4">
               {/* Title Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('hexagon.title')}
                 </label>
                 <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none
-                  focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-shadow"
-                    autoFocus
-                    placeholder={t('hexagon.titlePlaceholder')}
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none
+                    focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-shadow"
+                  autoFocus
+                  placeholder={t('hexagon.titlePlaceholder')}
                 />
               </div>
 
               {/* Description Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('hexagon.description')}
                 </label>
                 <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none
-                  focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-shadow
-                  resize-y min-h-[80px] max-h-[200px]"
-                    placeholder={t('hexagon.descriptionPlaceholder')}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none
+                    focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-shadow
+                    resize-y min-h-[80px] max-h-[150px]"
+                  placeholder={t('hexagon.descriptionPlaceholder')}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {/* Icon Dropdown */}
-                <Dropdown
-                    label={t('hexagon.icon')}
-                    value={selectedIcon}
-                    onChange={setSelectedIcon}
-                    options={[ ...ICONS]} // Add 'None' as first option
-                    renderOption={(icon) => {
-                      if (icon === 'None') {
-                        return (
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4" /> {/* Empty space for alignment */}
-                              <span>None</span>
-                              {icon === selectedIcon && <Check size={16} className="ml-auto text-amber-500" />}
-                            </div>
-                        );
-                      }
-                      const Icon = ICONS_MAP[icon as keyof typeof ICONS_MAP];
-                      // Safety check for Icon component
-                      if (!Icon) {
-                        return (
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4" />
-                              <span>{icon}</span>
-                              {icon === selectedIcon && <Check size={16} className="ml-auto text-amber-500" />}
-                            </div>
-                        );
-                      }
-                      return (
-                          <div className="flex items-center gap-2">
-                            <Icon size={16} />
-                            <span>{icon}</span>
-                            {icon === selectedIcon && <Check size={16} className="ml-auto text-amber-500" />}
-                          </div>
-                      );
-                    }}
-                    renderValue={(icon) => {
-                      if (icon === 'None') {
-                        return (
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4" /> {/* Empty space for alignment */}
-                              <span>None</span>
-                            </div>
-                        );
-                      }
-                      const Icon = ICONS_MAP[icon as keyof typeof ICONS_MAP];
-                      // Safety check for Icon component
-                      if (!Icon) {
-                        return (
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4" />
-                              <span>{icon}</span>
-                            </div>
-                        );
-                      }
-                      return (
-                          <div className="flex items-center gap-2">
-                            <Icon size={16} />
-                            <span>{icon}</span>
-                          </div>
-                      );
-                    }}
+              {/* Icon and Color Row */}
+              <div className="space-y-4 sm:space-y-6">
+                {/* Icon Selector - Full width on mobile for better UX */}
+                <IconSelector
+                  selectedIcon={selectedIcon}
+                  onIconChange={setSelectedIcon}
                 />
 
-                {/* Color Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    {t('hexagon.color')}
-                  </label>
-                  <div className="flex gap-2">
-                    <Dropdown
-                        label=""
-                        value={selectedColor}
-                        onChange={handleColorChange}
-                        options={PRESET_COLORS}
-                        className="!p-1"
-                        renderOption={(color) => (
-                            <div className="flex items-center gap-2">
-                              <div
-                                  className="w-6 h-6 rounded-full"
-                                  style={{ backgroundColor: validateColor(color) }}
-                              />
-                              <span>{color}</span>
-                              {color === selectedColor && !isCustomColor && (
-                                  <Check size={16} className="ml-auto text-amber-500" />
-                              )}
-                            </div>
-                        )}
-                        renderValue={(color) => (
-                            <div
-                                className="w-8 h-8 rounded-full"
-                                style={{ backgroundColor: isCustomColor ? validateColor(customColor) : validateColor(color) }}
-                            />
-                        )}
-                    />
-                    <div className="relative mt-2">
-                      <input
-                          type="color"
-                          value={validateColor(customColor) || PRESET_COLORS[0]}
-                          onChange={handleCustomColorChange}
-                          className="sr-only"
-                          id="custom-color"
-                      />
-                      <label
-                          htmlFor="custom-color"
-                          className="flex items-center justify-center w-[42px] h-[42px] border border-gray-300
-                        rounded-md cursor-pointer hover:bg-gray-50"
-                      >
-                        <Plus size={20} />
-                      </label>
-                    </div>
-                  </div>
-                </div>
+                {/* Color Palette - Full width on mobile */}
+                <ColorPalette
+                  selectedColor={selectedColor}
+                  onColorChange={setSelectedColor}
+                />
               </div>
 
-              {/* Priority Selection */}
-              <div className="grid sm:grid-cols-2 grid-cols-1 gap-4">
+              {/* Priority and Deadline */}
+              <div className="space-y-4 sm:space-y-6">
+                {/* Priority Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('hexagon.priority')}
                   </label>
                   <div className="flex rounded-md shadow-sm">
-                    {PRIORITIES.map((p) => (
-                        <button
-                            key={p}
-                            type="button"
-                            onClick={() => setPriority(p as TaskPriority)}
-                            className={`flex-1 px-4 py-2 text-sm first:rounded-l-md last:rounded-r-md
-                        ${priority === p
-                                ? 'bg-amber-500 text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-50'
-                            } border border-gray-300 font-medium capitalize
-                        ${p !== PRIORITIES[PRIORITIES.length - 1] ? 'border-r-0' : ''}`}
-                        >
-                          {t(`priority.${p}`)}
-                        </button>
+                    {PRIORITIES.map((p, index) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPriority(p as TaskPriority)}
+                        className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors
+                          ${index === 0 ? 'rounded-l-md' : ''}
+                          ${index === PRIORITIES.length - 1 ? 'rounded-r-md' : ''}
+                          ${priority === p
+                            ? 'bg-amber-500 text-white border-amber-500'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                          } border ${index !== PRIORITIES.length - 1 ? 'border-r-0' : ''}`}
+                      >
+                        {t(`priority.${p}`)}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -468,77 +514,77 @@ isCreating = false,
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('hexagon.deadline')}
                   </label>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                                  size={16}/>
-                        <input
-                            type="date"
-                            value={deadline}
-                            onChange={(e) => setDeadline(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="date"
+                        value={deadline}
+                        onChange={(e) => setDeadline(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-md focus:outline-none
                           focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm"
-                        />
-                      </div>
+                      />
                     </div>
-                    <div className="flex-1">
-                      <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16}/>
-                        <input
-                            type="time"
-                            value={deadlineTime}
-                            onChange={(e) => setDeadlineTime(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="time"
+                        value={deadlineTime}
+                        onChange={(e) => setDeadlineTime(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-md focus:outline-none
                           focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm"
-                        />
-                      </div>
+                      />
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end items-center pt-4">
-                {!isCreating && onDelete && !initialData?.isMain && (
+              <div className="flex-shrink-0 pt-4 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+                  {/* Delete Button */}
+                  {!isCreating && onDelete && !initialData?.isMain && (
                     <button
-                        type="button"
-                        onClick={onDelete}
-                        className="mr-auto px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-md
-                    hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2
-                    focus:ring-red-500 flex items-center gap-2 transition-colors"
+                      type="button"
+                      onClick={onDelete}
+                      className="order-2 sm:order-1 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 rounded-md
+                        hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2
+                        focus:ring-red-500 flex items-center justify-center gap-2 transition-colors"
                     >
                       <Trash2 size={16} />
                       {t('actions.delete')}
                     </button>
-                )}
+                  )}
 
-                <div className="flex gap-2">
-                  <button
+                  {/* Right side buttons */}
+                  <div className="order-1 sm:order-2 flex gap-2">
+                    <button
                       type="button"
                       onClick={onClose}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md
-                    hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2
-                    focus:ring-amber-500 transition-colors"
-                  >
-                    {t('actions.cancel')}
-                  </button>
+                      className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-md
+                        hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2
+                        focus:ring-amber-500 transition-colors"
+                    >
+                      {t('actions.cancel')}
+                    </button>
 
-                  <button
+                    <button
                       type="submit"
                       disabled={!title.trim()}
-                      className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md
-                    hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2
-                    focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed
-                    transition-colors"
-                  >
-                    {isCreating ? t('actions.create') : t('actions.save')}
-                  </button>
+                      className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-white bg-amber-600 rounded-md
+                        hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2
+                        focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed
+                        transition-colors"
+                    >
+                      {isCreating ? t('actions.create') : t('actions.save')}
+                    </button>
+                  </div>
                 </div>
               </div>
             </form>
           </div>
         </div>
-      </>
+      </div>
+    </>
   );
-}
+};

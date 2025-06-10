@@ -199,7 +199,9 @@
       "AllTasks": "Tutte le Attività",
       "NoColor": "Nessun Colore",
       "Completed": "Completato",
-      "pending": "In Sospeso"
+      "pending": "In Sospeso",
+      "searchIcons": "Cerca icone...",
+      "noIconsFound": "Nessuna icona trovata"
     },
     "confirmations": {
       "delete": "Sei sicuro? Questa azione non può essere annullata.",

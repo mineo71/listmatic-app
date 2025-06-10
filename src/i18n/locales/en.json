@@ -199,7 +199,9 @@
     "AllTasks": "All Tasks",
     "NoColor": "No Color",
     "Completed": "Completed",
-    "pending": "Pending"
+    "pending": "Pending",
+    "searchIcons": "Search icons...",
+    "noIconsFound": "No icons found"
   },
   "confirmations": {
     "delete": "Are you sure? This action cannot be undone.",

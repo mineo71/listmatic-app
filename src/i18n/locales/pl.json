@@ -199,7 +199,9 @@
     "AllTasks": "Wszystkie zadania",
     "NoColor": "Bez koloru",
     "Completed": "Ukończone",
-    "pending": "Oczekujące"
+    "pending": "Oczekujące",
+    "searchIcons": "Szukaj ikon...",
+    "noIconsFound": "Nie znaleziono ikon"
   },
   "confirmations": {
     "delete": "Czy jesteś pewien? Ta akcja nie może być cofnięta.",

@@ -199,7 +199,9 @@
     "AllTasks": "Alle Aufgaben",
     "NoColor": "Keine Farbe",
     "Completed": "Abgeschlossen",
-    "pending": "Ausstehend"
+    "pending": "Ausstehend",
+    "searchIcons": "Icons suchen...",
+    "noIconsFound": "Keine Icons gefunden"
   },
   "confirmations": {
     "delete": "Bist du sicher? Diese Aktion kann nicht rückgängig gemacht werden.",

@@ -199,7 +199,9 @@
       "AllTasks": "Todas las Tareas",
       "NoColor": "Sin Color",
       "Completed": "Completado",
-      "pending": "Pendiente"
+      "pending": "Pendiente",
+      "searchIcons": "Buscar iconos...",
+      "noIconsFound": "No se encontraron iconos"
     },
     "confirmations": {
       "delete": "¿Estás seguro? Esta acción no se puede deshacer.",

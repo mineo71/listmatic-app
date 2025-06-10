@@ -199,7 +199,9 @@
     "AllTasks": "Всі завдання",
     "NoColor": "Без кольору",
     "Completed": "Завершено",
-    "pending": "В процесі"
+    "pending": "В процесі",
+    "searchIcons": "Пошук іконок...",
+    "noIconsFound": "Іконок не знайдено"
   },
   "confirmations": {
     "delete": "Ви впевнені? Цю дію неможливо скасувати.",

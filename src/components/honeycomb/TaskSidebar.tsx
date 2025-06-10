@@ -256,7 +256,7 @@ const TaskSidebar = ({
                 <div className="space-y-1">
                   {groupItems.map((item) => {
                     const IconComponent = item.icon && item.icon !== 'None'
-                        ? ICONS_MAP[item.icon]
+                        ? ICONS_MAP[item.icon as keyof typeof ICONS_MAP]
                         : null;
 
                     return (

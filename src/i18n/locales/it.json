@@ -449,5 +449,22 @@
       "hiveName": "Nome Giardino delle Api",
       "honeycombName": "Nome Alveare",
       "currentName": "Nome attuale"
+    },
+    "delete": {
+      "confirmTitle": {
+        "hive": "Elimina Giardino delle Api",
+        "honeycomb": "Elimina Alveare"
+      },
+      "confirmMessage": {
+        "hive": "Sei sicuro di voler eliminare questo giardino delle api? Questo rimuoverà permanentemente tutti gli alveari e le attività al suo interno.",
+        "honeycomb": "Sei sicuro di voler eliminare questo alveare? Questo rimuoverà permanentemente tutte le attività al suo interno.",
+        "clonedHoneycomb": "Questo è un alveare clonato. Eliminarlo non influirà sull'originale. Sei sicuro di voler eliminare questa copia?"
+      },
+      "itemToDelete": {
+        "hive": "Giardino delle api da eliminare:",
+        "honeycomb": "Alveare da eliminare:"
+      },
+      "warning": "Questa azione non può essere annullata",
+      "warningDescription": "Una volta eliminati, questi dati non possono essere recuperati. Assicurati che questo sia ciò che vuoi fare."
     }
   }

@@ -449,5 +449,22 @@
     "hiveName": "Bee-Garden Name",
     "honeycombName": "Hive Name",
     "currentName": "Current name"
+  },
+  "delete": {
+    "confirmTitle": {
+      "hive": "Delete Bee-Garden",
+      "honeycomb": "Delete Hive"
+    },
+    "confirmMessage": {
+      "hive": "Are you sure you want to delete this bee-garden? This will permanently remove all hives and tasks within it.",
+      "honeycomb": "Are you sure you want to delete this hive? This will permanently remove all tasks within it.",
+      "clonedHoneycomb": "This is a cloned hive. Deleting it will not affect the original. Are you sure you want to delete this copy?"
+    },
+    "itemToDelete": {
+      "hive": "Bee-garden to delete:",
+      "honeycomb": "Hive to delete:"
+    },
+    "warning": "This action cannot be undone",
+    "warningDescription": "Once deleted, this data cannot be recovered. Please make sure this is what you want to do."
   }
 }

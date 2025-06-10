@@ -449,5 +449,22 @@
     "hiveName": "Bienengarten-Name",
     "honeycombName": "Bienenstock-Name",
     "currentName": "Aktueller Name"
+  },
+  "delete": {
+    "confirmTitle": {
+      "hive": "Bienengarten löschen",
+      "honeycomb": "Bienenstock löschen"
+    },
+    "confirmMessage": {
+      "hive": "Bist du sicher, dass du diesen Bienengarten löschen möchtest? Dadurch werden alle Bienenstöcke und Aufgaben darin dauerhaft entfernt.",
+      "honeycomb": "Bist du sicher, dass du diesen Bienenstock löschen möchtest? Dadurch werden alle Aufgaben darin dauerhaft entfernt.",
+      "clonedHoneycomb": "Dies ist ein geklonter Bienenstock. Das Löschen hat keinen Einfluss auf das Original. Bist du sicher, dass du diese Kopie löschen möchtest?"
+    },
+    "itemToDelete": {
+      "hive": "Zu löschender Bienengarten:",
+      "honeycomb": "Zu löschender Bienenstock:"
+    },
+    "warning": "Diese Aktion kann nicht rückgängig gemacht werden",
+    "warningDescription": "Nach dem Löschen können diese Daten nicht wiederhergestellt werden. Bitte stelle sicher, dass dies gewünscht ist."
   }
 }

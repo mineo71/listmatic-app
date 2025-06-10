@@ -450,5 +450,22 @@
       "hiveName": "Nombre del Jardín de Abejas",
       "honeycombName": "Nombre de la Colmena",
       "currentName": "Nombre actual"
+    },
+    "delete": {
+      "confirmTitle": {
+        "hive": "Eliminar Jardín de Abejas",
+        "honeycomb": "Eliminar Colmena"
+      },
+      "confirmMessage": {
+        "hive": "¿Estás seguro de que quieres eliminar este jardín de abejas? Esto eliminará permanentemente todas las colmenas y tareas dentro de él.",
+        "honeycomb": "¿Estás seguro de que quieres eliminar esta colmena? Esto eliminará permanentemente todas las tareas dentro de ella.",
+        "clonedHoneycomb": "Esta es una colmena clonada. Eliminarla no afectará el original. ¿Estás seguro de que quieres eliminar esta copia?"
+      },
+      "itemToDelete": {
+        "hive": "Jardín de abejas a eliminar:",
+        "honeycomb": "Colmena a eliminar:"
+      },
+      "warning": "Esta acción no se puede deshacer",
+      "warningDescription": "Una vez eliminados, estos datos no se pueden recuperar. Por favor asegúrate de que esto es lo que quieres hacer."
     }
   }

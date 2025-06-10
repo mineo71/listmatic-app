@@ -449,5 +449,22 @@
     "hiveName": "Nazwa ogrodu pszczelarskiego",
     "honeycombName": "Nazwa ula",
     "currentName": "Aktualna nazwa"
+  },
+  "delete": {
+    "confirmTitle": {
+      "hive": "Usuń ogród pszczeli",
+      "honeycomb": "Usuń ul"
+    },
+    "confirmMessage": {
+      "hive": "Czy na pewno chcesz usunąć ten ogród pszczeli? To trwale usunie wszystkie ule i zadania w nim zawarte.",
+      "honeycomb": "Czy na pewno chcesz usunąć ten ul? To trwale usunie wszystkie zadania w nim zawarte.",
+      "clonedHoneycomb": "To jest sklonowany ul. Usunięcie go nie wpłynie na oryginał. Czy na pewno chcesz usunąć tę kopię?"
+    },
+    "itemToDelete": {
+      "hive": "Ogród pszczeli do usunięcia:",
+      "honeycomb": "Ul do usunięcia:"
+    },
+    "warning": "Ta akcja nie może być cofnięta",
+    "warningDescription": "Po usunięciu tych danych nie można ich odzyskać. Upewnij się, że tego właśnie chcesz."
   }
 }

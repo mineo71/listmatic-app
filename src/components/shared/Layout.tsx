@@ -14,7 +14,6 @@ import {
   deleteHive, 
   deleteHoneycomb,
   checkIfHoneycombIsCloned,
-  getOriginalHoneycombId
 } from '@/services/database';
 import type { Hive, Honeycomb } from '@/types';
 import { useTranslation } from 'react-i18next';
@@ -88,10 +87,6 @@ export const Layout = () => {
   };
 
   const handleDeleteHive = async (hiveId: string) => {
-    if (!window.confirm(t('confirmations.deleteHive'))) {
-      return;
-    }
-
     try {
       const { error } = await deleteHive(hiveId);
       if (error) {
@@ -120,19 +115,6 @@ export const Layout = () => {
     try {
       // Check if this honeycomb is a clone
       const { data: isCloned } = await checkIfHoneycombIsCloned(honeycombId);
-      
-      let confirmMessage = t('confirmations.deleteHoneycomb');
-      if (isCloned) {
-        // Get original honeycomb info
-        const { data: originalId } = await getOriginalHoneycombId(honeycombId);
-        if (originalId) {
-          confirmMessage = 'This is a cloned honeycomb. Deleting it will not affect the original. Are you sure you want to delete this copy?';
-        }
-      }
-
-      if (!window.confirm(confirmMessage)) {
-        return;
-      }
 
       const { error } = await deleteHoneycomb(honeycombId);
       if (error) {

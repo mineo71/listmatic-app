@@ -15,6 +15,7 @@ import {
 import type { Hive } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { RenameModal } from './RenameModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -72,6 +73,18 @@ export const Sidebar = ({
     id: '',
     currentName: '',
     type: 'hive'
+  });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
   });
 
   const toggleHive = (hiveId: string, e: React.MouseEvent) => {
@@ -366,14 +379,26 @@ export const Sidebar = ({
                   {t('actions.rename')}
                 </button>
                 <button
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100"
-                    onClick={() => {
-                      if (window.confirm(t('confirmations.delete'))) {
-                        if (contextMenu.type === 'hive') onDeleteHive(contextMenu.id);
-                        else onDeleteHoneycomb(contextMenu.id);
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100"
+                  onClick={() => {
+                    const isHive = contextMenu.type === 'hive';
+                    setConfirmModal({
+                      isOpen: true,
+                      title: isHive ? t('delete.confirmTitle.hive') : t('delete.confirmTitle.honeycomb'),
+                      message: isHive 
+                        ? t('delete.confirmMessage.hive')
+                        : t('delete.confirmMessage.honeycomb'),
+                      onConfirm: () => {
+                        if (contextMenu.type === 'hive') {
+                          onDeleteHive(contextMenu.id);
+                        } else {
+                          onDeleteHoneycomb(contextMenu.id);
+                        }
+                        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
                       }
-                      setContextMenu(null);
-                    }}
+                    });
+                    setContextMenu(null);
+                  }}
                 >
                   {t('actions.delete')}
                 </button>
@@ -388,6 +413,16 @@ export const Sidebar = ({
           onSubmit={handleRenameSubmit}
           currentName={renameModal.currentName}
           type={renameModal.type}
+        />
+
+        <ConfirmDeleteModal
+          isOpen={confirmModal.isOpen}
+          onClose={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
+          onConfirm={() => {
+            confirmModal.onConfirm();
+          }}
+          title={confirmModal.title}
+          message={confirmModal.message}
         />
       </>
   );

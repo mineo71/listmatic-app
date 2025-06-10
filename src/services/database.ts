@@ -63,7 +63,7 @@ const VALID_ICONS: TaskIcon[] = [
   
   // Additional Useful Icons
   'Bookmark2', 'Calendar2', 'Check', 'X', 'Edit', 'Trash', 'Copy', 'Download',
-  'RefreshCw', 'Search', 'Filter', 'Sort', 'MoreHorizontal', 'MoreVertical',
+  'RefreshCw', 'Search', 'Filter', 'MoreHorizontal', 'MoreVertical',
   'ChevronUp', 'ChevronDown', 'ChevronLeft', 'ChevronRight', 'ArrowUp', 'ArrowDown',
   'ArrowLeft', 'ArrowRight', 'External', 'Link', 'Paperclip', 'Save', 'Folder',
   'FolderOpen', 'File', 'Files', 'HardDrive', 'Wifi', 'WifiOff', 'Power',

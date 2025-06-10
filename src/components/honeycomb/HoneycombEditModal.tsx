@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { X, Trash2, Calendar, Clock, Search, Check, Plus } from 'lucide-react';
 import type { TaskIcon, TaskPriority } from '../../types';
@@ -89,7 +90,39 @@ const IconSelector = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const { t } = useTranslation();
+
+  // Update dropdown position when opened
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  }, [isOpen]);
+
+  // Close dropdown on window resize or scroll
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClose = () => {
+      setIsOpen(false);
+      setSearchQuery('');
+    };
+
+    window.addEventListener('resize', handleClose);
+    window.addEventListener('scroll', handleClose);
+
+    return () => {
+      window.removeEventListener('resize', handleClose);
+      window.removeEventListener('scroll', handleClose);
+    };
+  }, [isOpen]);
 
   // Filter icons based on search query
   const filteredIcons = useMemo(() => {
@@ -147,6 +180,7 @@ const IconSelector = ({
       
       {/* Selected Icon Display */}
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center justify-between w-full px-3 py-2 text-left 
@@ -167,12 +201,12 @@ const IconSelector = ({
         </svg>
       </button>
 
-      {/* Dropdown */}
-      {isOpen && (
+      {/* Dropdown using Portal */}
+      {isOpen && createPortal(
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[999]"
             onClick={() => {
               setIsOpen(false);
               setSearchQuery('');
@@ -181,14 +215,13 @@ const IconSelector = ({
           
           {/* Dropdown Content */}
           <div 
-            className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-80 overflow-hidden"
-            onWheel={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            onTouchMove={(e) => e.stopPropagation()}
-            onTouchEnd={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onMouseMove={(e) => e.stopPropagation()}
-            onMouseUp={(e) => e.stopPropagation()}
+            className="fixed z-[1000] bg-white rounded-lg shadow-lg border border-gray-200 max-h-80 overflow-hidden"
+            style={{
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              width: dropdownPosition.width,
+              minWidth: '250px'
+            }}
           >
             {/* Search Input */}
             <div className="p-3 border-b border-gray-200">
@@ -201,19 +234,13 @@ const IconSelector = ({
                   placeholder={t('placeholders.searchIcons') || 'Search icons...'}
                   className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md 
                     focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  onClick={(e) => e.stopPropagation()}
+                  autoFocus
                 />
               </div>
             </div>
             
             {/* Icons Grid */}
-            <div 
-              className="max-h-60 overflow-y-auto p-2"
-              onWheel={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
-            >
+            <div className="max-h-60 overflow-y-auto p-2">
               {filteredIcons.length === 0 ? (
                 <div className="p-4 text-center text-gray-500 text-sm">
                   {t('placeholders.noIconsFound') || 'No icons found'}
@@ -225,7 +252,8 @@ const IconSelector = ({
               )}
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
@@ -415,10 +443,6 @@ export const HoneycombEditModal = ({
           className="bg-white rounded-lg w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] 
             relative shadow-xl flex flex-col overflow-hidden"
           onClick={e => e.stopPropagation()}
-          onWheel={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
-          onTouchEnd={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">

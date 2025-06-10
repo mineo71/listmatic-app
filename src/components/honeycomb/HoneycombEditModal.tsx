@@ -269,16 +269,22 @@ const ColorPalette = ({
   onColorChange: (color: string) => void;
   className?: string;
 }) => {
-  const [customColor, setCustomColor] = useState('');
-  const [showCustomPicker, setShowCustomPicker] = useState(false);
+  const colorInputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
+
+  const handleCustomColorClick = () => {
+    if (colorInputRef.current) {
+      colorInputRef.current.click();
+    }
+  };
 
   const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
-    setCustomColor(newColor);
     onColorChange(newColor);
-    setShowCustomPicker(false);
   };
+
+  // Check if current color is a custom color (not in presets)
+  const isCustomColor = !PRESET_COLORS.includes(selectedColor);
 
   return (
     <div className={className}>
@@ -307,27 +313,38 @@ const ColorPalette = ({
         <div className="relative">
           <button
             type="button"
-            onClick={() => setShowCustomPicker(true)}
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-dashed border-gray-400 
-              hover:border-gray-600 transition-colors flex items-center justify-center
-              hover:bg-gray-100"
-            title={t('hexagon.customColor') || 'Custom color'}
+            onClick={handleCustomColorClick}
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 transition-all duration-200 hover:scale-110 flex items-center justify-center ${
+              isCustomColor
+                ? 'ring-2 ring-amber-500 ring-offset-2 shadow-lg border-solid'
+                : 'border-dashed border-gray-400 hover:border-gray-600 hover:bg-gray-100'
+            }`}
+            style={{ 
+              backgroundColor: isCustomColor ? selectedColor : 'transparent' 
+            }}
+            title={isCustomColor ? selectedColor : (t('hexagon.customColor') || 'Custom color')}
           >
-            <Plus size={14} className="text-gray-600" />
+            {!isCustomColor && <Plus size={14} className="text-gray-600" />}
           </button>
           
           {/* Hidden color input */}
-          {showCustomPicker && (
-            <input
-              type="color"
-              value={selectedColor}
-              onChange={handleCustomColorChange}
-              className="absolute top-0 left-0 w-8 h-8 sm:w-9 sm:h-9 opacity-0 cursor-pointer"
-              title={t('hexagon.pickCustomColor') || 'Pick custom color'}
-            />
-          )}
+          <input
+            ref={colorInputRef}
+            type="color"
+            value={selectedColor}
+            onChange={handleCustomColorChange}
+            className="absolute top-0 left-0 w-8 h-8 sm:w-9 sm:h-9 opacity-0 cursor-pointer"
+            title={t('hexagon.pickCustomColor') || 'Pick custom color'}
+          />
         </div>
       </div>
+      
+      {/* Custom color display */}
+      {isCustomColor && (
+        <div className="mt-2 text-xs text-gray-600">
+          {t('hexagon.customColorSelected') || 'Custom color'}: {selectedColor}
+        </div>
+      )}
     </div>
   );
 };
